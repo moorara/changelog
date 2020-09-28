@@ -1,0 +1,18 @@
+# Compiled files
+/main
+/changelog
+
+# Build directories
+/bin/**
+/build/**
+
+# Test files
+*.log
+*.out
+*.test
+
+# Misc files
+*.html
+
+# Exceptions
+!Dockerfile.test
