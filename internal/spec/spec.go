@@ -6,7 +6,10 @@ import (
 	"text/template"
 
 	"github.com/go-git/go-git/v5"
+	"gopkg.in/yaml.v3"
 )
+
+var specFiles = []string{"changelog.yml", "changelog.yaml"}
 
 const helpTemplate = `
   It assumes the remote repository name is origin.
@@ -31,15 +34,15 @@ const helpTemplate = `
     -print                 Print the generated changelong to STDOUT (default: {{.General.Print}})
     -verbose               Show the vervbosity logs (default: {{.General.Verbose}})
 
+    -issues                TODO: (values: none|all|labeled) (default: {{.Changes.Issues}})
+    -merges                TODO: (values: none|all|labeled) (default: {{.Changes.Merges}})
+
     -branch                TODO: (default: {{.Release.Branch}})
     -from-tag              TODO: (default: {{.Release.FromTag}})
     -to-tag                TODO: (default: {{.Release.ToTag}})
     -future-tag            TODO: (default: {{.Release.FutureTag}})
     -exclude-tags          TODO: (default: {{Join .Release.ExcludeTags ","}})
     -exclude-tags-regex    TODO: (default: {{.Release.ExcludeTagsRegex}})
-
-    -issues                TODO: (values: none|all|labeled) (default: {{.Changes.Issues}})
-    -merges                TODO: (values: none|all|labeled) (default: {{.Changes.Merges}})
 
     -group-by              TODO: (values: simple|label|milestone) (default: {{.Format.GroupBy}})
     -release-url           TODO: (default: {{.Format.ReleaseURL}})
@@ -98,66 +101,66 @@ const (
 
 // Spec has all the specifications required for generating a changelog.
 type Spec struct {
-	Help    bool `flag:"help"`
-	Version bool `flag:"version"`
+	Help    bool `yaml:"-" flag:"help"`
+	Version bool `yaml:"-" flag:"version"`
 
 	Repo struct {
-		Platform    Platform
-		Path        string
-		AccessToken string `flag:"access-token"`
-	}
+		Platform    Platform `yaml:"-"`
+		Path        string   `yaml:"-"`
+		AccessToken string   `yaml:"-" flag:"access-token"`
+	} `yaml:"-"`
 
 	General struct {
-		File    string `flag:"file"`
-		Base    string `flag:"base"`
-		Print   bool   `flag:"print"`
-		Verbose bool   `flag:"verbose"`
-	}
-
-	Release struct {
-		Branch           string   `flag:"branch"`
-		FromTag          string   `flag:"from-tag"`
-		ToTag            string   `flag:"to-tag"`
-		FutureTag        string   `flag:"future-tag"`
-		ExcludeTags      []string `flag:"exclude-tags"`
-		ExcludeTagsRegex string   `flag:"exclude-tag-regex"`
-	}
+		File    string `yaml:"file" flag:"file"`
+		Base    string `yaml:"base" flag:"base"`
+		Print   bool   `yaml:"print" flag:"print"`
+		Verbose bool   `yaml:"verbose" flag:"verbose"`
+	} `yaml:"general"`
 
 	Changes struct {
-		Issues Select `flag:"issues"`
-		Merges Select `flag:"merges"`
-	}
+		Issues Select `yaml:"issues" flag:"issues"`
+		Merges Select `yaml:"merges" flag:"merges"`
+	} `yaml:"changes"`
+
+	Release struct {
+		Branch           string   `yaml:"branch" flag:"branch"`
+		FromTag          string   `yaml:"from-tag" flag:"from-tag"`
+		ToTag            string   `yaml:"to-tag" flag:"to-tag"`
+		FutureTag        string   `yaml:"future-tag" flag:"future-tag"`
+		ExcludeTags      []string `yaml:"exclude-tags" flag:"exclude-tags"`
+		ExcludeTagsRegex string   `yaml:"exclude-tags-regex" flag:"exclude-tags-regex"`
+	} `yaml:"release"`
 
 	Format struct {
-		GroupBy    GroupBy `flag:"group-by"`
-		ReleaseURL string  `flag:"release-url"`
-	}
+		GroupBy    GroupBy `yaml:"group-by" flag:"group-by"`
+		ReleaseURL string  `yaml:"release-url" flag:"release-url"`
+	} `yaml:"format"`
 
 	Labels struct {
-		Include     []string `flag:"include-labels"`
-		Exclude     []string `flag:"exclude-labels"`
-		Summary     []string `flag:"summary-labels"`
-		Removed     []string `flag:"removed-labels"`
-		Breaking    []string `flag:"breaking-labels"`
-		Deprecated  []string `flag:"deprecated-labels"`
-		Feature     []string `flag:"feature-labels"`
-		Enhancement []string `flag:"enhancement-labels"`
-		Bug         []string `flag:"bug-labels"`
-		Security    []string `flag:"security-labels"`
-	}
+		Include     []string `yaml:"include" flag:"include-labels"`
+		Exclude     []string `yaml:"exclude" flag:"exclude-labels"`
+		Summary     []string `yaml:"summary" flag:"summary-labels"`
+		Removed     []string `yaml:"removed" flag:"removed-labels"`
+		Breaking    []string `yaml:"breaking" flag:"breaking-labels"`
+		Deprecated  []string `yaml:"deprecated" flag:"deprecated-labels"`
+		Feature     []string `yaml:"feature" flag:"feature-labels"`
+		Enhancement []string `yaml:"enhancement" flag:"enhancement-labels"`
+		Bug         []string `yaml:"bug" flag:"bug-labels"`
+		Security    []string `yaml:"security" flag:"security-labels"`
+	} `yaml:"labels"`
 }
 
 // Default returns specfications with default values.
 // The default access token will be read from the CHANGELOG_ACCESS_TOKEN environment variable (if set).
-func Default(repo *git.Repository) (*Spec, error) {
+func Default(repo *git.Repository) (Spec, error) {
 	accessToken := os.Getenv("CHANGELOG_ACCESS_TOKEN")
 
 	repoDomain, repoPath, err := getGitRemoteInfo(repo)
 	if err != nil {
-		return nil, err
+		return Spec{}, err
 	}
 
-	spec := &Spec{
+	spec := Spec{
 		Help:    false,
 		Version: false,
 	}
@@ -171,15 +174,15 @@ func Default(repo *git.Repository) (*Spec, error) {
 	spec.General.Print = false
 	spec.General.Verbose = false
 
+	spec.Changes.Issues = SelectAll
+	spec.Changes.Merges = SelectAll
+
 	spec.Release.Branch = "master"
 	spec.Release.FromTag = ""
 	spec.Release.ToTag = ""
 	spec.Release.FutureTag = ""
 	spec.Release.ExcludeTags = []string{}
 	spec.Release.ExcludeTagsRegex = ""
-
-	spec.Changes.Issues = SelectAll
-	spec.Changes.Merges = SelectAll
 
 	spec.Format.GroupBy = GroupByLabel
 	spec.Format.ReleaseURL = ""
@@ -188,7 +191,7 @@ func Default(repo *git.Repository) (*Spec, error) {
 	spec.Labels.Exclude = []string{"duplicate", "invalid", "question", "wontfix"}
 	spec.Labels.Summary = []string{"summary", "release-summary"}
 	spec.Labels.Removed = []string{"removed"}
-	spec.Labels.Breaking = []string{"breaking", "backward-incompatible", "backwards-incompatible"}
+	spec.Labels.Breaking = []string{"breaking"}
 	spec.Labels.Deprecated = []string{"deprecated"}
 	spec.Labels.Feature = []string{"feature"}
 	spec.Labels.Enhancement = []string{"enhancement"}
@@ -198,8 +201,30 @@ func Default(repo *git.Repository) (*Spec, error) {
 	return spec, nil
 }
 
+// FromFile updates a base spec from a spec file if it exists.
+func FromFile(s Spec) (Spec, error) {
+	for _, filename := range specFiles {
+		f, err := os.Open(filename)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return Spec{}, err
+		}
+		defer f.Close()
+
+		if err = yaml.NewDecoder(f).Decode(&s); err != nil {
+			return Spec{}, err
+		}
+
+		return s, nil
+	}
+
+	return s, nil
+}
+
 // PrintHelp prints the help text.
-func (s *Spec) PrintHelp() error {
+func (s Spec) PrintHelp() error {
 	tmpl := template.New("help")
 	tmpl = tmpl.Funcs(template.FuncMap{
 		"Join": strings.Join,

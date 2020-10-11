@@ -1,0 +1,33 @@
+general:
+  file: RELEASE-NOTES.md
+  base: OLD-NOTES.md
+  print: true
+  verbose: true
+
+changes:
+  issues: labeled
+  merges: labeled
+
+release:
+  branch: release
+  from-tag: v0.1.0
+  to-tag: v0.5.0
+  future-tag: v1.0.0
+  exclude-tags: [ staging ]
+  exclude-tags-regex: '(.*)-(alpha|beta)'
+
+format:
+  group-by: milestone
+  release-url: https://storage.artifactory.com/project/releases/{tag}
+
+labels:
+  include: [ breaking, bug, defect, deprecated, dropped, enhancement, fault, feature, highlight, improvement, incompatible, new, not-supported, privacy, removed, security, summary ]
+  exclude: [ documentation, duplicate, invalid, question, wontfix ]
+  summary: [ summary, highlight ]
+  removed: [ removed, dropped ]
+  breaking: [ breaking, incompatible ]
+  deprecated: [ deprecated, not-supported ]
+  feature: [ feature, new ]
+  enhancement: [ enhancement, improvement ]
+  bug: [ bug, defect, fault ]
+  security: [ security, privacy ]

@@ -5,10 +5,11 @@ import (
 	"os"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/moorara/flagit"
+
 	"github.com/moorara/changelog/internal/generate"
 	"github.com/moorara/changelog/internal/spec"
 	"github.com/moorara/changelog/version"
-	"github.com/moorara/flagit"
 )
 
 func main() {
@@ -31,7 +32,12 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	if err := flagit.Populate(s, false); err != nil {
+	s, err = spec.FromFile(s)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	if err := flagit.Populate(&s, false); err != nil {
 		logger.Fatal(err)
 	}
 
