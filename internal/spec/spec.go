@@ -5,8 +5,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/go-git/go-git/v5"
 	"gopkg.in/yaml.v3"
+
+	"github.com/moorara/changelog/internal/git"
 )
 
 var specFiles = []string{"changelog.yml", "changelog.yaml"}
@@ -152,10 +153,10 @@ type Spec struct {
 
 // Default returns specfications with default values.
 // The default access token will be read from the CHANGELOG_ACCESS_TOKEN environment variable (if set).
-func Default(repo *git.Repository) (Spec, error) {
+func Default(gitRepo *git.Repo) (Spec, error) {
 	accessToken := os.Getenv("CHANGELOG_ACCESS_TOKEN")
 
-	repoDomain, repoPath, err := getGitRemoteInfo(repo)
+	domain, path, err := gitRepo.GetRemoteInfo()
 	if err != nil {
 		return Spec{}, err
 	}
@@ -165,8 +166,8 @@ func Default(repo *git.Repository) (Spec, error) {
 		Version: false,
 	}
 
-	spec.Repo.Platform = Platform(repoDomain)
-	spec.Repo.Path = repoPath
+	spec.Repo.Platform = Platform(domain)
+	spec.Repo.Path = path
 	spec.Repo.AccessToken = accessToken
 
 	spec.General.File = "CHANGELOG.md"

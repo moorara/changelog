@@ -4,10 +4,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/moorara/flagit"
 
 	"github.com/moorara/changelog/internal/generate"
+	"github.com/moorara/changelog/internal/git"
 	"github.com/moorara/changelog/internal/spec"
 	"github.com/moorara/changelog/version"
 )
@@ -17,17 +17,14 @@ func main() {
 
 	logger := log.New(os.Stdout, "", 0)
 
-	repo, err := git.PlainOpenWithOptions(".", &git.PlainOpenOptions{
-		DetectDotGit: true,
-	})
-
+	gitRepo, err := git.NewRepo(".")
 	if err != nil {
 		logger.Fatal(err)
 	}
 
 	// READING SPEC
 
-	s, err := spec.Default(repo)
+	s, err := spec.Default(gitRepo)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -53,7 +50,8 @@ func main() {
 		logger.Println(version.String())
 
 	default:
-		if err := generate.Generate(logger, s); err != nil {
+		g := generate.New(logger, gitRepo, s)
+		if err := g.Generate(); err != nil {
 			logger.Fatal(err)
 		}
 	}

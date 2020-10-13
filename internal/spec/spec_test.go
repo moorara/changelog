@@ -3,15 +3,16 @@ package spec
 import (
 	"testing"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/moorara/changelog/internal/git"
 )
 
 func TestDefault(t *testing.T) {
-	repo, err := git.PlainOpen("../..")
+	gitRepo, err := git.NewRepo(".")
 	assert.NoError(t, err)
 
-	spec, err := Default(repo)
+	spec, err := Default(gitRepo)
 	assert.NoError(t, err)
 
 	assert.NotNil(t, spec)
@@ -45,10 +46,10 @@ func TestDefault(t *testing.T) {
 }
 
 func TestSpecUpdateFromFile(t *testing.T) {
-	repo, err := git.PlainOpen("../..")
+	gitRepo, err := git.NewRepo(".")
 	assert.NoError(t, err)
 
-	spec, err := Default(repo)
+	spec, err := Default(gitRepo)
 	assert.NoError(t, err)
 
 	expectedMinSpec := spec

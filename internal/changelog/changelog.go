@@ -1,6 +1,9 @@
 package changelog
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Processor is an abstraction for reading and writing changelogs.
 type Processor interface {
@@ -25,6 +28,15 @@ type Release struct {
 	Timestamp   time.Time
 	IssueGroups []IssueGroup
 	MergeGroups []MergeGroup
+}
+
+func (r Release) String() string {
+	return fmt.Sprintf("%s %s %s\n%v\n%v",
+		r.GitTag,
+		r.URL,
+		r.Timestamp.Format(time.RFC3339),
+		r.IssueGroups, r.MergeGroups,
+	)
 }
 
 // IssueGroup represents a group of issues.

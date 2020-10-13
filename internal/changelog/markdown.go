@@ -1,4 +1,4 @@
-package markdown
+package changelog
 
 import (
 	"bufio"
@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"time"
-
-	"github.com/moorara/changelog/internal/changelog"
 )
 
 var (
@@ -17,32 +15,32 @@ var (
 	h2Regex = regexp.MustCompile(`^## \[([0-9A-Za-z-.]+)\]\(([0-9A-Za-z-.:/]+)\) \((\d{4}-\d{2}-\d{2})\)$`)
 )
 
-// processor implements the changelog.Processor interface for Markdown format.
-type processor struct {
+// markdownProcessor implements the changelog.Processor interface for Markdown format.
+type markdownProcessor struct {
 	logger   *log.Logger
 	filename string
 	doc      string
 }
 
-// NewProcessor creates a new changelog processor for Markdown format.
-func NewProcessor(logger *log.Logger, filename string) changelog.Processor {
-	return &processor{
+// NewMarkdownProcessor creates a new changelog processor for Markdown format.
+func NewMarkdownProcessor(logger *log.Logger, filename string) Processor {
+	return &markdownProcessor{
 		logger:   logger,
 		filename: filepath.Clean(filename),
 	}
 }
 
-func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, error) {
+func (p *markdownProcessor) Parse(opts ParseOptions) (*Changelog, error) {
 	f, err := os.Open(p.filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return changelog.NewChangelog(), nil
+			return NewChangelog(), nil
 		}
 		return nil, err
 	}
 	defer f.Close()
 
-	chlog := new(changelog.Changelog)
+	chlog := new(Changelog)
 	scanner := bufio.NewScanner(f)
 
 	for scanner.Scan() {
@@ -57,7 +55,7 @@ func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, er
 				return nil, err
 			}
 
-			chlog.Releases = append(chlog.Releases, changelog.Release{
+			chlog.Releases = append(chlog.Releases, Release{
 				GitTag:    sm[1],
 				URL:       sm[2],
 				Timestamp: ts,
@@ -72,7 +70,7 @@ func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, er
 	return chlog, nil
 }
 
-func (p *processor) Render(chlog *changelog.Changelog) (string, error) {
+func (p *markdownProcessor) Render(chlog *Changelog) (string, error) {
 	// UPDATE THE MARKDOWN DOCUMENT
 
 	// RENDER THE MARKDOWN DOCUMENT

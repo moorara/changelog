@@ -1,15 +1,14 @@
-package markdown
+package changelog
 
 import (
 	"log"
 	"testing"
 	"time"
 
-	"github.com/moorara/changelog/internal/changelog"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewProcessor(t *testing.T) {
+func TestNewMarkdownProcessor(t *testing.T) {
 	tests := []struct {
 		name     string
 		logger   *log.Logger
@@ -24,10 +23,10 @@ func TestNewProcessor(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			proc := NewProcessor(tc.logger, tc.filename)
+			proc := NewMarkdownProcessor(tc.logger, tc.filename)
 			assert.NotNil(t, proc)
 
-			p, ok := proc.(*processor)
+			p, ok := proc.(*markdownProcessor)
 			assert.True(t, ok)
 
 			assert.Equal(t, tc.logger, p.logger)
@@ -37,32 +36,32 @@ func TestNewProcessor(t *testing.T) {
 	}
 }
 
-func TestProcessorParse(t *testing.T) {
+func TestMarkdownProcessorParse(t *testing.T) {
 	tests := []struct {
 		name              string
-		p                 *processor
-		opts              changelog.ParseOptions
-		expectedChangelog *changelog.Changelog
+		p                 *markdownProcessor
+		opts              ParseOptions
+		expectedChangelog *Changelog
 		expectedError     string
 	}{
 		{
 			name: "FileNotExist",
-			p:    &processor{},
-			opts: changelog.ParseOptions{},
-			expectedChangelog: &changelog.Changelog{
+			p:    &markdownProcessor{},
+			opts: ParseOptions{},
+			expectedChangelog: &Changelog{
 				Title: "Changelog",
 			},
 			expectedError: "",
 		},
 		{
 			name: "Success",
-			p: &processor{
+			p: &markdownProcessor{
 				filename: "test/CHANGELOG.md",
 			},
-			opts: changelog.ParseOptions{},
-			expectedChangelog: &changelog.Changelog{
+			opts: ParseOptions{},
+			expectedChangelog: &Changelog{
 				Title: "Changelog",
-				Releases: []changelog.Release{
+				Releases: []Release{
 					{
 						GitTag:    "v0.1.1",
 						URL:       "https://github.com/moorara/changelog/tree/v0.1.1",
@@ -94,18 +93,18 @@ func TestProcessorParse(t *testing.T) {
 	}
 }
 
-func TestProcessorRender(t *testing.T) {
+func TestMarkdownProcessorRender(t *testing.T) {
 	tests := []struct {
 		name           string
-		p              *processor
-		chlog          *changelog.Changelog
+		p              *markdownProcessor
+		chlog          *Changelog
 		expectedString string
 		expectedError  error
 	}{
 		{
 			name:           "OK",
-			p:              &processor{},
-			chlog:          &changelog.Changelog{},
+			p:              &markdownProcessor{},
+			chlog:          &Changelog{},
 			expectedString: "&{Title: New:[] Releases:[]}",
 			expectedError:  nil,
 		},
