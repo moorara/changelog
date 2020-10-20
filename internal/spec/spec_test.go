@@ -45,7 +45,7 @@ func TestDefault(t *testing.T) {
 	assert.Equal(t, []string{"security"}, spec.Labels.Security)
 }
 
-func TestSpecUpdateFromFile(t *testing.T) {
+func TestFromFile(t *testing.T) {
 	gitRepo, err := git.NewRepo(".")
 	assert.NoError(t, err)
 
@@ -73,7 +73,7 @@ func TestSpecUpdateFromFile(t *testing.T) {
 	expectedMaxSpec.Release.ToTag = "v0.5.0"
 	expectedMaxSpec.Release.FutureTag = "v1.0.0"
 	expectedMaxSpec.Release.ExcludeTags = []string{"staging"}
-	expectedMaxSpec.Release.ExcludeTagsRegex = "(.*)-(alpha|beta)"
+	expectedMaxSpec.Release.ExcludeTagsRegex = `(.*)-(alpha|beta)`
 	expectedMaxSpec.Format.GroupBy = GroupBy("milestone")
 	expectedMaxSpec.Format.ReleaseURL = "https://storage.artifactory.com/project/releases/{tag}"
 	expectedMaxSpec.Labels.Include = []string{"breaking", "bug", "defect", "deprecated", "dropped", "enhancement", "fault", "feature", "highlight", "improvement", "incompatible", "new", "not-supported", "privacy", "removed", "security", "summary"}
@@ -142,7 +142,7 @@ func TestSpecUpdateFromFile(t *testing.T) {
 	}
 }
 
-func TestSpecPrintHelp(t *testing.T) {
+func TestSpec_PrintHelp(t *testing.T) {
 	s := new(Spec)
 	err := s.PrintHelp()
 

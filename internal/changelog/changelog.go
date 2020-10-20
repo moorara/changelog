@@ -1,7 +1,6 @@
 package changelog
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -28,15 +27,6 @@ type Release struct {
 	Timestamp   time.Time
 	IssueGroups []IssueGroup
 	MergeGroups []MergeGroup
-}
-
-func (r Release) String() string {
-	return fmt.Sprintf("%s %s %s\n%v\n%v",
-		r.GitTag,
-		r.URL,
-		r.Timestamp.Format(time.RFC3339),
-		r.IssueGroups, r.MergeGroups,
-	)
 }
 
 // IssueGroup represents a group of issues.

@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -21,18 +22,22 @@ var (
 	sshRE           = regexp.MustCompile(sshPattern)
 )
 
-// TagType determines if a Git tag is lightweight or annotated.
-type TagType bool
+// TagType determines the type a Git tag.
+type TagType int
 
 const (
+	// Void represents a tag and does not exist in Git.
+	Void TagType = iota
 	// Lightweight is a lightweight Git tag.
-	Lightweight TagType = false
+	Lightweight
 	// Annotated is an annotated Git tag.
-	Annotated TagType = true
+	Annotated
 )
 
 func (t TagType) String() string {
 	switch t {
+	case Void:
+		return ""
 	case Lightweight:
 		return "Lightweight"
 	case Annotated:
@@ -90,8 +95,114 @@ func annotatedTag(tagObj *object.Tag) Tag {
 	}
 }
 
+// Equal determines if two tags are the same.
+// Two tags are the same if they both have the same name.
+func (t Tag) Equal(u Tag) bool {
+	return t.Name == u.Name
+}
+
+// Before determines if a given tag is chronologically before the current tag.
+func (t Tag) Before(u Tag) bool {
+	return t.Tagger.Timestamp.Before(u.Tagger.Timestamp)
+}
+
+// After determines if a given tag is chronologically after the current tag.
+func (t Tag) After(u Tag) bool {
+	return t.Tagger.Timestamp.After(u.Tagger.Timestamp)
+}
+
 func (t Tag) String() string {
 	return fmt.Sprintf("%s %s %s [%s]", t.Type, t.Hash, t.Name, t.Tagger)
+}
+
+// Tags is a list of tags.
+type Tags []Tag
+
+// Index looks up a tag by its name and returns its index if found.
+// Index returns the index of a tag specified by its name, or -1 if not found.
+func (t Tags) Index(name string) int {
+	for i, tag := range t {
+		if tag.Name == name {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// Find looks up a tag by its name.
+func (t Tags) Find(name string) (Tag, bool) {
+	for _, tag := range t {
+		if tag.Name == name {
+			return tag, true
+		}
+	}
+
+	return Tag{}, false
+}
+
+// Sort sorts the list of tags by their timestamps from the most recent to the least recent.
+func (t Tags) Sort() Tags {
+	sorted := make(Tags, len(t))
+	copy(sorted, t)
+
+	sort.Slice(sorted, func(i, j int) bool {
+		// The order of the tags should be from the most recent to the least recent
+		return sorted[i].Tagger.Timestamp.After(sorted[j].Tagger.Timestamp)
+	})
+
+	return sorted
+}
+
+// Exclude excludes the given tag names and returns a new list of tags.
+func (t Tags) Exclude(names ...string) Tags {
+	match := func(tag Tag) bool {
+		for _, name := range names {
+			if tag.Name == name {
+				return true
+			}
+		}
+		return false
+	}
+
+	new := Tags{}
+	for _, tag := range t {
+		if !match(tag) {
+			new = append(new, tag)
+		}
+	}
+
+	/* new := make(Tags, len(t))
+	copy(new, t)
+	for i := range new {
+		for _, name := range names {
+			if new[i].Name == name {
+				new[i].Included = false
+			}
+		}
+	} */
+
+	return new
+}
+
+// ExcludeRegex excludes matched tags against the given regex and returns a new list of tags.
+func (t Tags) ExcludeRegex(regex *regexp.Regexp) Tags {
+	new := Tags{}
+	for _, tag := range t {
+		if !regex.MatchString(tag.Name) {
+			new = append(new, tag)
+		}
+	}
+
+	/* new := make(Tags, len(t))
+	copy(new, t)
+	for i := range new {
+		if regex.MatchString(new[i].Name) {
+			new[i].Included = false
+		}
+	} */
+
+	return new
 }
 
 // Repo is a Git repository.
@@ -144,8 +255,8 @@ func (r *Repo) GetRemoteInfo() (string, string, error) {
 }
 
 // Tags returns all tags for the Git repository.
-func (r *Repo) Tags() ([]Tag, error) {
-	tags := make([]Tag, 0)
+func (r *Repo) Tags() (Tags, error) {
+	tags := Tags{}
 
 	refs, err := r.git.Tags()
 	if err != nil {

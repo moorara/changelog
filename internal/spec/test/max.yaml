@@ -14,7 +14,7 @@ release:
   to-tag: v0.5.0
   future-tag: v1.0.0
   exclude-tags: [ staging ]
-  exclude-tags-regex: '(.*)-(alpha|beta)'
+  exclude-tags-regex: (.*)-(alpha|beta)
 
 format:
   group-by: milestone

@@ -35,15 +35,15 @@ const helpTemplate = `
     -print                 Print the generated changelong to STDOUT (default: {{.General.Print}})
     -verbose               Show the vervbosity logs (default: {{.General.Verbose}})
 
-    -issues                TODO: (values: none|all|labeled) (default: {{.Changes.Issues}})
-    -merges                TODO: (values: none|all|labeled) (default: {{.Changes.Merges}})
+    -issues                Include closed issues in changelog (values: none|all|labeled) (default: {{.Changes.Issues}})
+    -merges                Include closed pull/merge requests in changelog (values: none|all|labeled) (default: {{.Changes.Merges}})
 
     -branch                TODO: (default: {{.Release.Branch}})
-    -from-tag              TODO: (default: {{.Release.FromTag}})
-    -to-tag                TODO: (default: {{.Release.ToTag}})
-    -future-tag            TODO: (default: {{.Release.FutureTag}})
-    -exclude-tags          TODO: (default: {{Join .Release.ExcludeTags ","}})
-    -exclude-tags-regex    TODO: (default: {{.Release.ExcludeTagsRegex}})
+    -from-tag              Changelog will be generated for all changes after this tag (default: last tag on changelog)
+    -to-tag                Changelog will be generated for all changes before this tag (default: last git tag)
+    -future-tag            A future tag for all unreleased changes (changes after the last git tag) {{if .Release.FutureTag}}(default: {{.Release.FutureTag ","}}){{end}}
+    -exclude-tags          These tags will be excluded from changelog {{if .Release.ExcludeTags}}(default: {{Join .Release.ExcludeTags ","}}){{end}}
+    -exclude-tags-regex    A POSIX-compliant regex for excluding certain tags from changelog {{if .Release.ExcludeTagsRegex}}(default: {{.Release.ExcludeTagsRegex}}){{end}}
 
     -group-by              TODO: (values: simple|label|milestone) (default: {{.Format.GroupBy}})
     -release-url           TODO: (default: {{.Format.ReleaseURL}})

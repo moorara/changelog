@@ -36,7 +36,7 @@ func TestNewMarkdownProcessor(t *testing.T) {
 	}
 }
 
-func TestMarkdownProcessorParse(t *testing.T) {
+func TestMarkdownProcessor_Parse(t *testing.T) {
 	tests := []struct {
 		name              string
 		p                 *markdownProcessor
@@ -93,7 +93,7 @@ func TestMarkdownProcessorParse(t *testing.T) {
 	}
 }
 
-func TestMarkdownProcessorRender(t *testing.T) {
+func TestMarkdownProcessor_Render(t *testing.T) {
 	tests := []struct {
 		name           string
 		p              *markdownProcessor

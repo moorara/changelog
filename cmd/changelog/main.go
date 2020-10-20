@@ -50,7 +50,7 @@ func main() {
 		logger.Println(version.String())
 
 	default:
-		g := generate.New(logger, gitRepo, s)
+		g := generate.New(s, logger, gitRepo)
 		if err := g.Generate(); err != nil {
 			logger.Fatal(err)
 		}

@@ -31,6 +31,8 @@ func TestNewGitLabRepo(t *testing.T) {
 			assert.True(t, ok)
 
 			assert.Equal(t, tc.logger, r.logger)
+			assert.NotNil(t, r.client)
+			assert.Equal(t, gitlabAPIURL, r.apiURL)
 			assert.Equal(t, tc.path, r.path)
 			assert.Equal(t, tc.accessToken, r.accessToken)
 		})
