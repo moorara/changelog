@@ -1,6 +1,7 @@
 package spec
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"text/template"
@@ -64,6 +65,43 @@ const helpTemplate = `
     changelog
     changelog -access-token=<your-access-token>
 
+`
+
+const format = `
+Specifications
+Repo:
+  Platform:          %s
+  Path:              %s
+  AccessToken:       %s
+General:
+  File:              %s
+  Base:              %s
+  Print:             %t
+  Verbose:           %t
+Changes:
+  Issues:            %s
+  Merges:            %s
+Release:
+  Branch:            %s
+  FromTag:           %s
+  ToTag:             %s
+  FutureTag:         %s
+  ExcludeTags:       %s
+  ExcludeTagsRegex:  %s
+Format:
+  GroupBy:           %s
+  ReleaseURL:        %s
+Labels:
+  Include:           %s
+  Exclude:           %s
+  Summary:           %s
+  Removed:           %s
+  Breaking:          %s
+  Deprecated:        %s
+  Feature:           %s
+  Enhancement:       %s
+  Bug:               %s
+  Security:          %s
 `
 
 // Platform is the platform for managing a Git remote repository.
@@ -237,4 +275,16 @@ func (s Spec) PrintHelp() error {
 	}
 
 	return tmpl.Execute(os.Stdout, s)
+}
+
+func (s Spec) String() string {
+	return fmt.Sprintf(format,
+		s.Repo.Platform, s.Repo.Path, strings.Repeat("*", len(s.Repo.AccessToken)),
+		s.General.File, s.General.Base, s.General.Print, s.General.Verbose,
+		s.Changes.Issues, s.Changes.Merges,
+		s.Release.Branch, s.Release.FromTag, s.Release.ToTag, s.Release.FutureTag, s.Release.ExcludeTags, s.Release.ExcludeTagsRegex,
+		s.Format.GroupBy, s.Format.ReleaseURL,
+		s.Labels.Include, s.Labels.Exclude, s.Labels.Summary, s.Labels.Removed, s.Labels.Breaking,
+		s.Labels.Deprecated, s.Labels.Feature, s.Labels.Enhancement, s.Labels.Bug, s.Labels.Security,
+	)
 }

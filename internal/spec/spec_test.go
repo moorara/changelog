@@ -6,10 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moorara/changelog/internal/git"
+	"github.com/moorara/changelog/pkg/log"
 )
 
 func TestDefault(t *testing.T) {
-	gitRepo, err := git.NewRepo(".")
+	l := log.New(log.None)
+	gitRepo, err := git.NewRepo(l, ".")
 	assert.NoError(t, err)
 
 	spec, err := Default(gitRepo)
@@ -46,7 +48,8 @@ func TestDefault(t *testing.T) {
 }
 
 func TestFromFile(t *testing.T) {
-	gitRepo, err := git.NewRepo(".")
+	l := log.New(log.None)
+	gitRepo, err := git.NewRepo(l, ".")
 	assert.NoError(t, err)
 
 	spec, err := Default(gitRepo)
@@ -147,4 +150,11 @@ func TestSpec_PrintHelp(t *testing.T) {
 	err := s.PrintHelp()
 
 	assert.NoError(t, err)
+}
+
+func TestSpec_String(t *testing.T) {
+	s := new(Spec)
+	str := s.String()
+
+	assert.NotEmpty(t, str)
 }

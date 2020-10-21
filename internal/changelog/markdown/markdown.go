@@ -1,13 +1,15 @@
-package changelog
+package markdown
 
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"time"
+
+	"github.com/moorara/changelog/internal/changelog"
+	"github.com/moorara/changelog/pkg/log"
 )
 
 var (
@@ -15,32 +17,38 @@ var (
 	h2Regex = regexp.MustCompile(`^## \[([0-9A-Za-z-.]+)\]\(([0-9A-Za-z-.:/]+)\) \((\d{4}-\d{2}-\d{2})\)$`)
 )
 
-// markdownProcessor implements the changelog.Processor interface for Markdown format.
-type markdownProcessor struct {
-	logger   *log.Logger
+// processor implements the changelog.Processor interface for Markdown format.
+type processor struct {
+	logger   log.Logger
 	filename string
 	doc      string
 }
 
-// NewMarkdownProcessor creates a new changelog processor for Markdown format.
-func NewMarkdownProcessor(logger *log.Logger, filename string) Processor {
-	return &markdownProcessor{
+// NewProcessor creates a new changelog processor for Markdown format.
+func NewProcessor(logger log.Logger, filename string) changelog.Processor {
+	return &processor{
 		logger:   logger,
 		filename: filepath.Clean(filename),
 	}
 }
 
-func (p *markdownProcessor) Parse(opts ParseOptions) (*Changelog, error) {
+func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, error) {
+	p.logger.Debugf("Opening %s ...", p.filename)
+
 	f, err := os.Open(p.filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return NewChangelog(), nil
+			p.logger.Warnf("%s not found", p.filename)
+			p.logger.Info("A new changelog is created.")
+			return changelog.NewChangelog(), nil
 		}
 		return nil, err
 	}
 	defer f.Close()
 
-	chlog := new(Changelog)
+	p.logger.Debugf("Parsing %s ...", p.filename)
+
+	chlog := new(changelog.Changelog)
 	scanner := bufio.NewScanner(f)
 
 	for scanner.Scan() {
@@ -55,7 +63,7 @@ func (p *markdownProcessor) Parse(opts ParseOptions) (*Changelog, error) {
 				return nil, err
 			}
 
-			chlog.Releases = append(chlog.Releases, Release{
+			chlog.Releases = append(chlog.Releases, changelog.Release{
 				GitTag:    sm[1],
 				URL:       sm[2],
 				Timestamp: ts,
@@ -67,13 +75,19 @@ func (p *markdownProcessor) Parse(opts ParseOptions) (*Changelog, error) {
 		return nil, err
 	}
 
+	p.logger.Infof("Successfully parsed %s", p.filename)
+
 	return chlog, nil
 }
 
-func (p *markdownProcessor) Render(chlog *Changelog) (string, error) {
+func (p *processor) Render(chlog *changelog.Changelog) (string, error) {
+	p.logger.Debugf("Rendering the changelog ...")
+
 	// UPDATE THE MARKDOWN DOCUMENT
 
 	// RENDER THE MARKDOWN DOCUMENT
+
+	p.logger.Infof("Successfully rendered the changelog.")
 
 	return fmt.Sprintf("%+v", chlog), nil
 }

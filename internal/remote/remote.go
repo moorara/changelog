@@ -1,8 +1,13 @@
 package remote
 
+import (
+	"context"
+	"time"
+)
+
 // Repo is the abstraction for a remote repository.
 type Repo interface {
-	FetchClosedIssuesAndMerges() ([]Issue, []Merge, error)
+	FetchClosedIssuesAndMerges(context.Context, time.Time) ([]Issue, []Merge, error)
 }
 
 // Issue represents a single issue.

@@ -1,23 +1,24 @@
 package main
 
 import (
-	"log"
-	"os"
+	"context"
+	"fmt"
 
 	"github.com/moorara/flagit"
 
 	"github.com/moorara/changelog/internal/generate"
 	"github.com/moorara/changelog/internal/git"
 	"github.com/moorara/changelog/internal/spec"
+	"github.com/moorara/changelog/pkg/log"
 	"github.com/moorara/changelog/version"
 )
 
 func main() {
 	// CREATE DEPENDENCIES
 
-	logger := log.New(os.Stdout, "", 0)
+	logger := log.New(log.Debug)
 
-	gitRepo, err := git.NewRepo(".")
+	gitRepo, err := git.NewRepo(logger, ".")
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -38,6 +39,8 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	logger.Debug(s)
+
 	// RUNNING COMMANDS
 
 	switch {
@@ -47,11 +50,13 @@ func main() {
 		}
 
 	case s.Version:
-		logger.Println(version.String())
+		fmt.Println(version.String())
 
 	default:
 		g := generate.New(s, logger, gitRepo)
-		if err := g.Generate(); err != nil {
+		ctx := context.Background()
+
+		if err := g.Generate(ctx); err != nil {
 			logger.Fatal(err)
 		}
 	}

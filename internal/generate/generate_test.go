@@ -1,15 +1,17 @@
 package generate
 
 import (
+	"context"
 	"errors"
-	"log"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/moorara/changelog/internal/changelog"
 	"github.com/moorara/changelog/internal/git"
 	"github.com/moorara/changelog/internal/spec"
-	"github.com/stretchr/testify/assert"
+	"github.com/moorara/changelog/pkg/log"
 )
 
 func TestNew(t *testing.T) {
@@ -22,19 +24,19 @@ func TestNew(t *testing.T) {
 	tests := []struct {
 		name    string
 		s       spec.Spec
-		logger  *log.Logger
+		logger  log.Logger
 		gitRepo *git.Repo
 	}{
 		{
 			name:    "GitHub",
 			s:       specGitHub,
-			logger:  &log.Logger{},
+			logger:  log.New(log.None),
 			gitRepo: &git.Repo{},
 		},
 		{
 			name:    "GitLab",
 			s:       specGitLab,
-			logger:  &log.Logger{},
+			logger:  log.New(log.None),
 			gitRepo: &git.Repo{},
 		},
 	}
@@ -56,12 +58,13 @@ func TestGenerator_Generate(t *testing.T) {
 	tests := []struct {
 		name          string
 		g             *Generator
+		ctx           context.Context
 		expectedError string
 	}{}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.g.Generate()
+			err := tc.g.Generate(tc.ctx)
 
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
@@ -131,8 +134,11 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		expectedError   error
 	}{
 		{
-			name:            "NoTagAndNoChangelog",
-			g:               &Generator{spec: specWithDefaults},
+			name: "NoTagAndNoChangelog",
+			g: &Generator{
+				spec:   specWithDefaults,
+				logger: log.New(log.None),
+			},
 			tags:            git.Tags{},
 			chlog:           &changelog.Changelog{},
 			expectedFromTag: git.Tag{},
@@ -140,8 +146,11 @@ func TestGenerator_ResolveTags(t *testing.T) {
 			expectedError:   nil,
 		},
 		{
-			name:            "FirstRelease",
-			g:               &Generator{spec: specWithDefaults},
+			name: "FirstRelease",
+			g: &Generator{
+				spec:   specWithDefaults,
+				logger: log.New(log.None),
+			},
 			tags:            git.Tags{tag1},
 			chlog:           &changelog.Changelog{},
 			expectedFromTag: git.Tag{},
@@ -150,7 +159,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		},
 		{
 			name: "TagNotInChangelog",
-			g:    &Generator{spec: specWithDefaults},
+			g: &Generator{
+				spec:   specWithDefaults,
+				logger: log.New(log.None),
+			},
 			tags: git.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
@@ -163,7 +175,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		},
 		{
 			name: "SecondRelease",
-			g:    &Generator{spec: specWithDefaults},
+			g: &Generator{
+				spec:   specWithDefaults,
+				logger: log.New(log.None),
+			},
 			tags: git.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
@@ -176,7 +191,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		},
 		{
 			name: "InvalidFromTag",
-			g:    &Generator{spec: specWithInvalidFromTag},
+			g: &Generator{
+				spec:   specWithInvalidFromTag,
+				logger: log.New(log.None),
+			},
 			tags: git.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
@@ -189,7 +207,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		},
 		{
 			name: "InvalidToTag",
-			g:    &Generator{spec: specWithInvalidToTag},
+			g: &Generator{
+				spec:   specWithInvalidToTag,
+				logger: log.New(log.None),
+			},
 			tags: git.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
@@ -202,7 +223,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		},
 		{
 			name: "FromTagBeforeLastChangelogTag",
-			g:    &Generator{spec: specWithBeforeFromTag},
+			g: &Generator{
+				spec:   specWithBeforeFromTag,
+				logger: log.New(log.None),
+			},
 			tags: git.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
@@ -216,7 +240,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		},
 		{
 			name: "ToTagBeforeFromTag",
-			g:    &Generator{spec: specWithToTagBeforeFromTag},
+			g: &Generator{
+				spec:   specWithToTagBeforeFromTag,
+				logger: log.New(log.None),
+			},
 			tags: git.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
@@ -230,7 +257,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		},
 		{
 			name: "SameFromAndToTags",
-			g:    &Generator{spec: specWithSameFromAndToTags},
+			g: &Generator{
+				spec:   specWithSameFromAndToTags,
+				logger: log.New(log.None),
+			},
 			tags: git.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
@@ -244,7 +274,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 		},
 		{
 			name: "ValidFromAndToTags",
-			g:    &Generator{spec: specWithValidFromAndToTags},
+			g: &Generator{
+				spec:   specWithValidFromAndToTags,
+				logger: log.New(log.None),
+			},
 			tags: git.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{

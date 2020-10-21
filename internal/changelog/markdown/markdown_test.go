@@ -1,67 +1,72 @@
-package changelog
+package markdown
 
 import (
-	"log"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/moorara/changelog/internal/changelog"
+	"github.com/moorara/changelog/pkg/log"
 )
 
-func TestNewMarkdownProcessor(t *testing.T) {
+func TestNewProcessor(t *testing.T) {
 	tests := []struct {
 		name     string
-		logger   *log.Logger
+		logger   log.Logger
 		filename string
 	}{
 		{
 			name:     "OK",
-			logger:   &log.Logger{},
+			logger:   log.New(log.None),
 			filename: "CHANGELOG.md",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			proc := NewMarkdownProcessor(tc.logger, tc.filename)
-			assert.NotNil(t, proc)
+			p := NewProcessor(tc.logger, tc.filename)
+			assert.NotNil(t, p)
 
-			p, ok := proc.(*markdownProcessor)
+			mp, ok := p.(*processor)
 			assert.True(t, ok)
 
-			assert.Equal(t, tc.logger, p.logger)
-			assert.Equal(t, tc.filename, p.filename)
-			assert.Empty(t, p.doc)
+			assert.Equal(t, tc.logger, mp.logger)
+			assert.Equal(t, tc.filename, mp.filename)
+			assert.Empty(t, mp.doc)
 		})
 	}
 }
 
-func TestMarkdownProcessor_Parse(t *testing.T) {
+func TestProcessor_Parse(t *testing.T) {
 	tests := []struct {
 		name              string
-		p                 *markdownProcessor
-		opts              ParseOptions
-		expectedChangelog *Changelog
+		p                 *processor
+		opts              changelog.ParseOptions
+		expectedChangelog *changelog.Changelog
 		expectedError     string
 	}{
 		{
 			name: "FileNotExist",
-			p:    &markdownProcessor{},
-			opts: ParseOptions{},
-			expectedChangelog: &Changelog{
+			p: &processor{
+				logger: log.New(log.None),
+			},
+			opts: changelog.ParseOptions{},
+			expectedChangelog: &changelog.Changelog{
 				Title: "Changelog",
 			},
 			expectedError: "",
 		},
 		{
 			name: "Success",
-			p: &markdownProcessor{
+			p: &processor{
+				logger:   log.New(log.None),
 				filename: "test/CHANGELOG.md",
 			},
-			opts: ParseOptions{},
-			expectedChangelog: &Changelog{
+			opts: changelog.ParseOptions{},
+			expectedChangelog: &changelog.Changelog{
 				Title: "Changelog",
-				Releases: []Release{
+				Releases: []changelog.Release{
 					{
 						GitTag:    "v0.1.1",
 						URL:       "https://github.com/moorara/changelog/tree/v0.1.1",
@@ -93,18 +98,20 @@ func TestMarkdownProcessor_Parse(t *testing.T) {
 	}
 }
 
-func TestMarkdownProcessor_Render(t *testing.T) {
+func TestProcessor_Render(t *testing.T) {
 	tests := []struct {
 		name           string
-		p              *markdownProcessor
-		chlog          *Changelog
+		p              *processor
+		chlog          *changelog.Changelog
 		expectedString string
 		expectedError  error
 	}{
 		{
-			name:           "OK",
-			p:              &markdownProcessor{},
-			chlog:          &Changelog{},
+			name: "OK",
+			p: &processor{
+				logger: log.New(log.None),
+			},
+			chlog:          &changelog.Changelog{},
 			expectedString: "&{Title: New:[] Releases:[]}",
 			expectedError:  nil,
 		},

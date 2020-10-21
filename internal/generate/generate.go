@@ -1,34 +1,38 @@
 package generate
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"log"
 	"regexp"
 
 	"github.com/moorara/changelog/internal/changelog"
+	"github.com/moorara/changelog/internal/changelog/markdown"
 	"github.com/moorara/changelog/internal/git"
 	"github.com/moorara/changelog/internal/remote"
+	"github.com/moorara/changelog/internal/remote/github"
+	"github.com/moorara/changelog/internal/remote/gitlab"
 	"github.com/moorara/changelog/internal/spec"
+	"github.com/moorara/changelog/pkg/log"
 )
 
 // Generator is the changelog generator.
 type Generator struct {
 	spec       spec.Spec
-	logger     *log.Logger
+	logger     log.Logger
 	gitRepo    *git.Repo
 	remoteRepo remote.Repo
 	processor  changelog.Processor
 }
 
 // New creates a new changelog generator.
-func New(s spec.Spec, logger *log.Logger, gitRepo *git.Repo) *Generator {
+func New(s spec.Spec, logger log.Logger, gitRepo *git.Repo) *Generator {
 	var remoteRepo remote.Repo
 	switch s.Repo.Platform {
 	case spec.PlatformGitHub:
-		remoteRepo = remote.NewGitHubRepo(logger, s.Repo.Path, s.Repo.AccessToken)
+		remoteRepo = github.NewRepo(logger, s.Repo.Path, s.Repo.AccessToken)
 	case spec.PlatformGitLab:
-		remoteRepo = remote.NewGitLabRepo(logger, s.Repo.Path, s.Repo.AccessToken)
+		remoteRepo = gitlab.NewRepo(logger, s.Repo.Path, s.Repo.AccessToken)
 	}
 
 	return &Generator{
@@ -36,12 +40,12 @@ func New(s spec.Spec, logger *log.Logger, gitRepo *git.Repo) *Generator {
 		logger:     logger,
 		gitRepo:    gitRepo,
 		remoteRepo: remoteRepo,
-		processor:  changelog.NewMarkdownProcessor(logger, s.General.File),
+		processor:  markdown.NewProcessor(logger, s.General.File),
 	}
 }
 
 // Generate generates changelogs for a Git repository.
-func (g *Generator) Generate() error {
+func (g *Generator) Generate(ctx context.Context) error {
 	// PARSE THE EXISTING CHANGELOG IF ANY
 
 	chlog, err := g.processor.Parse(changelog.ParseOptions{})
@@ -56,6 +60,8 @@ func (g *Generator) Generate() error {
 		return err
 	}
 
+	g.logger.Info("Sorting and filtering git tags ...")
+
 	tags = tags.Sort()
 	tags = tags.Exclude(g.spec.Release.ExcludeTags...)
 
@@ -67,42 +73,33 @@ func (g *Generator) Generate() error {
 		tags = tags.ExcludeRegex(re)
 	}
 
-	fromTag, toTag, err := g.resolveTags(tags, chlog)
+	fromTag, _, err := g.resolveTags(tags, chlog)
 	if err != nil {
 		return err
 	}
-
-	// TODO: Remove!
-	fmt.Printf("FromTag: %s\nToTag: %s\n", fromTag, toTag)
-	if g.spec.Release.FutureTag != "" {
-		fmt.Printf("FutureTag: %s\n", g.spec.Release.FutureTag)
-	}
-	fmt.Println()
 
 	// FETCH ISSUES AND MERGES
 
-	issues, merges, err := g.remoteRepo.FetchClosedIssuesAndMerges()
+	since := fromTag.Tagger.Timestamp
+
+	_, _, err = g.remoteRepo.FetchClosedIssuesAndMerges(ctx, since)
 	if err != nil {
 		return err
 	}
-
-	// TODO: Remove!
-	fmt.Printf("Issues: %s\nMerges: %s\n\n", issues, merges)
 
 	// UPDATE THE CHANGELOG
 
-	content, err := g.processor.Render(chlog)
+	_, err = g.processor.Render(chlog)
 	if err != nil {
 		return err
 	}
-
-	// TODO: Remove!
-	fmt.Println(content)
 
 	return nil
 }
 
 func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.Tag, git.Tag, error) {
+	g.logger.Debug("Resolving from and to tags ...")
+
 	var ok bool
 	var zero git.Tag
 	var lastGitTag, lastChangelogTag git.Tag
@@ -133,6 +130,7 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 		}
 
 		if fromTag.Before(lastChangelogTag) {
+			g.logger.Debugf("From tag updated to the last tag on changelog: %s", lastChangelogTag.Name)
 			fromTag = lastChangelogTag
 		}
 	}
@@ -149,6 +147,9 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 			return zero, zero, errors.New("to-tag should be after the from-tag")
 		}
 	}
+
+	g.logger.Infof("From tag resolved: %s", fromTag.Name)
+	g.logger.Infof("To tag resolved: %s", toTag.Name)
 
 	return fromTag, toTag, nil
 }

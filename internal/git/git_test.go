@@ -9,6 +9,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/moorara/changelog/pkg/log"
 )
 
 func TestTagType(t *testing.T) {
@@ -465,18 +467,20 @@ func TestTags_ExcludeRegex(t *testing.T) {
 
 func TestNewRepo(t *testing.T) {
 	tests := []struct {
-		name string
-		path string
+		name   string
+		logger log.Logger
+		path   string
 	}{
 		{
-			name: "OK",
-			path: ".",
+			name:   "OK",
+			logger: log.New(log.None),
+			path:   ".",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := NewRepo(tc.path)
+			r, err := NewRepo(tc.logger, tc.path)
 
 			assert.NoError(t, err)
 			assert.NotNil(t, r)
@@ -491,14 +495,12 @@ func TestRepo_GetRemoteInfo(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		git            *git.Repository
 		expectedDomain string
 		expectedPath   string
 		expectedError  string
 	}{
 		{
 			name:           "OK",
-			git:            g,
 			expectedDomain: "github.com",
 			expectedPath:   "moorara/changelog",
 			expectedError:  "",
@@ -507,7 +509,11 @@ func TestRepo_GetRemoteInfo(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			r := &Repo{git: tc.git}
+			r := &Repo{
+				logger: log.New(log.None),
+				git:    g,
+			}
+
 			domain, path, err := r.GetRemoteInfo()
 
 			if tc.expectedError == "" {
@@ -529,19 +535,21 @@ func TestRepo_Tags(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		git           *git.Repository
 		expectedError string
 	}{
 		{
 			name:          "OK",
-			git:           g,
 			expectedError: "",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			r := &Repo{git: tc.git}
+			r := &Repo{
+				logger: log.New(log.None),
+				git:    g,
+			}
+
 			tags, err := r.Tags()
 
 			if tc.expectedError == "" {

@@ -10,6 +10,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+
+	"github.com/moorara/changelog/pkg/log"
 )
 
 var (
@@ -207,11 +209,12 @@ func (t Tags) ExcludeRegex(regex *regexp.Regexp) Tags {
 
 // Repo is a Git repository.
 type Repo struct {
-	git *git.Repository
+	logger log.Logger
+	git    *git.Repository
 }
 
 // NewRepo creates a new instance of Repo.
-func NewRepo(path string) (*Repo, error) {
+func NewRepo(logger log.Logger, path string) (*Repo, error) {
 	git, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{
 		DetectDotGit: true,
 	})
@@ -220,14 +223,19 @@ func NewRepo(path string) (*Repo, error) {
 		return nil, err
 	}
 
+	logger.Debug("Git repository found.")
+
 	return &Repo{
-		git: git,
+		logger: logger,
+		git:    git,
 	}, nil
 }
 
 // GetRemoteInfo returns the domain part and path part of a Git remote repository URL.
 // It assumes the remote repository is named origin.
 func (r *Repo) GetRemoteInfo() (string, string, error) {
+	r.logger.Debug("Reading git remote URL ...")
+
 	// TODO: Should we handle all remote names and not just the origin?
 	remote, err := r.git.Remote("origin")
 	if err != nil {
@@ -244,10 +252,12 @@ func (r *Repo) GetRemoteInfo() (string, string, error) {
 	if matches := httpsRE.FindStringSubmatch(remoteURL); len(matches) == 6 {
 		// Git remote url is using HTTPS protocol
 		// Example: https://github.com/moorara/changelog.git --> matches = []string{"https://github.com/moorara/changelog.git", "github.com", "moorara/changelog", "moorara/", "changelog", ".git"}
+		r.logger.Infof("Git remote URL: %s", remoteURL)
 		return matches[1], matches[2], nil
 	} else if matches := sshRE.FindStringSubmatch(remoteURL); len(matches) == 6 {
 		// Git remote url is using SSH protocol
 		// Example: git@github.com:moorara/changelog.git --> matches = []string{"git@github.com:moorara/changelog.git", "github.com", "moorara/changelog, "moorara/", "changelog", ".git"}
+		r.logger.Infof("Git remote URL: %s", remoteURL)
 		return matches[1], matches[2], nil
 	}
 
@@ -256,12 +266,16 @@ func (r *Repo) GetRemoteInfo() (string, string, error) {
 
 // Tags returns all tags for the Git repository.
 func (r *Repo) Tags() (Tags, error) {
+	r.logger.Debug("Reading git tag references ...")
+
 	tags := Tags{}
 
 	refs, err := r.git.Tags()
 	if err != nil {
 		return nil, err
 	}
+
+	r.logger.Debug("Parsing git tag references ...")
 
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
 		tagObj, err := r.git.TagObject(ref.Hash())
@@ -291,6 +305,8 @@ func (r *Repo) Tags() (Tags, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	r.logger.Debug("Git tags parsed.")
 
 	return tags, nil
 }
