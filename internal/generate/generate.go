@@ -20,13 +20,13 @@ import (
 type Generator struct {
 	spec       spec.Spec
 	logger     log.Logger
-	gitRepo    *git.Repo
+	gitRepo    git.Repo
 	remoteRepo remote.Repo
 	processor  changelog.Processor
 }
 
 // New creates a new changelog generator.
-func New(s spec.Spec, logger log.Logger, gitRepo *git.Repo) *Generator {
+func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
 	var remoteRepo remote.Repo
 	switch s.Repo.Platform {
 	case spec.PlatformGitHub:
@@ -42,59 +42,6 @@ func New(s spec.Spec, logger log.Logger, gitRepo *git.Repo) *Generator {
 		remoteRepo: remoteRepo,
 		processor:  markdown.NewProcessor(logger, s.General.File),
 	}
-}
-
-// Generate generates changelogs for a Git repository.
-func (g *Generator) Generate(ctx context.Context) error {
-	// PARSE THE EXISTING CHANGELOG IF ANY
-
-	chlog, err := g.processor.Parse(changelog.ParseOptions{})
-	if err != nil {
-		return err
-	}
-
-	// GET AND FILTER GIT TAGS
-
-	tags, err := g.gitRepo.Tags()
-	if err != nil {
-		return err
-	}
-
-	g.logger.Info("Sorting and filtering git tags ...")
-
-	tags = tags.Sort()
-	tags = tags.Exclude(g.spec.Release.ExcludeTags...)
-
-	if g.spec.Release.ExcludeTagsRegex != "" {
-		re, err := regexp.CompilePOSIX(g.spec.Release.ExcludeTagsRegex)
-		if err != nil {
-			return err
-		}
-		tags = tags.ExcludeRegex(re)
-	}
-
-	fromTag, _, err := g.resolveTags(tags, chlog)
-	if err != nil {
-		return err
-	}
-
-	// FETCH ISSUES AND MERGES
-
-	since := fromTag.Tagger.Timestamp
-
-	_, _, err = g.remoteRepo.FetchClosedIssuesAndMerges(ctx, since)
-	if err != nil {
-		return err
-	}
-
-	// UPDATE THE CHANGELOG
-
-	_, err = g.processor.Render(chlog)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.Tag, git.Tag, error) {
@@ -122,11 +69,11 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 	}
 
 	// Resolve the from tag
-	if g.spec.Release.FromTag == "" {
+	if g.spec.Tags.From == "" {
 		fromTag = lastChangelogTag
 	} else {
-		if fromTag, ok = tags.Find(g.spec.Release.FromTag); !ok {
-			return zero, zero, fmt.Errorf("from-tag not found: %s", g.spec.Release.FromTag)
+		if fromTag, ok = tags.Find(g.spec.Tags.From); !ok {
+			return zero, zero, fmt.Errorf("from-tag not found: %s", g.spec.Tags.From)
 		}
 
 		if fromTag.Before(lastChangelogTag) {
@@ -136,11 +83,11 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 	}
 
 	// Resolve the to tag
-	if g.spec.Release.ToTag == "" {
+	if g.spec.Tags.To == "" {
 		toTag = lastGitTag
 	} else {
-		if toTag, ok = tags.Find(g.spec.Release.ToTag); !ok {
-			return zero, zero, fmt.Errorf("to-tag not found: %s", g.spec.Release.ToTag)
+		if toTag, ok = tags.Find(g.spec.Tags.To); !ok {
+			return zero, zero, fmt.Errorf("to-tag not found: %s", g.spec.Tags.To)
 		}
 
 		if toTag.Before(fromTag) || toTag.Equal(fromTag) {
@@ -152,4 +99,137 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 	g.logger.Infof("To tag resolved: %s", toTag.Name)
 
 	return fromTag, toTag, nil
+}
+
+func (g *Generator) filterByLabels(issues, merges remote.Changes) (remote.Changes, remote.Changes) {
+	g.logger.Debug("Filtering issues pull/merge requests by labels ...")
+
+	switch g.spec.Issues.Selection {
+	case spec.SelectionNone:
+		issues = remote.Changes{}
+
+	case spec.SelectionAll:
+		// All issues without labels or if any labels, they should include one of the given labels
+		if len(g.spec.Issues.IncludeLabels) > 0 {
+			issues = issues.Select(func(c remote.Change) bool {
+				return len(c.Labels) == 0 || c.Labels.Any(g.spec.Issues.IncludeLabels...)
+			})
+		}
+		if len(g.spec.Issues.ExcludeLabels) > 0 {
+			issues = issues.Select(func(c remote.Change) bool {
+				return len(c.Labels) == 0 || !c.Labels.Any(g.spec.Issues.ExcludeLabels...)
+			})
+		}
+
+	case spec.SelectionLabeled:
+		// Select only labeled issues
+		issues = issues.Select(func(c remote.Change) bool {
+			return len(c.Labels) > 0
+		})
+		if len(g.spec.Issues.IncludeLabels) > 0 {
+			issues = issues.Select(func(c remote.Change) bool {
+				return c.Labels.Any(g.spec.Issues.IncludeLabels...)
+			})
+		}
+		if len(g.spec.Issues.ExcludeLabels) > 0 {
+			issues = issues.Select(func(c remote.Change) bool {
+				return !c.Labels.Any(g.spec.Issues.ExcludeLabels...)
+			})
+		}
+	}
+
+	g.logger.Infof("Filtered issues by labels: %d", len(issues))
+
+	switch g.spec.Merges.Selection {
+	case spec.SelectionNone:
+		merges = remote.Changes{}
+
+	case spec.SelectionAll:
+		// All merges without labels or if any labels, they should include one of the given labels
+		if len(g.spec.Merges.IncludeLabels) > 0 {
+			merges = merges.Select(func(c remote.Change) bool {
+				return len(c.Labels) == 0 || c.Labels.Any(g.spec.Merges.IncludeLabels...)
+			})
+		}
+		if len(g.spec.Merges.ExcludeLabels) > 0 {
+			merges = merges.Select(func(c remote.Change) bool {
+				return len(c.Labels) == 0 || !c.Labels.Any(g.spec.Merges.ExcludeLabels...)
+			})
+		}
+
+	case spec.SelectionLabeled:
+		// Select only labeled merges
+		merges = merges.Select(func(c remote.Change) bool {
+			return len(c.Labels) > 0
+		})
+		if len(g.spec.Merges.IncludeLabels) > 0 {
+			merges = merges.Select(func(c remote.Change) bool {
+				return c.Labels.Any(g.spec.Merges.IncludeLabels...)
+			})
+		}
+		if len(g.spec.Merges.ExcludeLabels) > 0 {
+			merges = merges.Select(func(c remote.Change) bool {
+				return !c.Labels.Any(g.spec.Merges.ExcludeLabels...)
+			})
+		}
+	}
+
+	g.logger.Infof("Filtered pull/merge requests by labels: %d", len(merges))
+
+	return issues, merges
+}
+
+// Generate generates changelogs for a Git repository.
+func (g *Generator) Generate(ctx context.Context) error {
+	// PARSE THE EXISTING CHANGELOG IF ANY
+
+	chlog, err := g.processor.Parse(changelog.ParseOptions{})
+	if err != nil {
+		return err
+	}
+
+	// GET AND FILTER GIT TAGS
+
+	tags, err := g.gitRepo.Tags()
+	if err != nil {
+		return err
+	}
+
+	g.logger.Info("Sorting and filtering git tags ...")
+
+	tags = tags.Sort()
+	tags = tags.Exclude(g.spec.Tags.Exclude...)
+
+	if g.spec.Tags.ExcludeRegex != "" {
+		re, err := regexp.CompilePOSIX(g.spec.Tags.ExcludeRegex)
+		if err != nil {
+			return err
+		}
+		tags = tags.ExcludeRegex(re)
+	}
+
+	fromTag, _, err := g.resolveTags(tags, chlog)
+	if err != nil {
+		return err
+	}
+
+	// FETCH ISSUES AND MERGES
+
+	since := fromTag.Commit.Committer.Timestamp
+
+	issues, merges, err := g.remoteRepo.FetchClosedIssuesAndMerges(ctx, since)
+	if err != nil {
+		return err
+	}
+
+	issues, merges = g.filterByLabels(issues, merges)
+
+	// UPDATE THE CHANGELOG
+
+	_, err = g.processor.Render(chlog)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

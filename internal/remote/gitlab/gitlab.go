@@ -38,7 +38,7 @@ func NewRepo(logger log.Logger, path, accessToken string) remote.Repo {
 	}
 }
 
-// FetchClosedIssuesAndMerges retrieves all issues and merges requests for a GitLab repository.
-func (r *repo) FetchClosedIssuesAndMerges(ctx context.Context, since time.Time) ([]remote.Issue, []remote.Merge, error) {
-	return []remote.Issue{}, []remote.Merge{}, nil
+// FetchClosedIssuesAndMerges retrieves all issues and merge requests for a GitLab repository.
+func (r *repo) FetchClosedIssuesAndMerges(ctx context.Context, since time.Time) ([]remote.Change, []remote.Change, error) {
+	return []remote.Change{}, []remote.Change{}, nil
 }

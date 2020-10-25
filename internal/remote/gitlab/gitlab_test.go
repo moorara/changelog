@@ -1,7 +1,9 @@
 package gitlab
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -38,4 +40,16 @@ func TestNewRepo(t *testing.T) {
 			assert.Equal(t, tc.accessToken, gr.accessToken)
 		})
 	}
+}
+
+func TestRepo_FetchClosedIssuesAndMerges(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	issues, merges, err := r.FetchClosedIssuesAndMerges(context.Background(), time.Now())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, issues)
+	assert.NotNil(t, merges)
 }

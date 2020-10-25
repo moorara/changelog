@@ -1,6 +1,6 @@
 general:
   file: RELEASE-NOTES.md
-  base: OLD-NOTES.md
+  base: SUMMARY-NOTES.md
   print: true
   verbose: true
 
@@ -8,26 +8,42 @@ changes:
   issues: labeled
   merges: labeled
 
-release:
-  branch: release
-  from-tag: v0.1.0
-  to-tag: v0.5.0
-  future-tag: v1.0.0
-  exclude-tags: [ staging ]
-  exclude-tags-regex: (.*)-(alpha|beta)
+tags:
+  from: v0.1.0
+  to: v0.2.0
+  future: v0.3.0
+  exclude: [ staging ]
+  exclude-regex: (.*)-(alpha|beta)
+
+issues:
+  selection: labeled
+  include-labels: [ breaking, bug, defect, deprecated, dropped, enhancement, feature, highlight, improvement, incompatible, new, not-supported, privacy, removed, security, summary ]
+  exclude-labels: [ documentation, duplicate, invalid, question, wontfix ]
+  grouping: true
+  summary-labels: [ summary, highlight ]
+  removed-labels: [ removed, dropped ]
+  breaking-labels: [ breaking, incompatible ]
+  deprecated-labels: [ deprecated, not-supported ]
+  feature-labels: [ feature, new ]
+  enhancement-labels: [ enhancement, improvement ]
+  bug-labels: [ bug, defect ]
+  security-labels: [ security, privacy ]
+
+merges:
+  selection: labeled
+  branch: production
+  include-labels: [ breaking, bug, defect, deprecated, dropped, enhancement, feature, highlight, improvement, incompatible, new, not-supported, privacy, removed, security, summary ]
+  exclude-labels: [ documentation, duplicate, invalid, question, wontfix ]
+  grouping: true
+  summary-labels: [ summary, highlight ]
+  removed-labels: [ removed, dropped ]
+  breaking-labels: [ breaking, incompatible ]
+  deprecated-labels: [ deprecated, not-supported ]
+  feature-labels: [ feature, new ]
+  enhancement-labels: [ enhancement, improvement ]
+  bug-labels: [ bug, defect ]
+  security-labels: [ security, privacy ]
 
 format:
   group-by: milestone
   release-url: https://storage.artifactory.com/project/releases/{tag}
-
-labels:
-  include: [ breaking, bug, defect, deprecated, dropped, enhancement, fault, feature, highlight, improvement, incompatible, new, not-supported, privacy, removed, security, summary ]
-  exclude: [ documentation, duplicate, invalid, question, wontfix ]
-  summary: [ summary, highlight ]
-  removed: [ removed, dropped ]
-  breaking: [ breaking, incompatible ]
-  deprecated: [ deprecated, not-supported ]
-  feature: [ feature, new ]
-  enhancement: [ enhancement, improvement ]
-  bug: [ bug, defect, fault ]
-  security: [ security, privacy ]

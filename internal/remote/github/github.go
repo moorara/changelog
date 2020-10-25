@@ -30,92 +30,6 @@ var (
 	relLastRE = regexp.MustCompile(`<https://api.github.com/[\w\?=&-_]+page=(\d+)>; rel="last"`)
 )
 
-// scope represents a GitHub authorization scope.
-// See https://docs.github.com/en/developers/apps/scopes-for-oauth-apps
-type scope string
-
-const (
-	// scopeRepo grants full access to private and public repositories. It also grants ability to manage user projects.
-	scopeRepo scope = "repo"
-)
-
-type (
-	user struct {
-		ID         int       `json:"id"`
-		Login      string    `json:"login"`
-		Type       string    `json:"type"`
-		Email      string    `json:"email"`
-		Name       string    `json:"name"`
-		URL        string    `json:"url"`
-		HTMLURL    string    `json:"html_url"`
-		AvatarURL  string    `json:"avatar_url"`
-		GravatarID string    `json:"gravatar_id"`
-		CreatedAt  time.Time `json:"created_at"`
-		UpdatedAt  time.Time `json:"updated_at"`
-	}
-
-	label struct {
-		ID          int    `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Color       string `json:"color"`
-		Default     bool   `json:"default"`
-		URL         string `json:"url"`
-	}
-
-	milestone struct {
-		ID           int       `json:"id"`
-		Number       int       `json:"number"`
-		State        string    `json:"state"`
-		Title        string    `json:"title"`
-		Description  string    `json:"description"`
-		Creator      user      `json:"creator"`
-		OpenIssues   int       `json:"open_issues"`
-		ClosedIssues int       `json:"closed_issues"`
-		DueOn        time.Time `json:"due_on"`
-		URL          string    `json:"url"`
-		HTMLURL      string    `json:"html_url"`
-		LabelsURL    string    `json:"labels_url"`
-		CreatedAt    time.Time `json:"created_at"`
-		UpdatedAt    time.Time `json:"updated_at"`
-		ClosedAt     time.Time `json:"closed_at"`
-	}
-
-	pullRequestURLs struct {
-		URL      string `json:"url"`
-		HTMLURL  string `json:"html_url"`
-		DiffURL  string `json:"diff_url"`
-		PatchURL string `json:"patch_url"`
-	}
-
-	issue struct {
-		ID                int              `json:"id"`
-		Number            int              `json:"number"`
-		State             string           `json:"state"`
-		Title             string           `json:"title"`
-		Body              string           `json:"body"`
-		URL               string           `json:"url"`
-		HTMLURL           string           `json:"html_url"`
-		LabelsURL         string           `json:"labels_url"`
-		EventsURL         string           `json:"events_url"`
-		CommentsURL       string           `json:"comments_url"`
-		RepoURL           string           `json:"repository_url"`
-		User              user             `json:"user"`
-		Assignee          user             `json:"assignee"`
-		Assignees         []user           `json:"assignees"`
-		Labels            []label          `json:"labels"`
-		Milestone         milestone        `json:"milestone"`
-		Locked            bool             `json:"locked"`
-		LockReason        string           `json:"active_lock_reason"`
-		AuthorAssociation string           `json:"author_association"`
-		Comments          int              `json:"comments"`
-		PullRequest       *pullRequestURLs `json:"pull_request"`
-		CreatedAt         time.Time        `json:"created_at"`
-		UpdatedAt         time.Time        `json:"updated_at"`
-		ClosedAt          time.Time        `json:"closed_at"`
-	}
-)
-
 // repo implements the remote.Repo interface for GitHub.
 type repo struct {
 	logger      log.Logger
@@ -201,7 +115,7 @@ func (r *repo) checkScopes(ctx context.Context, scopes ...scope) error {
 func (r *repo) fetchPageCount(ctx context.Context, since time.Time) (int, error) {
 	// See https://docs.github.com/en/rest/reference/issues#list-repository-issues
 
-	r.logger.Debug("Fetching the total number of issue pages ...")
+	r.logger.Debug("Fetching the total number of GitHub issue pages ...")
 
 	url := fmt.Sprintf("/repos/%s/issues", r.path)
 	req, err := r.createRequest(ctx, "HEAD", url, nil)
@@ -234,7 +148,7 @@ func (r *repo) fetchPageCount(ctx context.Context, since time.Time) (int, error)
 		count, _ = strconv.Atoi(sm[1])
 	}
 
-	r.logger.Debugf("Fetched the total number of pages: %d", count)
+	r.logger.Debugf("Fetched the total number of GitHub issue pages: %d", count)
 
 	return count, nil
 }
@@ -242,7 +156,7 @@ func (r *repo) fetchPageCount(ctx context.Context, since time.Time) (int, error)
 func (r *repo) fetchIssues(ctx context.Context, since time.Time, pageNo int) ([]issue, error) {
 	// See https://docs.github.com/en/rest/reference/issues#list-repository-issues
 
-	r.logger.Debugf("Fetching issues page %d ...", pageNo)
+	r.logger.Debugf("Fetching GitHub issues page %d ...", pageNo)
 
 	url := fmt.Sprintf("/repos/%s/issues", r.path)
 	req, err := r.createRequest(ctx, "GET", url, nil)
@@ -269,14 +183,20 @@ func (r *repo) fetchIssues(ctx context.Context, since time.Time, pageNo int) ([]
 		return nil, err
 	}
 
-	r.logger.Debugf("Fetched issues page %d: %d", pageNo, len(issues))
+	r.logger.Debugf("Fetched GitHub issues page %d: %d", pageNo, len(issues))
 
 	return issues, nil
 }
 
-// FetchClosedIssuesAndMerges retrieves all issues and merges requests for a GitHub repository.
+// FetchClosedIssuesAndMerges retrieves all issues and pull requests for a GitHub repository.
 // See https://docs.github.com/en/rest/reference/issues#list-repository-issues
-func (r *repo) FetchClosedIssuesAndMerges(ctx context.Context, since time.Time) ([]remote.Issue, []remote.Merge, error) {
+func (r *repo) FetchClosedIssuesAndMerges(ctx context.Context, since time.Time) ([]remote.Change, []remote.Change, error) {
+	if since.IsZero() {
+		r.logger.Info("Fetching GitHub issues and pull requests since the beginning ...")
+	} else {
+		r.logger.Infof("Fetching GitHub issues since %s ...", since.Format(time.RFC3339))
+	}
+
 	if err := r.checkScopes(ctx, scopeRepo); err != nil {
 		return nil, nil, err
 	}
@@ -305,10 +225,9 @@ func (r *repo) FetchClosedIssuesAndMerges(ctx context.Context, since time.Time) 
 		return nil, nil, err
 	}
 
-	r.logger.Debugf("All issues are fetched: %d", len(gitHubIssues))
+	issues, merges := partitionIssuesAndMerges(gitHubIssues)
 
-	// TODO:
-	issues, merges := []remote.Issue{}, []remote.Merge{}
+	r.logger.Infof("All GitHub issues and pull requests are fetched: %d, %d", len(issues), len(merges))
 
 	return issues, merges, nil
 }

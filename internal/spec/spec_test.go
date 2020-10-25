@@ -4,92 +4,54 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/moorara/changelog/internal/git"
-	"github.com/moorara/changelog/pkg/log"
 )
 
 func TestDefault(t *testing.T) {
-	l := log.New(log.None)
-	gitRepo, err := git.NewRepo(l, ".")
-	assert.NoError(t, err)
-
-	spec, err := Default(gitRepo)
-	assert.NoError(t, err)
+	spec := Default("github.com", "octocat/Hello-World")
 
 	assert.NotNil(t, spec)
 	assert.Equal(t, PlatformGitHub, spec.Repo.Platform)
-	assert.Equal(t, "moorara/changelog", spec.Repo.Path)
+	assert.Equal(t, "octocat/Hello-World", spec.Repo.Path)
 	assert.Equal(t, "", spec.Repo.AccessToken)
 	assert.Equal(t, "CHANGELOG.md", spec.General.File)
 	assert.Equal(t, "HISTORY.md", spec.General.Base)
 	assert.Equal(t, false, spec.General.Print)
 	assert.Equal(t, false, spec.General.Verbose)
-	assert.Equal(t, SelectAll, spec.Changes.Issues)
-	assert.Equal(t, SelectAll, spec.Changes.Merges)
-	assert.Equal(t, "master", spec.Release.Branch)
-	assert.Equal(t, "", spec.Release.FromTag)
-	assert.Equal(t, "", spec.Release.ToTag)
-	assert.Equal(t, "", spec.Release.FutureTag)
-	assert.Equal(t, []string{}, spec.Release.ExcludeTags)
-	assert.Equal(t, "", spec.Release.ExcludeTagsRegex)
+	assert.Equal(t, "", spec.Tags.From)
+	assert.Equal(t, "", spec.Tags.To)
+	assert.Equal(t, "", spec.Tags.Future)
+	assert.Equal(t, []string{}, spec.Tags.Exclude)
+	assert.Equal(t, "", spec.Tags.ExcludeRegex)
+	assert.Equal(t, SelectionAll, spec.Issues.Selection)
+	assert.Nil(t, spec.Issues.IncludeLabels)
+	assert.Equal(t, []string{"duplicate", "invalid", "question", "wontfix"}, spec.Issues.ExcludeLabels)
+	assert.True(t, spec.Issues.Grouping)
+	assert.Equal(t, []string{"summary", "release-summary"}, spec.Issues.SummaryLabels)
+	assert.Equal(t, []string{"removed"}, spec.Issues.RemovedLabels)
+	assert.Equal(t, []string{"breaking"}, spec.Issues.BreakingLabels)
+	assert.Equal(t, []string{"deprecated"}, spec.Issues.DeprecatedLabels)
+	assert.Equal(t, []string{"feature"}, spec.Issues.FeatureLabels)
+	assert.Equal(t, []string{"enhancement"}, spec.Issues.EnhancementLabels)
+	assert.Equal(t, []string{"bug"}, spec.Issues.BugLabels)
+	assert.Equal(t, []string{"security"}, spec.Issues.SecurityLabels)
+	assert.Equal(t, SelectionAll, spec.Merges.Selection)
+	assert.Equal(t, "master", spec.Merges.Branch)
+	assert.Nil(t, spec.Merges.IncludeLabels)
+	assert.Nil(t, spec.Merges.ExcludeLabels)
+	assert.False(t, spec.Merges.Grouping)
+	assert.Equal(t, []string{}, spec.Merges.SummaryLabels)
+	assert.Equal(t, []string{}, spec.Merges.RemovedLabels)
+	assert.Equal(t, []string{}, spec.Merges.BreakingLabels)
+	assert.Equal(t, []string{}, spec.Merges.DeprecatedLabels)
+	assert.Equal(t, []string{}, spec.Merges.FeatureLabels)
+	assert.Equal(t, []string{}, spec.Merges.EnhancementLabels)
+	assert.Equal(t, []string{}, spec.Merges.BugLabels)
+	assert.Equal(t, []string{}, spec.Merges.SecurityLabels)
 	assert.Equal(t, GroupByLabel, spec.Format.GroupBy)
 	assert.Equal(t, "", spec.Format.ReleaseURL)
-	assert.Equal(t, []string{}, spec.Labels.Include)
-	assert.Equal(t, []string{"duplicate", "invalid", "question", "wontfix"}, spec.Labels.Exclude)
-	assert.Equal(t, []string{"summary", "release-summary"}, spec.Labels.Summary)
-	assert.Equal(t, []string{"removed"}, spec.Labels.Removed)
-	assert.Equal(t, []string{"breaking"}, spec.Labels.Breaking)
-	assert.Equal(t, []string{"deprecated"}, spec.Labels.Deprecated)
-	assert.Equal(t, []string{"feature"}, spec.Labels.Feature)
-	assert.Equal(t, []string{"enhancement"}, spec.Labels.Enhancement)
-	assert.Equal(t, []string{"bug"}, spec.Labels.Bug)
-	assert.Equal(t, []string{"security"}, spec.Labels.Security)
 }
 
 func TestFromFile(t *testing.T) {
-	l := log.New(log.None)
-	gitRepo, err := git.NewRepo(l, ".")
-	assert.NoError(t, err)
-
-	spec, err := Default(gitRepo)
-	assert.NoError(t, err)
-
-	expectedMinSpec := spec
-	expectedMinSpec.General.Print = true
-	expectedMinSpec.Release.Branch = "release"
-	expectedMinSpec.Format.GroupBy = GroupBy("milestone")
-	expectedMinSpec.Labels.Summary = []string{"summary", "highlight"}
-	expectedMinSpec.Labels.Removed = []string{"removed", "dropped"}
-	expectedMinSpec.Labels.Breaking = []string{"breaking", "incompatible"}
-	expectedMinSpec.Labels.Enhancement = []string{"enhancement", "improvement"}
-
-	expectedMaxSpec := spec
-	expectedMaxSpec.General.File = "RELEASE-NOTES.md"
-	expectedMaxSpec.General.Base = "OLD-NOTES.md"
-	expectedMaxSpec.General.Print = true
-	expectedMaxSpec.General.Verbose = true
-	expectedMaxSpec.Changes.Issues = Select("labeled")
-	expectedMaxSpec.Changes.Merges = Select("labeled")
-	expectedMaxSpec.Release.Branch = "release"
-	expectedMaxSpec.Release.FromTag = "v0.1.0"
-	expectedMaxSpec.Release.ToTag = "v0.5.0"
-	expectedMaxSpec.Release.FutureTag = "v1.0.0"
-	expectedMaxSpec.Release.ExcludeTags = []string{"staging"}
-	expectedMaxSpec.Release.ExcludeTagsRegex = `(.*)-(alpha|beta)`
-	expectedMaxSpec.Format.GroupBy = GroupBy("milestone")
-	expectedMaxSpec.Format.ReleaseURL = "https://storage.artifactory.com/project/releases/{tag}"
-	expectedMaxSpec.Labels.Include = []string{"breaking", "bug", "defect", "deprecated", "dropped", "enhancement", "fault", "feature", "highlight", "improvement", "incompatible", "new", "not-supported", "privacy", "removed", "security", "summary"}
-	expectedMaxSpec.Labels.Exclude = []string{"documentation", "duplicate", "invalid", "question", "wontfix"}
-	expectedMaxSpec.Labels.Summary = []string{"summary", "highlight"}
-	expectedMaxSpec.Labels.Removed = []string{"removed", "dropped"}
-	expectedMaxSpec.Labels.Breaking = []string{"breaking", "incompatible"}
-	expectedMaxSpec.Labels.Deprecated = []string{"deprecated", "not-supported"}
-	expectedMaxSpec.Labels.Feature = []string{"feature", "new"}
-	expectedMaxSpec.Labels.Enhancement = []string{"enhancement", "improvement"}
-	expectedMaxSpec.Labels.Bug = []string{"bug", "defect", "fault"}
-	expectedMaxSpec.Labels.Security = []string{"security", "privacy"}
-
 	tests := []struct {
 		name          string
 		specFiles     []string
@@ -100,32 +62,140 @@ func TestFromFile(t *testing.T) {
 		{
 			name:         "NoSpecFile",
 			specFiles:    []string{"test/null"},
-			spec:         spec,
-			expectedSpec: spec,
+			spec:         Default("github.com", "octocat/Hello-World"),
+			expectedSpec: Default("github.com", "octocat/Hello-World"),
 		},
 		{
 			name:          "EmptySpecFile",
 			specFiles:     []string{"test/empty.yaml"},
-			spec:          spec,
+			spec:          Default("github.com", "octocat/Hello-World"),
 			expectedError: "EOF",
 		},
 		{
 			name:          "InvalidSpecFile",
 			specFiles:     []string{"test/invalid.yaml"},
-			spec:          spec,
+			spec:          Default("github.com", "octocat/Hello-World"),
 			expectedError: "yaml: unmarshal errors",
 		},
 		{
-			name:         "MinimumSpecFile",
-			specFiles:    []string{"test/min.yaml"},
-			spec:         spec,
-			expectedSpec: expectedMinSpec,
+			name:      "MinimumSpecFile",
+			specFiles: []string{"test/min.yaml"},
+			spec:      Default("github.com", "octocat/Hello-World"),
+			expectedSpec: Spec{
+				Help:    false,
+				Version: false,
+				Repo: Repo{
+					Platform:    Platform("github.com"),
+					Path:        "octocat/Hello-World",
+					AccessToken: "",
+				},
+				General: General{
+					File:    "CHANGELOG.md",
+					Base:    "HISTORY.md",
+					Print:   true,
+					Verbose: false,
+				},
+				Tags: Tags{
+					From:         "",
+					To:           "",
+					Future:       "",
+					Exclude:      []string{},
+					ExcludeRegex: "",
+				},
+				Issues: Issues{
+					Selection:         SelectionLabeled,
+					IncludeLabels:     nil,
+					ExcludeLabels:     []string{"duplicate", "invalid", "question", "wontfix"},
+					Grouping:          true,
+					SummaryLabels:     []string{"summary", "release-summary"},
+					RemovedLabels:     []string{"removed"},
+					BreakingLabels:    []string{"breaking"},
+					DeprecatedLabels:  []string{"deprecated"},
+					FeatureLabels:     []string{"feature"},
+					EnhancementLabels: []string{"enhancement"},
+					BugLabels:         []string{"bug"},
+					SecurityLabels:    []string{"security"},
+				},
+				Merges: Merges{
+					Selection:         SelectionAll,
+					Branch:            "production",
+					IncludeLabels:     nil,
+					ExcludeLabels:     nil,
+					Grouping:          false,
+					SummaryLabels:     []string{},
+					RemovedLabels:     []string{},
+					BreakingLabels:    []string{},
+					DeprecatedLabels:  []string{},
+					FeatureLabels:     []string{},
+					EnhancementLabels: []string{},
+					BugLabels:         []string{},
+					SecurityLabels:    []string{},
+				},
+				Format: Format{
+					GroupBy:    GroupByMilestone,
+					ReleaseURL: "",
+				},
+			},
 		},
 		{
-			name:         "MaximumSpecFile",
-			specFiles:    []string{"test/max.yaml"},
-			spec:         spec,
-			expectedSpec: expectedMaxSpec,
+			name:      "MaximumSpecFile",
+			specFiles: []string{"test/max.yaml"},
+			spec:      Default("github.com", "octocat/Hello-World"),
+			expectedSpec: Spec{
+				Help:    false,
+				Version: false,
+				Repo: Repo{
+					Platform:    Platform("github.com"),
+					Path:        "octocat/Hello-World",
+					AccessToken: "",
+				},
+				General: General{
+					File:    "RELEASE-NOTES.md",
+					Base:    "SUMMARY-NOTES.md",
+					Print:   true,
+					Verbose: true,
+				},
+				Tags: Tags{
+					From:         "v0.1.0",
+					To:           "v0.2.0",
+					Future:       "v0.3.0",
+					Exclude:      []string{"staging"},
+					ExcludeRegex: `(.*)-(alpha|beta)`,
+				},
+				Issues: Issues{
+					Selection:         SelectionLabeled,
+					IncludeLabels:     []string{"breaking", "bug", "defect", "deprecated", "dropped", "enhancement", "feature", "highlight", "improvement", "incompatible", "new", "not-supported", "privacy", "removed", "security", "summary"},
+					ExcludeLabels:     []string{"documentation", "duplicate", "invalid", "question", "wontfix"},
+					Grouping:          true,
+					SummaryLabels:     []string{"summary", "highlight"},
+					RemovedLabels:     []string{"removed", "dropped"},
+					BreakingLabels:    []string{"breaking", "incompatible"},
+					DeprecatedLabels:  []string{"deprecated", "not-supported"},
+					FeatureLabels:     []string{"feature", "new"},
+					EnhancementLabels: []string{"enhancement", "improvement"},
+					BugLabels:         []string{"bug", "defect"},
+					SecurityLabels:    []string{"security", "privacy"},
+				},
+				Merges: Merges{
+					Selection:         SelectionLabeled,
+					Branch:            "production",
+					IncludeLabels:     []string{"breaking", "bug", "defect", "deprecated", "dropped", "enhancement", "feature", "highlight", "improvement", "incompatible", "new", "not-supported", "privacy", "removed", "security", "summary"},
+					ExcludeLabels:     []string{"documentation", "duplicate", "invalid", "question", "wontfix"},
+					Grouping:          true,
+					SummaryLabels:     []string{"summary", "highlight"},
+					RemovedLabels:     []string{"removed", "dropped"},
+					BreakingLabels:    []string{"breaking", "incompatible"},
+					DeprecatedLabels:  []string{"deprecated", "not-supported"},
+					FeatureLabels:     []string{"feature", "new"},
+					EnhancementLabels: []string{"enhancement", "improvement"},
+					BugLabels:         []string{"bug", "defect"},
+					SecurityLabels:    []string{"security", "privacy"},
+				},
+				Format: Format{
+					GroupBy:    GroupByMilestone,
+					ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
+				},
+			},
 		},
 	}
 

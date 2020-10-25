@@ -28,6 +28,7 @@ const (
 
 // Logger is a simple logger for logging to standard output.
 type Logger interface {
+	ChangeVerbosity(v Verbosity)
 	Debug(v ...interface{})
 	Debugf(format string, v ...interface{})
 	Info(v ...interface{})
@@ -71,6 +72,13 @@ func New(v Verbosity) Logger {
 		errorColor: magenta,
 		fatalColor: red,
 	}
+}
+
+func (l *logger) ChangeVerbosity(v Verbosity) {
+	l.Mutex.Lock()
+	defer l.Mutex.Unlock()
+
+	l.verbosity = v
 }
 
 func (l *logger) Debug(v ...interface{}) {

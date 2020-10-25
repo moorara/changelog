@@ -23,12 +23,14 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	// READING SPEC
-
-	s, err := spec.Default(gitRepo)
+	domain, path, err := gitRepo.GetRemoteInfo()
 	if err != nil {
 		logger.Fatal(err)
 	}
+
+	// READING SPEC
+
+	s := spec.Default(domain, path)
 
 	s, err = spec.FromFile(s)
 	if err != nil {

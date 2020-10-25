@@ -21,7 +21,9 @@ func TestLogger(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			l := New(tc.v)
+			l := New(None)
+
+			l.ChangeVerbosity(tc.v)
 
 			l.Debug(tc.args...)
 			l.Debugf(tc.format, tc.args...)

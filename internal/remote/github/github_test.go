@@ -11,112 +11,166 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/moorara/changelog/internal/remote"
 	"github.com/moorara/changelog/pkg/log"
 )
 
 const (
-	mockIssuesBody = `[
+	mockGitHubIssuesBody = `[
 		{
 			"id": 1,
-			"number": 1347,
+			"number": 1001,
 			"state": "open",
 			"title": "Found a bug",
-			"body": "I'm having a problem with this.",
+			"body": "This is not working as expected!",
 			"user": {
-				"id": 1,
 				"login": "octocat",
+				"id": 1,
 				"type": "User"
 			},
 			"labels": [
 				{
-					"id": 208045946,
+					"id": 2000,
 					"name": "bug",
-					"description": "Something isn't working",
 					"default": true
 				}
 			],
-			"assignee": {
-				"id": 1,
+			"milestone": {
+				"id": 3000,
+				"number": 1,
+				"state": "open",
+				"title": "v1.0"
+			},
+			"locked": true,
+			"pull_request": null,
+			"closed_at": null,
+			"created_at": "2020-10-10T10:00:00Z",
+			"updated_at": "2020-10-20T20:00:00Z"
+		},
+		{
+			"id": 2,
+			"number": 1002,
+			"state": "closed",
+			"title": "Fixed a bug",
+			"body": "I made this to work as expected!",
+			"user": {
 				"login": "octocat",
+				"id": 1,
 				"type": "User"
 			},
-			"assignees": [
+			"labels": [
 				{
-					"id": 1,
-					"login": "octocat",
-					"type": "User"
+					"id": 2000,
+					"name": "bug",
+					"default": true
 				}
 			],
 			"milestone": {
-				"id": 1002604,
+				"id": 3000,
 				"number": 1,
 				"state": "open",
-				"title": "v1.0",
-				"description": "Tracking milestone for version 1.0",
-				"creator": {
-					"id": 1,
-					"login": "octocat",
-					"type": "User"
-				}
+				"title": "v1.0"
 			},
+			"locked": false,
 			"pull_request": {
-				"url": "https://api.github.com/repos/octocat/Hello-World/pulls/1347"
-			}
+				"url": "https://api.github.com/repos/octocat/Hello-World/pulls/1002"
+			},
+			"closed_at": "2020-10-20T20:00:00Z",
+			"created_at": "2020-10-15T15:00:00Z",
+			"updated_at": "2020-10-22T22:00:00Z"
 		}
 	]`
 )
 
 var (
-	expectedIssues = []issue{
-		{
-			ID:     1,
-			Number: 1347,
-			State:  "open",
-			Title:  "Found a bug",
-			Body:   "I'm having a problem with this.",
-			User: user{
-				ID:    1,
-				Login: "octocat",
-				Type:  "User",
-			},
-			Assignee: user{
-				ID:    1,
-				Login: "octocat",
-				Type:  "User",
-			},
-			Assignees: []user{
-				{
-					ID:    1,
-					Login: "octocat",
-					Type:  "User",
-				},
-			},
-			Labels: []label{
-				{
-					ID:          208045946,
-					Name:        "bug",
-					Description: "Something isn't working",
-					Default:     true,
-				},
-			},
-			Milestone: milestone{
-				ID:          1002604,
-				Number:      1,
-				State:       "open",
-				Title:       "v1.0",
-				Description: "Tracking milestone for version 1.0",
-				Creator: user{
-					ID:    1,
-					Login: "octocat",
-					Type:  "User",
-				},
-			},
-			PullRequest: &pullRequestURLs{
-				URL: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
+	gitHubIssue1 = issue{
+		ID:     1,
+		Number: 1001,
+		State:  "open",
+		Title:  "Found a bug",
+		Body:   "This is not working as expected!",
+		Locked: true,
+		User: user{
+			ID:    1,
+			Login: "octocat",
+			Type:  "User",
+		},
+		Labels: []label{
+			{
+				ID:      2000,
+				Name:    "bug",
+				Default: true,
 			},
 		},
+		Milestone: milestone{
+			ID:     3000,
+			Number: 1,
+			State:  "open",
+			Title:  "v1.0",
+		},
+		PullRequest: nil,
+		CreatedAt:   parseGitHubTime("2020-10-10T10:00:00Z"),
+		UpdatedAt:   parseGitHubTime("2020-10-20T20:00:00Z"),
+		ClosedAt:    nil,
+	}
+
+	closedAt     = parseGitHubTime("2020-10-20T20:00:00Z")
+	gitHubIssue2 = issue{
+		ID:     2,
+		Number: 1002,
+		State:  "closed",
+		Title:  "Fixed a bug",
+		Body:   "I made this to work as expected!",
+		Locked: false,
+		User: user{
+			ID:    1,
+			Login: "octocat",
+			Type:  "User",
+		},
+		Labels: []label{
+			{
+				ID:      2000,
+				Name:    "bug",
+				Default: true,
+			},
+		},
+		Milestone: milestone{
+			ID:     3000,
+			Number: 1,
+			State:  "open",
+			Title:  "v1.0",
+		},
+		PullRequest: &pullRequestURLs{
+			URL: "https://api.github.com/repos/octocat/Hello-World/pulls/1002",
+		},
+		CreatedAt: parseGitHubTime("2020-10-15T15:00:00Z"),
+		UpdatedAt: parseGitHubTime("2020-10-22T22:00:00Z"),
+		ClosedAt:  &closedAt,
+	}
+
+	remoteIssue = remote.Change{
+		Number:    1001,
+		Title:     "Found a bug",
+		Labels:    []string{"bug"},
+		Milestone: "v1.0",
+	}
+
+	remoteMerge = remote.Change{
+		Number:    1002,
+		Title:     "Fixed a bug",
+		Labels:    []string{"bug"},
+		Milestone: "v1.0",
 	}
 )
+
+func parseGitHubTime(s string) time.Time {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		panic(err)
+	}
+
+	return t
+}
 
 type MockResponse struct {
 	Method             string
@@ -129,6 +183,7 @@ type MockResponse struct {
 func createMockHTTPServer(mocks ...MockResponse) *httptest.Server {
 	r := mux.NewRouter()
 	for _, m := range mocks {
+		m := m
 		r.Methods(m.Method).Path(m.Path).HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			for k, vals := range m.ResponseHeader {
 				for _, v := range vals {
@@ -344,10 +399,10 @@ func TestRepo_CheckScopes(t *testing.T) {
 		{
 			name: "Success",
 			mockResponses: []MockResponse{
-				{"HEAD", "/user", 200, nil, ``},
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 			},
 			ctx:           context.Background(),
-			scopes:        []scope{},
+			scopes:        []scope{scopeRepo},
 			expectedError: "",
 		},
 	}
@@ -476,8 +531,8 @@ func TestRepo_FetchIssues(t *testing.T) {
 		ctx            context.Context
 		since          time.Time
 		pageNo         int
-		expectedIssues []issue
 		expectedError  string
+		expectedIssues []issue
 	}{
 		{
 			name:          "NilContext",
@@ -510,12 +565,12 @@ func TestRepo_FetchIssues(t *testing.T) {
 		{
 			name: "Success",
 			mockResponses: []MockResponse{
-				{"GET", "/repos/octocat/Hello-World/issues", 200, nil, mockIssuesBody},
+				{"GET", "/repos/octocat/Hello-World/issues", 200, nil, mockGitHubIssuesBody},
 			},
 			ctx:            context.Background(),
 			since:          since,
 			pageNo:         1,
-			expectedIssues: expectedIssues,
+			expectedIssues: []issue{gitHubIssue1, gitHubIssue2},
 		},
 	}
 
@@ -538,6 +593,88 @@ func TestRepo_FetchIssues(t *testing.T) {
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.expectedIssues, issues)
+			} else {
+				assert.Nil(t, issues)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
+func TestRepo_FetchClosedIssuesAndMerges(t *testing.T) {
+	since, _ := time.Parse(time.RFC3339, "2020-10-20T22:30:00-04:00")
+
+	tests := []struct {
+		name           string
+		mockResponses  []MockResponse
+		ctx            context.Context
+		since          time.Time
+		expectedError  string
+		expectedIssues []remote.Change
+		expectedMerges []remote.Change
+	}{
+		{
+			name: "CheckScopesFails",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{}, ``},
+			},
+			ctx:           context.Background(),
+			since:         time.Time{},
+			expectedError: "access token does not have the scope: repo",
+		},
+		{
+			name: "FetchPageCountFails",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+			},
+			ctx:           context.Background(),
+			since:         since,
+			expectedError: "HEAD /repos/octocat/Hello-World/issues 404: ",
+		},
+		{
+			name: "FetchIssuesFails",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
+			},
+			ctx:           context.Background(),
+			since:         since,
+			expectedError: "GET /repos/octocat/Hello-World/issues 405: ",
+		},
+		{
+			name: "Success",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
+				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
+			},
+			ctx:            context.Background(),
+			since:          since,
+			expectedIssues: []remote.Change{remoteIssue},
+			expectedMerges: []remote.Change{remoteMerge},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				client: new(http.Client),
+				path:   "octocat/Hello-World",
+			}
+
+			if len(tc.mockResponses) > 0 {
+				ts := createMockHTTPServer(tc.mockResponses...)
+				defer ts.Close()
+				r.apiURL = ts.URL
+			}
+
+			issues, merges, err := r.FetchClosedIssuesAndMerges(tc.ctx, tc.since)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedIssues, issues)
+				assert.Equal(t, tc.expectedMerges, merges)
 			} else {
 				assert.Nil(t, issues)
 				assert.EqualError(t, err, tc.expectedError)

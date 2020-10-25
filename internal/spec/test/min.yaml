@@ -1,14 +1,11 @@
 general:
   print: true
 
-release:
-  branch: release
+issues:
+  selection: labeled
+
+merges:
+  branch: production
 
 format:
   group-by: milestone
-
-labels:
-  summary: [ summary, highlight ]
-  removed: [ removed, dropped ]
-  breaking: [ breaking, incompatible ]
-  enhancement: [ enhancement, improvement ]
