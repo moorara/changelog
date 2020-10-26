@@ -7,5 +7,6 @@ import (
 
 // Repo is the abstraction for a remote repository.
 type Repo interface {
-	FetchClosedIssuesAndMerges(context.Context, time.Time) ([]Change, []Change, error)
+	// FetchIssuesAndMerges fetches closed issues and merged pull/merge requests.
+	FetchIssuesAndMerges(context.Context, time.Time) (Changes, Changes, error)
 }

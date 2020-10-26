@@ -43,13 +43,13 @@ type Issue struct {
 	ClosedBy User
 }
 
-// MergeGroup represents a group of pull/merge/change requests.
+// MergeGroup represents a group of pull/merge requests.
 type MergeGroup struct {
 	Title  string
 	Merges []Merge
 }
 
-// Merge represents a single pull/merge/change request.
+// Merge represents a single pull/merge request.
 type Merge struct {
 	Number   uint
 	Title    string

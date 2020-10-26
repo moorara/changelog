@@ -7,27 +7,49 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestToChange(t *testing.T) {
+func TestIssueToChange(t *testing.T) {
 	tests := []struct {
 		name           string
-		gitHubIssue    issue
+		i              issue
 		expectedChange remote.Change
 	}{
 		{
 			name:           "Issue",
-			gitHubIssue:    gitHubIssue1,
+			i:              gitHubIssue1,
 			expectedChange: remoteIssue,
 		},
 		{
 			name:           "Merge",
-			gitHubIssue:    gitHubIssue2,
+			i:              gitHubIssue2,
 			expectedChange: remoteMerge,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			change := toChange(tc.gitHubIssue)
+			change := issueToChange(tc.i)
+
+			assert.Equal(t, tc.expectedChange, change)
+		})
+	}
+}
+
+func TestPullToChange(t *testing.T) {
+	tests := []struct {
+		name           string
+		p              pullRequest
+		expectedChange remote.Change
+	}{
+		{
+			name:           "Merge",
+			p:              gitHubPull1,
+			expectedChange: remoteMerge,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			change := pullToChange(tc.p)
 
 			assert.Equal(t, tc.expectedChange, change)
 		})
@@ -37,21 +59,28 @@ func TestToChange(t *testing.T) {
 func TestPartitionIssuesAndMerges(t *testing.T) {
 	tests := []struct {
 		name           string
-		gitHubIssues   []issue
-		expectedIssues []remote.Change
-		expectedMerges []remote.Change
+		gitHubIssues   map[int]issue
+		gitHubPulls    map[int]pullRequest
+		expectedIssues remote.Changes
+		expectedMerges remote.Changes
 	}{
 		{
-			name:           "OK",
-			gitHubIssues:   []issue{gitHubIssue1, gitHubIssue2},
-			expectedIssues: []remote.Change{remoteIssue},
-			expectedMerges: []remote.Change{remoteMerge},
+			name: "OK",
+			gitHubIssues: map[int]issue{
+				1001: gitHubIssue1,
+				1002: gitHubIssue2,
+			},
+			gitHubPulls: map[int]pullRequest{
+				1002: gitHubPull1,
+			},
+			expectedIssues: remote.Changes{remoteIssue},
+			expectedMerges: remote.Changes{remoteMerge},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			issues, merges := partitionIssuesAndMerges(tc.gitHubIssues)
+			issues, merges := partitionIssuesAndMerges(tc.gitHubIssues, tc.gitHubPulls)
 
 			assert.Equal(t, tc.expectedIssues, issues)
 			assert.Equal(t, tc.expectedMerges, merges)

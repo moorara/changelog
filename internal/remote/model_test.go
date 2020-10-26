@@ -2,16 +2,21 @@ package remote
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var (
+	ts1, _ = time.Parse(time.RFC3339, "2020-10-24T09:00:00-04:00")
+	ts2, _ = time.Parse(time.RFC3339, "2020-10-25T16:00:00-04:00")
+
 	c1 = Change{
 		Number:    1001,
 		Title:     "Found a bug",
 		Labels:    []string{"bug"},
 		Milestone: "v1.0",
+		Timestamp: ts1,
 	}
 
 	c2 = Change{
@@ -19,6 +24,7 @@ var (
 		Title:     "Added a feature",
 		Labels:    []string{"enhancement"},
 		Milestone: "v1.0",
+		Timestamp: ts2,
 	}
 )
 
@@ -83,6 +89,28 @@ func TestChanges_Select(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			changes := tc.changes.Select(tc.f)
+
+			assert.Equal(t, tc.expectedChanges, changes)
+		})
+	}
+}
+
+func TestChanges_Sort(t *testing.T) {
+	tests := []struct {
+		name            string
+		changes         Changes
+		expectedChanges Changes
+	}{
+		{
+			name:            "OK",
+			changes:         Changes{c1, c2},
+			expectedChanges: Changes{c2, c1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			changes := tc.changes.Sort()
 
 			assert.Equal(t, tc.expectedChanges, changes)
 		})

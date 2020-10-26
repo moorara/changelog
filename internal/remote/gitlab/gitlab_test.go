@@ -42,12 +42,12 @@ func TestNewRepo(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchClosedIssuesAndMerges(t *testing.T) {
+func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 	r := &repo{
 		logger: log.New(log.None),
 	}
 
-	issues, merges, err := r.FetchClosedIssuesAndMerges(context.Background(), time.Now())
+	issues, merges, err := r.FetchIssuesAndMerges(context.Background(), time.Now())
 
 	assert.NoError(t, err)
 	assert.NotNil(t, issues)

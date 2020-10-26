@@ -1,6 +1,10 @@
 package remote
 
-import "strings"
+import (
+	"sort"
+	"strings"
+	"time"
+)
 
 // Labels is a collection of labels.
 type Labels []string
@@ -36,6 +40,7 @@ type Change struct {
 	Title     string
 	Labels    Labels
 	Milestone string
+	Timestamp time.Time
 }
 
 // Changes is a collection of changes.
@@ -51,4 +56,17 @@ func (c Changes) Select(f func(Change) bool) Changes {
 	}
 
 	return new
+}
+
+// Sort sorts the collection of changes by their timestamps from the most recent to the least recent.
+func (c Changes) Sort() Changes {
+	sorted := make(Changes, len(c))
+	copy(sorted, c)
+
+	sort.Slice(sorted, func(i, j int) bool {
+		// The order of the tags should be from the most recent to the least recent
+		return sorted[i].Timestamp.After(sorted[j].Timestamp)
+	})
+
+	return sorted
 }

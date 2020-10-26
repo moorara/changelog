@@ -217,7 +217,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 
 	since := fromTag.Commit.Committer.Timestamp
 
-	issues, merges, err := g.remoteRepo.FetchClosedIssuesAndMerges(ctx, since)
+	issues, merges, err := g.remoteRepo.FetchIssuesAndMerges(ctx, since)
 	if err != nil {
 		return err
 	}

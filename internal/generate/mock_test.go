@@ -43,7 +43,7 @@ func (m *MockGitRepo) Tags() (git.Tags, error) {
 }
 
 type (
-	FetchClosedIssuesAndMergesMock struct {
+	FetchIssuesAndMergesMock struct {
 		InContext context.Context
 		InSince   time.Time
 		OutIssues []remote.Change
@@ -52,17 +52,17 @@ type (
 	}
 
 	MockRemoteRepo struct {
-		FetchClosedIssuesAndMergesIndex int
-		FetchClosedIssuesAndMergesMocks []FetchClosedIssuesAndMergesMock
+		FetchIssuesAndMergesIndex int
+		FetchIssuesAndMergesMocks []FetchIssuesAndMergesMock
 	}
 )
 
-func (m *MockRemoteRepo) FetchClosedIssuesAndMerges(ctx context.Context, since time.Time) ([]remote.Change, []remote.Change, error) {
-	i := m.FetchClosedIssuesAndMergesIndex
-	m.FetchClosedIssuesAndMergesIndex++
-	m.FetchClosedIssuesAndMergesMocks[i].InContext = ctx
-	m.FetchClosedIssuesAndMergesMocks[i].InSince = since
-	return m.FetchClosedIssuesAndMergesMocks[i].OutIssues, m.FetchClosedIssuesAndMergesMocks[i].OutMerges, m.FetchClosedIssuesAndMergesMocks[i].OutError
+func (m *MockRemoteRepo) FetchIssuesAndMerges(ctx context.Context, since time.Time) ([]remote.Change, []remote.Change, error) {
+	i := m.FetchIssuesAndMergesIndex
+	m.FetchIssuesAndMergesIndex++
+	m.FetchIssuesAndMergesMocks[i].InContext = ctx
+	m.FetchIssuesAndMergesMocks[i].InSince = since
+	return m.FetchIssuesAndMergesMocks[i].OutIssues, m.FetchIssuesAndMergesMocks[i].OutMerges, m.FetchIssuesAndMergesMocks[i].OutError
 }
 
 type (

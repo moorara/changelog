@@ -201,7 +201,7 @@ type (
 		SecurityLabels    []string  `yaml:"security-labels" flag:"issues-security-labels"`
 	}
 
-	// Merges has the specifications for fetching, flitering, and grouping pull/merge/change requests.
+	// Merges has the specifications for fetching, flitering, and grouping pull/merge requests.
 	Merges struct {
 		Selection         Selection `yaml:"selection" flag:"merges-selection"`
 		Branch            string    `yaml:"branch" flag:"merges-branch"`
@@ -218,7 +218,7 @@ type (
 		SecurityLabels    []string  `yaml:"security-labels" flag:"merges-security-labels"`
 	}
 
-	// Format has the specifications for formatting and grouping issues and pull/merge/change requests.
+	// Format has the specifications for formatting and grouping issues and pull/merge requests.
 	Format struct {
 		GroupBy    GroupBy `yaml:"group-by" flag:"group-by"`
 		ReleaseURL string  `yaml:"release-url" flag:"release-url"`
