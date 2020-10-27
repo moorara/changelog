@@ -87,7 +87,7 @@ type (
 	reference struct {
 		Label string `json:"label"`
 		Ref   string `json:"ref"`
-		Sha   string `json:"sha"`
+		SHA   string `json:"sha"`
 	}
 
 	pullRequest struct {
@@ -126,9 +126,33 @@ type (
 		CommitURL string    `json:"commit_url"`
 		CreatedAt time.Time `json:"created_at"`
 	}
+
+	gitSignature struct {
+		Name  string    `json:"name"`
+		Email string    `json:"email"`
+		Time  time.Time `json:"date"`
+	}
+
+	gitCommit struct {
+		Message   string       `json:"message"`
+		Author    gitSignature `json:"author"`
+		Committer gitSignature `json:"committer"`
+		URL       string       `json:"url"`
+	}
+
+	commit struct {
+		SHA       string    `json:"sha"`
+		Commit    gitCommit `json:"commit"`
+		Author    user      `json:"author"`
+		Committer user      `json:"committer"`
+		URL       string    `json:"url"`
+		HTMLURL   string    `json:"html_url"`
+	}
 )
 
-func issueToChange(i issue) remote.Change {
+func issueToChange(i issue, e event, u user) remote.Change {
+	// e is the closed event of the issue
+
 	labels := make([]string, len(i.Labels))
 	for i, l := range i.Labels {
 		labels[i] = l.Name
@@ -139,9 +163,17 @@ func issueToChange(i issue) remote.Change {
 		milestone = i.Milestone.Title
 	}
 
-	var timestamp time.Time
+	// *i.ClosedAt and e.CreatedAt are the same times
+	var time time.Time
 	if i.ClosedAt != nil {
-		timestamp = *i.ClosedAt
+		time = *i.ClosedAt
+	}
+
+	user := remote.User{
+		Name:     u.Name,
+		Email:    u.Email,
+		Username: u.Login,
+		URL:      u.URL,
 	}
 
 	return remote.Change{
@@ -149,11 +181,14 @@ func issueToChange(i issue) remote.Change {
 		Title:     i.Title,
 		Labels:    labels,
 		Milestone: milestone,
-		Timestamp: timestamp,
+		Time:      time,
+		User:      user,
 	}
 }
 
-func pullToChange(p pullRequest) remote.Change {
+func pullToChange(p pullRequest, e event, c commit, u user) remote.Change {
+	// e is the merged event of the pull request
+
 	labels := make([]string, len(p.Labels))
 	for i, l := range p.Labels {
 		labels[i] = l.Name
@@ -164,9 +199,15 @@ func pullToChange(p pullRequest) remote.Change {
 		milestone = p.Milestone.Title
 	}
 
-	var timestamp time.Time
-	if p.MergedAt != nil {
-		timestamp = *p.MergedAt
+	// *p.MergedAt and e.CreatedAt are the same times
+	// c.Commit.Author.Time is the actual time of merge
+	time := c.Commit.Author.Time
+
+	user := remote.User{
+		Name:     u.Name,
+		Email:    u.Email,
+		Username: u.Login,
+		URL:      u.URL,
 	}
 
 	return remote.Change{
@@ -174,27 +215,40 @@ func pullToChange(p pullRequest) remote.Change {
 		Title:     p.Title,
 		Labels:    labels,
 		Milestone: milestone,
-		Timestamp: timestamp,
+		Time:      time,
+		User:      user,
 	}
 }
 
-func partitionIssuesAndMerges(gitHubIssues map[int]issue, gitHubPulls map[int]pullRequest) (remote.Changes, remote.Changes) {
+func resolveIssuesAndMerges(
+	gitHubIssues *issueStore,
+	gitHubPulls *pullRequestStore,
+	gitHubEvents *eventStore,
+	gitHubCommits *commitStore,
+	gitHubUsers *userStore,
+) (remote.Changes, remote.Changes) {
 	issues := remote.Changes{}
 	merges := remote.Changes{}
 
-	for no, i := range gitHubIssues {
+	_ = gitHubIssues.ForEach(func(num int, i issue) error {
+		e, _ := gitHubEvents.Load(num)
+		u, _ := gitHubUsers.Load(i.User.Login)
+
 		if i.PullRequest == nil {
-			issues = append(issues, issueToChange(i))
+			issues = append(issues, issueToChange(i, e, u))
 		} else {
 			// Every GitHub pull request is also an issue (see https://docs.github.com/en/rest/reference/issues#list-repository-issues)
 			// For every closed issue that is a pull request, we also need to make sure it is merged.
-			if p, ok := gitHubPulls[no]; ok {
+			if p, ok := gitHubPulls.Load(num); ok {
 				if p.MergedAt != nil {
-					merges = append(merges, pullToChange(p))
+					c, _ := gitHubCommits.Load(e.CommitID)
+					merges = append(merges, pullToChange(p, e, c, u))
 				}
 			}
 		}
-	}
+
+		return nil
+	})
 
 	issues = issues.Sort()
 	merges = merges.Sort()

@@ -11,19 +11,19 @@ import (
 )
 
 var (
-	ts1, _ = time.Parse(time.RFC3339, "2020-10-12T09:00:00-04:00")
-	ts2, _ = time.Parse(time.RFC3339, "2020-10-22T16:00:00-04:00")
+	t1, _ = time.Parse(time.RFC3339, "2020-10-12T09:00:00-04:00")
+	t2, _ = time.Parse(time.RFC3339, "2020-10-22T16:00:00-04:00")
 
 	JohnDoe = Signature{
-		Name:      "John Doe",
-		Email:     "john@doe.com",
-		Timestamp: ts1,
+		Name:  "John Doe",
+		Email: "john@doe.com",
+		Time:  t1,
 	}
 
 	JaneDoe = Signature{
-		Name:      "Jane Doe",
-		Email:     "jane@doe.com",
-		Timestamp: ts2,
+		Name:  "Jane Doe",
+		Email: "jane@doe.com",
+		Time:  t2,
 	}
 
 	commit1 = Commit{
@@ -53,9 +53,9 @@ var (
 		Hash: "4ff025213432eee78526e2a75f2e043d34962b5a",
 		Name: "v0.2.0",
 		Tagger: &Signature{
-			Name:      "John Doe",
-			Email:     "john@doe.com",
-			Timestamp: ts1,
+			Name:  "John Doe",
+			Email: "john@doe.com",
+			Time:  t1,
 		},
 		Message: &tag2Message,
 		Commit:  commit2,
@@ -207,12 +207,12 @@ func TestLightweightTag(t *testing.T) {
 				Author: object.Signature{
 					Name:  "John Doe",
 					Email: "john@doe.com",
-					When:  ts1,
+					When:  t1,
 				},
 				Committer: object.Signature{
 					Name:  "John Doe",
 					Email: "john@doe.com",
-					When:  ts1,
+					When:  t1,
 				},
 				Message: "foo",
 			},
@@ -230,8 +230,8 @@ func TestLightweightTag(t *testing.T) {
 }
 
 func TestAnnotatedTag(t *testing.T) {
-	ts1, _ := time.Parse(time.RFC3339, "2020-10-12T09:00:00-04:00")
-	ts2, _ := time.Parse(time.RFC3339, "2020-10-22T16:00:00-04:00")
+	t1, _ := time.Parse(time.RFC3339, "2020-10-12T09:00:00-04:00")
+	t2, _ := time.Parse(time.RFC3339, "2020-10-22T16:00:00-04:00")
 
 	tests := []struct {
 		name        string
@@ -247,7 +247,7 @@ func TestAnnotatedTag(t *testing.T) {
 				Tagger: object.Signature{
 					Name:  "John Doe",
 					Email: "john@doe.com",
-					When:  ts1,
+					When:  t1,
 				},
 				Message: "Release v0.2.0",
 			},
@@ -256,12 +256,12 @@ func TestAnnotatedTag(t *testing.T) {
 				Author: object.Signature{
 					Name:  "Jane Doe",
 					Email: "jane@doe.com",
-					When:  ts2,
+					When:  t2,
 				},
 				Committer: object.Signature{
 					Name:  "Jane Doe",
 					Email: "jane@doe.com",
-					When:  ts2,
+					When:  t2,
 				},
 				Message: "bar",
 			},

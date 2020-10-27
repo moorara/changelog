@@ -153,6 +153,52 @@ const (
 			"created_at": "2020-10-20T20:00:00Z"
 		}
 	]`
+
+	mockGitHubUserBody = `{
+		"login": "octocat",
+		"id": 1,
+		"avatar_url": "https://github.com/images/error/octocat_happy.gif",
+		"gravatar_id": "",
+		"url": "https://api.github.com/users/octocat",
+		"html_url": "https://github.com/octocat",
+		"organizations_url": "https://api.github.com/users/octocat/orgs",
+		"type": "User",
+		"site_admin": false,
+		"name": "monalisa octocat",
+		"company": "GitHub",
+		"blog": "https://github.com/blog",
+		"location": "San Francisco",
+		"email": "octocat@github.com",
+		"created_at": "2008-01-14T04:33:35Z",
+		"updated_at": "2008-01-14T04:33:35Z"
+	}`
+
+	mockGitHubCommitBody = `{
+		"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+		"commit": {
+			"author": {
+				"name": "Monalisa Octocat",
+				"email": "mona@github.com",
+				"date": "2020-10-20T19:59:59Z"
+			},
+			"committer": {
+				"name": "Monalisa Octocat",
+				"email": "mona@github.com",
+				"date": "2020-10-20T19:59:59Z"
+			},
+			"message": "Fix all the bugs"
+		},
+		"author": {
+			"login": "octocat",
+			"id": 1,
+			"type": "User"
+		},
+		"committer": {
+			"login": "octocat",
+			"id": 1,
+			"type": "User"
+		}
+	}`
 )
 
 var (
@@ -249,12 +295,12 @@ var (
 		Base: reference{
 			Label: "octocat:master",
 			Ref:   "master",
-			Sha:   "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			SHA:   "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 		},
 		Head: reference{
 			Label: "octocat:new-topic",
 			Ref:   "new-topic",
-			Sha:   "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			SHA:   "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 		},
 		MergeCommitSHA: "e5bd3914e2e596debea16f433f57875b5b90bcd6",
 		CreatedAt:      parseGitHubTime("2020-10-15T15:00:00Z"),
@@ -287,12 +333,60 @@ var (
 		CreatedAt: parseGitHubTime("2020-10-20T20:00:00Z"),
 	}
 
+	gitHubUser = user{
+		ID:         1,
+		Login:      "octocat",
+		Type:       "User",
+		Email:      "octocat@github.com",
+		Name:       "monalisa octocat",
+		URL:        "https://api.github.com/users/octocat",
+		HTMLURL:    "https://github.com/octocat",
+		OrgsURL:    "https://api.github.com/users/octocat/orgs",
+		AvatarURL:  "https://github.com/images/error/octocat_happy.gif",
+		GravatarID: "",
+		CreatedAt:  parseGitHubTime("2008-01-14T04:33:35Z"),
+		UpdatedAt:  parseGitHubTime("2008-01-14T04:33:35Z"),
+	}
+
+	gitHubCommit = commit{
+		SHA: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+		Commit: gitCommit{
+			Message: "Fix all the bugs",
+			Author: gitSignature{
+				Name:  "Monalisa Octocat",
+				Email: "mona@github.com",
+				Time:  parseGitHubTime("2020-10-20T19:59:59Z"),
+			},
+			Committer: gitSignature{
+				Name:  "Monalisa Octocat",
+				Email: "mona@github.com",
+				Time:  parseGitHubTime("2020-10-20T19:59:59Z"),
+			},
+		},
+		Author: user{
+			ID:    1,
+			Login: "octocat",
+			Type:  "User",
+		},
+		Committer: user{
+			ID:    1,
+			Login: "octocat",
+			Type:  "User",
+		},
+	}
+
 	remoteIssue = remote.Change{
 		Number:    1001,
 		Title:     "Found a bug",
 		Labels:    []string{"bug"},
 		Milestone: "v1.0",
-		Timestamp: time.Time{},
+		Time:      time.Time{},
+		User: remote.User{
+			Name:     "monalisa octocat",
+			Email:    "octocat@github.com",
+			Username: "octocat",
+			URL:      "https://api.github.com/users/octocat",
+		},
 	}
 
 	remoteMerge = remote.Change{
@@ -300,7 +394,13 @@ var (
 		Title:     "Fixed a bug",
 		Labels:    []string{"bug"},
 		Milestone: "v1.0",
-		Timestamp: parseGitHubTime("2020-10-20T20:00:00Z"),
+		Time:      parseGitHubTime("2020-10-20T19:59:59Z"),
+		User: remote.User{
+			Name:     "monalisa octocat",
+			Email:    "octocat@github.com",
+			Username: "octocat",
+			URL:      "https://api.github.com/users/octocat",
+		},
 	}
 )
 
@@ -914,7 +1014,7 @@ func TestRepo_FindEvent(t *testing.T) {
 		issueNumber   int
 		eventName     string
 		expectedError string
-		expectedEvent *event
+		expectedEvent event
 	}{
 		{
 			name:          "NilContext",
@@ -952,7 +1052,7 @@ func TestRepo_FindEvent(t *testing.T) {
 			ctx:           context.Background(),
 			issueNumber:   1001,
 			eventName:     "closed",
-			expectedEvent: &gitHubEvent1,
+			expectedEvent: gitHubEvent1,
 		},
 		{
 			name: "NotFound_NoLinkHeader",
@@ -1000,7 +1100,150 @@ func TestRepo_FindEvent(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.expectedEvent, event)
 			} else {
-				assert.Nil(t, event)
+				assert.Empty(t, event)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
+func TestRepo_FetchUser(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockResponses []MockResponse
+		ctx           context.Context
+		username      string
+		expectedError string
+		expectedUser  user
+	}{
+		{
+			name:          "NilContext",
+			mockResponses: []MockResponse{},
+			ctx:           nil,
+			username:      "octocat",
+			expectedError: "net/http: nil Context",
+		},
+		{
+			name: "InvalidStatusCode",
+			mockResponses: []MockResponse{
+				{"GET", "/users/octocat", 401, nil, `bad credentials`},
+			},
+			ctx:           context.Background(),
+			username:      "octocat",
+			expectedError: "GET /users/octocat 401: bad credentials",
+		},
+		{
+			name: "ّInvalidResponse",
+			mockResponses: []MockResponse{
+				{"GET", "/users/octocat", 200, nil, `[`},
+			},
+			ctx:           context.Background(),
+			username:      "octocat",
+			expectedError: "unexpected EOF",
+		},
+		{
+			name: "Success",
+			mockResponses: []MockResponse{
+				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody},
+			},
+			ctx:          context.Background(),
+			username:     "octocat",
+			expectedUser: gitHubUser,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				client: new(http.Client),
+			}
+
+			if len(tc.mockResponses) > 0 {
+				ts := createMockHTTPServer(tc.mockResponses...)
+				defer ts.Close()
+				r.apiURL = ts.URL
+			}
+
+			user, err := r.fetchUser(tc.ctx, tc.username)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedUser, user)
+			} else {
+				assert.Empty(t, user)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
+func TestRepo_FetchCommit(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockResponses  []MockResponse
+		ctx            context.Context
+		ref            string
+		expectedError  string
+		expectedCommit commit
+	}{
+		{
+			name:          "NilContext",
+			mockResponses: []MockResponse{},
+			ctx:           nil,
+			ref:           "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			expectedError: "net/http: nil Context",
+		},
+		{
+			name: "InvalidStatusCode",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 401, nil, `bad credentials`},
+			},
+			ctx:           context.Background(),
+			ref:           "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			expectedError: "GET /repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e 401: bad credentials",
+		},
+		{
+			name: "ّInvalidResponse",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, `[`},
+			},
+			ctx:           context.Background(),
+			ref:           "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			expectedError: "unexpected EOF",
+		},
+		{
+			name: "Success",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
+			},
+			ctx:            context.Background(),
+			ref:            "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			expectedCommit: gitHubCommit,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				client: new(http.Client),
+				path:   "octocat/Hello-World",
+			}
+
+			if len(tc.mockResponses) > 0 {
+				ts := createMockHTTPServer(tc.mockResponses...)
+				defer ts.Close()
+				r.apiURL = ts.URL
+			}
+
+			commit, err := r.fetchCommit(tc.ctx, tc.ref)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedCommit, commit)
+			} else {
+				assert.Empty(t, commit)
 				assert.EqualError(t, err, tc.expectedError)
 			}
 		})
@@ -1080,6 +1323,7 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
 				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
 				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
+				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
 			},
 			ctx:           context.Background(),
 			since:         since,
@@ -1100,6 +1344,37 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 			expectedError: "GET /repos/octocat/Hello-World/issues/1002/events 404: 404 page not found\n",
 		},
 		{
+			name: "FetchCommitFails",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
+				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
+				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
+				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
+				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
+			},
+			ctx:           context.Background(),
+			since:         since,
+			expectedError: "GET /repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e 404: 404 page not found\n",
+		},
+		{
+			name: "FetchUserFails",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
+				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
+				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
+				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
+				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
+				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
+			},
+			ctx:           context.Background(),
+			since:         since,
+			expectedError: "GET /users/octocat 404: 404 page not found\n",
+		},
+		{
 			name: "Success",
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
@@ -1109,6 +1384,8 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
 				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
 				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
+				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
+				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody},
 			},
 			ctx:            context.Background(),
 			since:          since,

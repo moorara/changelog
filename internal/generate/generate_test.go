@@ -16,26 +16,26 @@ import (
 )
 
 var (
-	ts1, _ = time.Parse(time.RFC3339, "2020-10-02T02:00:00-04:00")
-	ts2, _ = time.Parse(time.RFC3339, "2020-10-12T09:00:00-04:00")
-	ts3, _ = time.Parse(time.RFC3339, "2020-10-22T16:00:00-04:00")
+	t1, _ = time.Parse(time.RFC3339, "2020-10-02T02:00:00-04:00")
+	t2, _ = time.Parse(time.RFC3339, "2020-10-12T09:00:00-04:00")
+	t3, _ = time.Parse(time.RFC3339, "2020-10-22T16:00:00-04:00")
 
 	JohnDoe = git.Signature{
-		Name:      "John Doe",
-		Email:     "john@doe.com",
-		Timestamp: ts1,
+		Name:  "John Doe",
+		Email: "john@doe.com",
+		Time:  t1,
 	}
 
 	JaneDoe = git.Signature{
-		Name:      "Jane Doe",
-		Email:     "jane@doe.com",
-		Timestamp: ts2,
+		Name:  "Jane Doe",
+		Email: "jane@doe.com",
+		Time:  t2,
 	}
 
 	JimDoe = git.Signature{
-		Name:      "Jim Doe",
-		Email:     "jim@doe.com",
-		Timestamp: ts3,
+		Name:  "Jim Doe",
+		Email: "jim@doe.com",
+		Time:  t3,
 	}
 
 	commit1 = git.Commit{

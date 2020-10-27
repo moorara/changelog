@@ -41,7 +41,7 @@ func NewRepo(logger log.Logger, path string) (Repo, error) {
 		return nil, err
 	}
 
-	logger.Debug("Git repository found.")
+	logger.Debug("Git repository found")
 
 	return &repo{
 		logger: logger,

@@ -68,14 +68,14 @@ func TestProcessor_Parse(t *testing.T) {
 				Title: "Changelog",
 				Releases: []changelog.Release{
 					{
-						GitTag:    "v0.1.1",
-						URL:       "https://github.com/moorara/changelog/tree/v0.1.1",
-						Timestamp: time.Date(2020, time.October, 11, 0, 0, 0, 0, time.UTC),
+						GitTag: "v0.1.1",
+						URL:    "https://github.com/moorara/changelog/tree/v0.1.1",
+						Time:   time.Date(2020, time.October, 11, 0, 0, 0, 0, time.UTC),
 					},
 					{
-						GitTag:    "v0.1.0",
-						URL:       "https://github.com/moorara/changelog/tree/v0.1.0",
-						Timestamp: time.Date(2020, time.October, 10, 0, 0, 0, 0, time.UTC),
+						GitTag: "v0.1.0",
+						URL:    "https://github.com/moorara/changelog/tree/v0.1.0",
+						Time:   time.Date(2020, time.October, 10, 0, 0, 0, 0, time.UTC),
 					},
 				},
 			},

@@ -8,15 +8,15 @@ import (
 )
 
 var (
-	ts1, _ = time.Parse(time.RFC3339, "2020-10-24T09:00:00-04:00")
-	ts2, _ = time.Parse(time.RFC3339, "2020-10-25T16:00:00-04:00")
+	t1, _ = time.Parse(time.RFC3339, "2020-10-24T09:00:00-04:00")
+	t2, _ = time.Parse(time.RFC3339, "2020-10-25T16:00:00-04:00")
 
 	c1 = Change{
 		Number:    1001,
 		Title:     "Found a bug",
 		Labels:    []string{"bug"},
 		Milestone: "v1.0",
-		Timestamp: ts1,
+		Time:      t1,
 	}
 
 	c2 = Change{
@@ -24,7 +24,7 @@ var (
 		Title:     "Added a feature",
 		Labels:    []string{"enhancement"},
 		Milestone: "v1.0",
-		Timestamp: ts2,
+		Time:      t2,
 	}
 )
 

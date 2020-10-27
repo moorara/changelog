@@ -13,23 +13,23 @@ import (
 
 // Signature determines who and when created a commit or tag.
 type Signature struct {
-	Name      string
-	Email     string
-	Timestamp time.Time
+	Name  string
+	Email string
+	Time  time.Time
 }
 
 // Before determines if a given signature is chronologically before another signature.
 func (s Signature) Before(t Signature) bool {
-	return s.Timestamp.Before(t.Timestamp)
+	return s.Time.Before(t.Time)
 }
 
 // After determines if a given signature is chronologically after another signature.
 func (s Signature) After(t Signature) bool {
-	return s.Timestamp.After(t.Timestamp)
+	return s.Time.After(t.Time)
 }
 
 func (s Signature) String() string {
-	return fmt.Sprintf("%s <%s> %s", s.Name, s.Email, s.Timestamp.Format(time.RFC3339))
+	return fmt.Sprintf("%s <%s> %s", s.Name, s.Email, s.Time.Format(time.RFC3339))
 }
 
 // Commit represents a Git commit.
@@ -106,14 +106,14 @@ func lightweightTag(ref *plumbing.Reference, commitObj *object.Commit) Tag {
 		Commit: Commit{
 			Hash: commitObj.Hash.String(),
 			Author: Signature{
-				Name:      commitObj.Author.Name,
-				Email:     commitObj.Author.Email,
-				Timestamp: commitObj.Author.When,
+				Name:  commitObj.Author.Name,
+				Email: commitObj.Author.Email,
+				Time:  commitObj.Author.When,
 			},
 			Committer: Signature{
-				Name:      commitObj.Committer.Name,
-				Email:     commitObj.Committer.Email,
-				Timestamp: commitObj.Committer.When,
+				Name:  commitObj.Committer.Name,
+				Email: commitObj.Committer.Email,
+				Time:  commitObj.Committer.When,
 			},
 			Message: commitObj.Message,
 		},
@@ -126,22 +126,22 @@ func annotatedTag(tagObj *object.Tag, commitObj *object.Commit) Tag {
 		Hash: tagObj.Hash.String(),
 		Name: tagObj.Name,
 		Tagger: &Signature{
-			Name:      tagObj.Tagger.Name,
-			Email:     tagObj.Tagger.Email,
-			Timestamp: tagObj.Tagger.When,
+			Name:  tagObj.Tagger.Name,
+			Email: tagObj.Tagger.Email,
+			Time:  tagObj.Tagger.When,
 		},
 		Message: &tagObj.Message,
 		Commit: Commit{
 			Hash: commitObj.Hash.String(),
 			Author: Signature{
-				Name:      commitObj.Author.Name,
-				Email:     commitObj.Author.Email,
-				Timestamp: commitObj.Author.When,
+				Name:  commitObj.Author.Name,
+				Email: commitObj.Author.Email,
+				Time:  commitObj.Author.When,
 			},
 			Committer: Signature{
-				Name:      commitObj.Committer.Name,
-				Email:     commitObj.Committer.Email,
-				Timestamp: commitObj.Committer.When,
+				Name:  commitObj.Committer.Name,
+				Email: commitObj.Committer.Email,
+				Time:  commitObj.Committer.When,
 			},
 			Message: commitObj.Message,
 		},
@@ -196,7 +196,7 @@ func (t Tags) Find(name string) (Tag, bool) {
 	return Tag{}, false
 }
 
-// Sort sorts the list of tags by their timestamps from the most recent to the least recent.
+// Sort sorts the list of tags by their Times from the most recent to the least recent.
 func (t Tags) Sort() Tags {
 	sorted := make(Tags, len(t))
 	copy(sorted, t)

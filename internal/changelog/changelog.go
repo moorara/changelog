@@ -24,7 +24,7 @@ type Changelog struct {
 type Release struct {
 	GitTag      string
 	URL         string
-	Timestamp   time.Time
+	Time        time.Time
 	IssueGroups []IssueGroup
 	MergeGroups []MergeGroup
 }
