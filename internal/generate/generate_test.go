@@ -151,13 +151,14 @@ func TestNew(t *testing.T) {
 
 func TestGenerator_ResolveTags(t *testing.T) {
 	tests := []struct {
-		name            string
-		g               *Generator
-		tags            git.Tags
-		chlog           *changelog.Changelog
-		expectedFromTag git.Tag
-		expectedToTag   git.Tag
-		expectedError   error
+		name              string
+		g                 *Generator
+		tags              git.Tags
+		chlog             *changelog.Changelog
+		expectedFromTag   git.Tag
+		expectedToTag     git.Tag
+		expectedFutureTag git.Tag
+		expectedError     error
 	}{
 		{
 			name: "NoTagAndNoChangelog",
@@ -165,11 +166,31 @@ func TestGenerator_ResolveTags(t *testing.T) {
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
+			tags:              git.Tags{},
+			chlog:             &changelog.Changelog{},
+			expectedFromTag:   git.Tag{},
+			expectedToTag:     git.Tag{},
+			expectedFutureTag: git.Tag{},
+			expectedError:     nil,
+		},
+		{
+			name: "FutureRelease",
+			g: &Generator{
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						Future: "v0.1.0",
+					},
+				},
+				logger: log.New(log.None),
+			},
 			tags:            git.Tags{},
 			chlog:           &changelog.Changelog{},
 			expectedFromTag: git.Tag{},
 			expectedToTag:   git.Tag{},
-			expectedError:   nil,
+			expectedFutureTag: git.Tag{
+				Name: "v0.1.0",
+			},
+			expectedError: nil,
 		},
 		{
 			name: "FirstRelease",
@@ -177,11 +198,12 @@ func TestGenerator_ResolveTags(t *testing.T) {
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
-			tags:            git.Tags{tag1},
-			chlog:           &changelog.Changelog{},
-			expectedFromTag: git.Tag{},
-			expectedToTag:   tag1,
-			expectedError:   nil,
+			tags:              git.Tags{tag1},
+			chlog:             &changelog.Changelog{},
+			expectedFromTag:   git.Tag{},
+			expectedToTag:     tag1,
+			expectedFutureTag: git.Tag{},
+			expectedError:     nil,
 		},
 		{
 			name: "TagNotInChangelog",
@@ -195,9 +217,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 					{GitTag: "0.1.0"},
 				},
 			},
-			expectedFromTag: git.Tag{},
-			expectedToTag:   git.Tag{},
-			expectedError:   errors.New("changelog tag not found: 0.1.0"),
+			expectedFromTag:   git.Tag{},
+			expectedToTag:     git.Tag{},
+			expectedFutureTag: git.Tag{},
+			expectedError:     errors.New("changelog tag not found: 0.1.0"),
 		},
 		{
 			name: "SecondRelease",
@@ -211,9 +234,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 					{GitTag: "v0.1.1"},
 				},
 			},
-			expectedFromTag: tag1,
-			expectedToTag:   tag2,
-			expectedError:   nil,
+			expectedFromTag:   tag1,
+			expectedToTag:     tag2,
+			expectedFutureTag: git.Tag{},
+			expectedError:     nil,
 		},
 		{
 			name: "InvalidFromTag",
@@ -231,9 +255,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 					{GitTag: "v0.1.1"},
 				},
 			},
-			expectedFromTag: git.Tag{},
-			expectedToTag:   git.Tag{},
-			expectedError:   errors.New("from-tag not found: invalid"),
+			expectedFromTag:   git.Tag{},
+			expectedToTag:     git.Tag{},
+			expectedFutureTag: git.Tag{},
+			expectedError:     errors.New("from-tag not found: invalid"),
 		},
 		{
 			name: "InvalidToTag",
@@ -251,9 +276,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 					{GitTag: "v0.1.1"},
 				},
 			},
-			expectedFromTag: git.Tag{},
-			expectedToTag:   git.Tag{},
-			expectedError:   errors.New("to-tag not found: invalid"),
+			expectedFromTag:   git.Tag{},
+			expectedToTag:     git.Tag{},
+			expectedFutureTag: git.Tag{},
+			expectedError:     errors.New("to-tag not found: invalid"),
 		},
 		{
 			name: "FromTagBeforeLastChangelogTag",
@@ -272,9 +298,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 					{GitTag: "v0.1.1"},
 				},
 			},
-			expectedFromTag: tag2,
-			expectedToTag:   tag3,
-			expectedError:   nil,
+			expectedFromTag:   tag2,
+			expectedToTag:     tag3,
+			expectedFutureTag: git.Tag{},
+			expectedError:     nil,
 		},
 		{
 			name: "ToTagBeforeFromTag",
@@ -294,9 +321,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 					{GitTag: "v0.1.1"},
 				},
 			},
-			expectedFromTag: git.Tag{},
-			expectedToTag:   git.Tag{},
-			expectedError:   errors.New("to-tag should be after the from-tag"),
+			expectedFromTag:   git.Tag{},
+			expectedToTag:     git.Tag{},
+			expectedFutureTag: git.Tag{},
+			expectedError:     errors.New("to-tag should be after the from-tag"),
 		},
 		{
 			name: "SameFromAndToTags",
@@ -316,9 +344,10 @@ func TestGenerator_ResolveTags(t *testing.T) {
 					{GitTag: "v0.1.1"},
 				},
 			},
-			expectedFromTag: git.Tag{},
-			expectedToTag:   git.Tag{},
-			expectedError:   errors.New("to-tag should be after the from-tag"),
+			expectedFromTag:   git.Tag{},
+			expectedToTag:     git.Tag{},
+			expectedFutureTag: git.Tag{},
+			expectedError:     errors.New("to-tag should be after the from-tag"),
 		},
 		{
 			name: "ValidFromAndToTags",
@@ -338,18 +367,20 @@ func TestGenerator_ResolveTags(t *testing.T) {
 					{GitTag: "v0.1.1"},
 				},
 			},
-			expectedFromTag: tag2,
-			expectedToTag:   tag3,
-			expectedError:   nil,
+			expectedFromTag:   tag2,
+			expectedToTag:     tag3,
+			expectedFutureTag: git.Tag{},
+			expectedError:     nil,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			fromTag, toTag, err := tc.g.resolveTags(tc.tags, tc.chlog)
+			fromTag, toTag, futureTag, err := tc.g.resolveTags(tc.tags, tc.chlog)
 
 			assert.Equal(t, tc.expectedFromTag, fromTag)
 			assert.Equal(t, tc.expectedToTag, toTag)
+			assert.Equal(t, tc.expectedFutureTag, futureTag)
 			assert.Equal(t, tc.expectedError, err)
 		})
 	}
@@ -480,7 +511,146 @@ func TestGenerator_Generate(t *testing.T) {
 		g             *Generator
 		ctx           context.Context
 		expectedError string
-	}{}
+	}{
+		{
+			name: "ParseFails",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutError: errors.New("error on parsing the changelog file")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on parsing the changelog file",
+		},
+		{
+			name: "TagsFails",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{
+							OutChangelog: &changelog.Changelog{},
+						},
+					},
+				},
+				gitRepo: &MockGitRepo{
+					TagsMocks: []TagsMock{
+						{OutError: errors.New("error on getting git tags")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on getting git tags",
+		},
+		{
+			name: "NoNewTag",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: new(changelog.Changelog)},
+					},
+				},
+				gitRepo: &MockGitRepo{
+					TagsMocks: []TagsMock{
+						{OutTags: git.Tags{}},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "",
+		},
+		{
+			name: "FetchIssuesAndMergesFails",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: new(changelog.Changelog)},
+					},
+				},
+				gitRepo: &MockGitRepo{
+					TagsMocks: []TagsMock{
+						{OutTags: git.Tags{tag1}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
+						{OutError: errors.New("error on fetching issues and merges")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on fetching issues and merges",
+		},
+		{
+			name: "RenderFails",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: new(changelog.Changelog)},
+					},
+					RenderMocks: []RenderMock{
+						{OutError: errors.New("error on rendering changelog")},
+					},
+				},
+				gitRepo: &MockGitRepo{
+					TagsMocks: []TagsMock{
+						{OutTags: git.Tags{tag1}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
+						{
+							OutIssues: remote.Changes{},
+							OutMerges: remote.Changes{},
+						},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on rendering changelog",
+		},
+		{
+			name: "Success",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: new(changelog.Changelog)},
+					},
+					RenderMocks: []RenderMock{
+						{OutContent: "changelog"},
+					},
+				},
+				gitRepo: &MockGitRepo{
+					TagsMocks: []TagsMock{
+						{OutTags: git.Tags{tag1}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
+						{
+							OutIssues: remote.Changes{},
+							OutMerges: remote.Changes{},
+						},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "",
+		},
+	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

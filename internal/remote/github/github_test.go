@@ -126,6 +126,49 @@ const (
 		}
 	]`
 
+	mockGitHubPullBody = `{
+		"id": 1,
+		"number": 1002,
+		"state": "closed",
+		"locked": false,
+		"draft": false,
+		"title": "Fixed a bug",
+		"body": "I made this to work as expected!",
+		"user": {
+			"login": "octocat",
+			"id": 1,
+			"type": "User"
+		},
+		"labels": [
+			{
+				"id": 2000,
+				"name": "bug",
+				"default": true
+			}
+		],
+		"milestone": {
+			"id": 3000,
+			"number": 1,
+			"state": "open",
+			"title": "v1.0"
+		},
+		"created_at":  "2020-10-15T15:00:00Z",
+		"updated_at": "2020-10-22T22:00:00Z",
+		"closed_at": "2020-10-20T20:00:00Z",
+		"merged_at": "2020-10-20T20:00:00Z",
+		"merge_commit_sha": "e5bd3914e2e596debea16f433f57875b5b90bcd6",
+		"head": {
+			"label": "octocat:new-topic",
+			"ref": "new-topic",
+			"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+		},
+		"base": {
+			"label": "octocat:master",
+			"ref": "master",
+			"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+		}
+	}`
+
 	mockGitHubEventsBody1 = `[
 		{
 			"id": 1,
@@ -1006,6 +1049,78 @@ func TestRepo_FetchPulls(t *testing.T) {
 	}
 }
 
+func TestRepo_FetchPull(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockResponses []MockResponse
+		ctx           context.Context
+		number        int
+		expectedError string
+		expectedPull  pullRequest
+	}{
+		{
+			name:          "NilContext",
+			mockResponses: []MockResponse{},
+			ctx:           nil,
+			number:        1002,
+			expectedError: "net/http: nil Context",
+		},
+		{
+			name: "InvalidStatusCode",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 401, nil, `bad credentials`},
+			},
+			ctx:           context.Background(),
+			number:        1002,
+			expectedError: "GET /repos/octocat/Hello-World/pulls/1002 401: bad credentials",
+		},
+		{
+			name: "ّInvalidResponse",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, `[`},
+			},
+			ctx:           context.Background(),
+			number:        1002,
+			expectedError: "unexpected EOF",
+		},
+		{
+			name: "Success",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, mockGitHubPullBody},
+			},
+			ctx:          context.Background(),
+			number:       1002,
+			expectedPull: gitHubPull1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				client: new(http.Client),
+				path:   "octocat/Hello-World",
+			}
+
+			if len(tc.mockResponses) > 0 {
+				ts := createMockHTTPServer(tc.mockResponses...)
+				defer ts.Close()
+				r.apiURL = ts.URL
+			}
+
+			pull, err := r.fetchPull(tc.ctx, tc.number)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedPull, pull)
+			} else {
+				assert.Empty(t, pull)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
 func TestRepo_FindEvent(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -1107,77 +1222,6 @@ func TestRepo_FindEvent(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchUser(t *testing.T) {
-	tests := []struct {
-		name          string
-		mockResponses []MockResponse
-		ctx           context.Context
-		username      string
-		expectedError string
-		expectedUser  user
-	}{
-		{
-			name:          "NilContext",
-			mockResponses: []MockResponse{},
-			ctx:           nil,
-			username:      "octocat",
-			expectedError: "net/http: nil Context",
-		},
-		{
-			name: "InvalidStatusCode",
-			mockResponses: []MockResponse{
-				{"GET", "/users/octocat", 401, nil, `bad credentials`},
-			},
-			ctx:           context.Background(),
-			username:      "octocat",
-			expectedError: "GET /users/octocat 401: bad credentials",
-		},
-		{
-			name: "ّInvalidResponse",
-			mockResponses: []MockResponse{
-				{"GET", "/users/octocat", 200, nil, `[`},
-			},
-			ctx:           context.Background(),
-			username:      "octocat",
-			expectedError: "unexpected EOF",
-		},
-		{
-			name: "Success",
-			mockResponses: []MockResponse{
-				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody},
-			},
-			ctx:          context.Background(),
-			username:     "octocat",
-			expectedUser: gitHubUser,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			r := &repo{
-				logger: log.New(log.None),
-				client: new(http.Client),
-			}
-
-			if len(tc.mockResponses) > 0 {
-				ts := createMockHTTPServer(tc.mockResponses...)
-				defer ts.Close()
-				r.apiURL = ts.URL
-			}
-
-			user, err := r.fetchUser(tc.ctx, tc.username)
-
-			if tc.expectedError == "" {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedUser, user)
-			} else {
-				assert.Empty(t, user)
-				assert.EqualError(t, err, tc.expectedError)
-			}
-		})
-	}
-}
-
 func TestRepo_FetchCommit(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -1250,6 +1294,77 @@ func TestRepo_FetchCommit(t *testing.T) {
 	}
 }
 
+func TestRepo_FetchUser(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockResponses []MockResponse
+		ctx           context.Context
+		username      string
+		expectedError string
+		expectedUser  user
+	}{
+		{
+			name:          "NilContext",
+			mockResponses: []MockResponse{},
+			ctx:           nil,
+			username:      "octocat",
+			expectedError: "net/http: nil Context",
+		},
+		{
+			name: "InvalidStatusCode",
+			mockResponses: []MockResponse{
+				{"GET", "/users/octocat", 401, nil, `bad credentials`},
+			},
+			ctx:           context.Background(),
+			username:      "octocat",
+			expectedError: "GET /users/octocat 401: bad credentials",
+		},
+		{
+			name: "ّInvalidResponse",
+			mockResponses: []MockResponse{
+				{"GET", "/users/octocat", 200, nil, `[`},
+			},
+			ctx:           context.Background(),
+			username:      "octocat",
+			expectedError: "unexpected EOF",
+		},
+		{
+			name: "Success",
+			mockResponses: []MockResponse{
+				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody},
+			},
+			ctx:          context.Background(),
+			username:     "octocat",
+			expectedUser: gitHubUser,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				client: new(http.Client),
+			}
+
+			if len(tc.mockResponses) > 0 {
+				ts := createMockHTTPServer(tc.mockResponses...)
+				defer ts.Close()
+				r.apiURL = ts.URL
+			}
+
+			user, err := r.fetchUser(tc.ctx, tc.username)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedUser, user)
+			} else {
+				assert.Empty(t, user)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
 func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 	since, _ := time.Parse(time.RFC3339, "2020-10-20T22:30:00-04:00")
 
@@ -1277,51 +1392,37 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 			},
 			ctx:           context.Background(),
-			since:         since,
+			since:         time.Time{},
 			expectedError: "HEAD /repos/octocat/Hello-World/issues 404: ",
-		},
-		{
-			name: "FetchPullsPageCountFails",
-			mockResponses: []MockResponse{
-				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
-				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
-			},
-			ctx:           context.Background(),
-			since:         since,
-			expectedError: "HEAD /repos/octocat/Hello-World/pulls 404: ",
 		},
 		{
 			name: "FetchIssuesFails",
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
-				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
-				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
 			},
 			ctx:           context.Background(),
 			since:         since,
 			expectedError: "GET /repos/octocat/Hello-World/issues 405: ",
 		},
 		{
-			name: "FetchPullsFails",
+			name: "FetchPullFails",
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
-				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
 				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
 			},
 			ctx:           context.Background(),
 			since:         since,
-			expectedError: "GET /repos/octocat/Hello-World/pulls 405: ",
+			expectedError: "GET /repos/octocat/Hello-World/pulls/1002 404: 404 page not found\n",
 		},
 		{
 			name: "FindEventFails#1001",
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
-				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
 				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
-				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, mockGitHubPullBody},
 				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
 				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
 			},
@@ -1334,9 +1435,8 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
-				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
 				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
-				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, mockGitHubPullBody},
 				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
 			},
 			ctx:           context.Background(),
@@ -1348,9 +1448,8 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
-				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
 				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
-				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, mockGitHubPullBody},
 				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
 				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
 			},
@@ -1363,9 +1462,8 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
-				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
 				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
-				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, mockGitHubPullBody},
 				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
 				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
 				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
@@ -1379,9 +1477,8 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
-				{"HEAD", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, ``},
 				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
-				{"GET", "/repos/octocat/Hello-World/pulls", 200, http.Header{}, mockGitHubPullsBody},
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, mockGitHubPullBody},
 				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
 				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
 				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},

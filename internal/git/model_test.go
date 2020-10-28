@@ -282,6 +282,8 @@ func TestTag(t *testing.T) {
 	tests := []struct {
 		name            string
 		t1, t2          Tag
+		expectedIsZero1 bool
+		expectedIsZero2 bool
 		expectedEqual   bool
 		expectedBefore  bool
 		expectedAfter   bool
@@ -289,9 +291,23 @@ func TestTag(t *testing.T) {
 		expectedString2 string
 	}{
 		{
+			name:            "Zero",
+			t1:              Tag{},
+			t2:              Tag{},
+			expectedIsZero1: true,
+			expectedIsZero2: true,
+			expectedEqual:   true,
+			expectedBefore:  false,
+			expectedAfter:   false,
+			expectedString1: "Zero",
+			expectedString2: "Zero",
+		},
+		{
 			name:            "Equal",
 			t1:              tag1,
 			t2:              tag1,
+			expectedIsZero1: false,
+			expectedIsZero2: false,
 			expectedEqual:   true,
 			expectedBefore:  false,
 			expectedAfter:   false,
@@ -302,6 +318,8 @@ func TestTag(t *testing.T) {
 			name:            "Before",
 			t1:              tag1,
 			t2:              tag2,
+			expectedIsZero1: false,
+			expectedIsZero2: false,
 			expectedEqual:   false,
 			expectedBefore:  true,
 			expectedAfter:   false,
@@ -312,6 +330,8 @@ func TestTag(t *testing.T) {
 			name:            "After",
 			t1:              tag2,
 			t2:              tag1,
+			expectedIsZero1: false,
+			expectedIsZero2: false,
 			expectedEqual:   false,
 			expectedBefore:  false,
 			expectedAfter:   true,
@@ -322,6 +342,8 @@ func TestTag(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedIsZero1, tc.t1.IsZero())
+			assert.Equal(t, tc.expectedIsZero2, tc.t2.IsZero())
 			assert.Equal(t, tc.expectedEqual, tc.t1.Equal(tc.t2))
 			assert.Equal(t, tc.expectedBefore, tc.t1.Before(tc.t2))
 			assert.Equal(t, tc.expectedAfter, tc.t1.After(tc.t2))

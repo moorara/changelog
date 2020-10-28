@@ -148,6 +148,11 @@ func annotatedTag(tagObj *object.Tag, commitObj *object.Commit) Tag {
 	}
 }
 
+// IsZero determines if a tag is a zero tag instance.
+func (t Tag) IsZero() bool {
+	return t == Tag{}
+}
+
 // Equal determines if two tags are the same.
 // Two tags are the same if they both have the same name.
 func (t Tag) Equal(u Tag) bool {
@@ -167,6 +172,9 @@ func (t Tag) After(u Tag) bool {
 }
 
 func (t Tag) String() string {
+	if t.IsZero() {
+		return "Zero"
+	}
 	return fmt.Sprintf("%s %s %s Commit[%s %s]", t.Type, t.Hash, t.Name, t.Commit.Hash, t.Commit.Message)
 }
 

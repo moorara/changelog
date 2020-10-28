@@ -46,8 +46,8 @@ type (
 	FetchIssuesAndMergesMock struct {
 		InContext context.Context
 		InSince   time.Time
-		OutIssues []remote.Change
-		OutMerges []remote.Change
+		OutIssues remote.Changes
+		OutMerges remote.Changes
 		OutError  error
 	}
 
@@ -57,7 +57,7 @@ type (
 	}
 )
 
-func (m *MockRemoteRepo) FetchIssuesAndMerges(ctx context.Context, since time.Time) ([]remote.Change, []remote.Change, error) {
+func (m *MockRemoteRepo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Changes, remote.Changes, error) {
 	i := m.FetchIssuesAndMergesIndex
 	m.FetchIssuesAndMergesIndex++
 	m.FetchIssuesAndMergesMocks[i].InContext = ctx

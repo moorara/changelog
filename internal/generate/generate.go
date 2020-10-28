@@ -44,13 +44,13 @@ func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
 	}
 }
 
-func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.Tag, git.Tag, error) {
+func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.Tag, git.Tag, git.Tag, error) {
 	g.logger.Debug("Resolving from and to tags ...")
 
 	var ok bool
 	var zero git.Tag
 	var lastGitTag, lastChangelogTag git.Tag
-	var fromTag, toTag git.Tag
+	var fromTag, toTag, futureTag git.Tag
 
 	// Resolve the last git tag
 	if len(tags) == 0 {
@@ -64,7 +64,7 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 		lastChangelogTag = git.Tag{} // Denotes the case where the changelog is empty
 	} else {
 		if lastChangelogTag, ok = tags.Find(chlog.Releases[0].GitTag); !ok {
-			return zero, zero, fmt.Errorf("changelog tag not found: %s", chlog.Releases[0].GitTag)
+			return zero, zero, zero, fmt.Errorf("changelog tag not found: %s", chlog.Releases[0].GitTag)
 		}
 	}
 
@@ -73,7 +73,7 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 		fromTag = lastChangelogTag
 	} else {
 		if fromTag, ok = tags.Find(g.spec.Tags.From); !ok {
-			return zero, zero, fmt.Errorf("from-tag not found: %s", g.spec.Tags.From)
+			return zero, zero, zero, fmt.Errorf("from-tag not found: %s", g.spec.Tags.From)
 		}
 
 		if fromTag.Before(lastChangelogTag) {
@@ -87,18 +87,27 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 		toTag = lastGitTag
 	} else {
 		if toTag, ok = tags.Find(g.spec.Tags.To); !ok {
-			return zero, zero, fmt.Errorf("to-tag not found: %s", g.spec.Tags.To)
+			return zero, zero, zero, fmt.Errorf("to-tag not found: %s", g.spec.Tags.To)
 		}
 
 		if toTag.Before(fromTag) || toTag.Equal(fromTag) {
-			return zero, zero, errors.New("to-tag should be after the from-tag")
+			return zero, zero, zero, errors.New("to-tag should be after the from-tag")
+		}
+	}
+
+	// Resolve the future tag
+	if g.spec.Tags.Future != "" {
+		futureTag = git.Tag{
+			Type: git.Void,
+			Name: g.spec.Tags.Future,
 		}
 	}
 
 	g.logger.Infof("From tag resolved: %s", fromTag.Name)
 	g.logger.Infof("To tag resolved: %s", toTag.Name)
+	g.logger.Infof("Future tag resolved: %s", futureTag.Name)
 
-	return fromTag, toTag, nil
+	return fromTag, toTag, futureTag, nil
 }
 
 func (g *Generator) filterByLabels(issues, merges remote.Changes) (remote.Changes, remote.Changes) {
@@ -188,7 +197,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 		return err
 	}
 
-	// GET AND FILTER GIT TAGS
+	// ==============================> GET AND FILTER GIT TAGS <==============================
 
 	tags, err := g.gitRepo.Tags()
 	if err != nil {
@@ -208,15 +217,35 @@ func (g *Generator) Generate(ctx context.Context) error {
 		tags = tags.ExcludeRegex(re)
 	}
 
-	fromTag, _, err := g.resolveTags(tags, chlog)
+	fromTag, toTag, futureTag, err := g.resolveTags(tags, chlog)
 	if err != nil {
 		return err
 	}
 
-	// FETCH ISSUES AND MERGES
+	/*
+		Here is the logic for when to fetch changes for released and unreleased sections:
+
+			| Since |  To | Future || Changes | Released | Unreleased |
+			|-------|-----|--------||---------|----------|------------|
+			|   0   |  0  |   0    ||    0    |     0    |      0     |
+			|   0   |  0  |   1    ||    1    |     0    |      1     |
+			|   0   |  1  |   0    ||    1    |     1    |      0     |
+			|   0   |  1  |   1    ||    1    |     1    |      1     |
+			|   1   |  0  |   0    ||    0    |     0    |      0     |
+			|   1   |  0  |   1    ||    1    |     0    |      1     |
+			|   1   |  1  |   0    ||    1    |     1    |      0     |
+			|   1   |  1  |   1    ||    1    |     1    |      1     |
+	*/
+
+	if (fromTag == toTag || toTag.IsZero()) && futureTag.IsZero() {
+		g.logger.Debug("No new tag or a future tag is detected.")
+		g.logger.Info("Changelog is up-to-date")
+		return nil
+	}
+
+	// ==============================> FETCH ISSUES AND MERGES <==============================
 
 	since := fromTag.Commit.Committer.Time
-
 	issues, merges, err := g.remoteRepo.FetchIssuesAndMerges(ctx, since)
 	if err != nil {
 		return err
@@ -224,7 +253,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 
 	issues, merges = g.filterByLabels(issues, merges)
 
-	// UPDATE THE CHANGELOG
+	// ==============================> UPDATE THE CHANGELOG <==============================
 
 	_, err = g.processor.Render(chlog)
 	if err != nil {
