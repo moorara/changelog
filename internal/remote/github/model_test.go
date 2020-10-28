@@ -9,24 +9,25 @@ import (
 
 func TestIssueToChange(t *testing.T) {
 	tests := []struct {
-		name           string
-		i              issue
-		e              event
-		u              user
-		expectedChange remote.Change
+		name            string
+		i               issue
+		e               event
+		creator, closer user
+		expectedChange  remote.Change
 	}{
 		{
 			name:           "Issue",
 			i:              gitHubIssue1,
 			e:              gitHubEvent1,
-			u:              gitHubUser,
+			creator:        gitHubUser1,
+			closer:         gitHubUser1,
 			expectedChange: remoteIssue,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			change := issueToChange(tc.i, tc.e, tc.u)
+			change := issueToChange(tc.i, tc.e, tc.creator, tc.closer)
 
 			assert.Equal(t, tc.expectedChange, change)
 		})
@@ -35,26 +36,27 @@ func TestIssueToChange(t *testing.T) {
 
 func TestPullToChange(t *testing.T) {
 	tests := []struct {
-		name           string
-		p              pullRequest
-		e              event
-		c              commit
-		u              user
-		expectedChange remote.Change
+		name            string
+		p               pullRequest
+		e               event
+		c               commit
+		creator, merger user
+		expectedChange  remote.Change
 	}{
 		{
 			name:           "Merge",
 			p:              gitHubPull1,
 			e:              gitHubEvent2,
 			c:              gitHubCommit,
-			u:              gitHubUser,
+			creator:        gitHubUser2,
+			merger:         gitHubUser3,
 			expectedChange: remoteMerge,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			change := pullToChange(tc.p, tc.e, tc.c, tc.u)
+			change := pullToChange(tc.p, tc.e, tc.c, tc.creator, tc.merger)
 
 			assert.Equal(t, tc.expectedChange, change)
 		})
@@ -98,7 +100,9 @@ func TestResolveIssuesAndMerges(t *testing.T) {
 			},
 			gitHubUsers: &userStore{
 				m: map[string]user{
-					"octocat": gitHubUser,
+					"octocat": gitHubUser1,
+					"octodog": gitHubUser2,
+					"octofox": gitHubUser3,
 				},
 			},
 			expectedIssues: remote.Changes{remoteIssue},

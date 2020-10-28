@@ -54,8 +54,8 @@ const (
 			"title": "Fixed a bug",
 			"body": "I made this to work as expected!",
 			"user": {
-				"login": "octocat",
-				"id": 1,
+				"login": "octodog",
+				"id": 2,
 				"type": "User"
 			},
 			"labels": [
@@ -73,7 +73,7 @@ const (
 			},
 			"locked": false,
 			"pull_request": {
-				"url": "https://api.github.com/repos/octocat/Hello-World/pulls/1002"
+				"url": "https://api.github.com/repos/octodog/Hello-World/pulls/1002"
 			},
 			"closed_at": "2020-10-20T20:00:00Z",
 			"created_at": "2020-10-15T15:00:00Z",
@@ -91,8 +91,8 @@ const (
 			"title": "Fixed a bug",
 			"body": "I made this to work as expected!",
 			"user": {
-				"login": "octocat",
-				"id": 1,
+				"login": "octodog",
+				"id": 2,
 				"type": "User"
 			},
 			"labels": [
@@ -114,14 +114,22 @@ const (
 			"merged_at": "2020-10-20T20:00:00Z",
 			"merge_commit_sha": "e5bd3914e2e596debea16f433f57875b5b90bcd6",
 			"head": {
-				"label": "octocat:new-topic",
+				"label": "octodog:new-topic",
 				"ref": "new-topic",
 				"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
 			},
 			"base": {
-				"label": "octocat:master",
+				"label": "octodog:master",
 				"ref": "master",
 				"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+			},
+			"merged": true,
+			"mergeable": null,
+			"rebaseable": null,
+			"merged_by": {
+				"login": "octofox",
+				"id": 3,
+				"type": "User"
 			}
 		}
 	]`
@@ -135,8 +143,8 @@ const (
 		"title": "Fixed a bug",
 		"body": "I made this to work as expected!",
 		"user": {
-			"login": "octocat",
-			"id": 1,
+			"login": "octodog",
+			"id": 2,
 			"type": "User"
 		},
 		"labels": [
@@ -158,14 +166,22 @@ const (
 		"merged_at": "2020-10-20T20:00:00Z",
 		"merge_commit_sha": "e5bd3914e2e596debea16f433f57875b5b90bcd6",
 		"head": {
-			"label": "octocat:new-topic",
+			"label": "octodog:new-topic",
 			"ref": "new-topic",
 			"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
 		},
 		"base": {
-			"label": "octocat:master",
+			"label": "octodog:master",
 			"ref": "master",
 			"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+		},
+		"merged": true,
+		"mergeable": null,
+		"rebaseable": null,
+		"merged_by": {
+			"login": "octofox",
+			"id": 3,
+			"type": "User"
 		}
 	}`
 
@@ -187,8 +203,8 @@ const (
 		{
 			"id": 2,
 			"actor": {
-				"login": "octocat",
-				"id": 1,
+				"login": "octofox",
+				"id": 3,
 				"type": "User"
 			},
 			"event": "merged",
@@ -197,23 +213,34 @@ const (
 		}
 	]`
 
-	mockGitHubUserBody = `{
+	mockGitHubUserBody1 = `{
 		"login": "octocat",
 		"id": 1,
-		"avatar_url": "https://github.com/images/error/octocat_happy.gif",
-		"gravatar_id": "",
 		"url": "https://api.github.com/users/octocat",
-		"html_url": "https://github.com/octocat",
-		"organizations_url": "https://api.github.com/users/octocat/orgs",
 		"type": "User",
 		"site_admin": false,
 		"name": "monalisa octocat",
-		"company": "GitHub",
-		"blog": "https://github.com/blog",
-		"location": "San Francisco",
-		"email": "octocat@github.com",
-		"created_at": "2008-01-14T04:33:35Z",
-		"updated_at": "2008-01-14T04:33:35Z"
+		"email": "octocat@github.com"
+	}`
+
+	mockGitHubUserBody2 = `{
+		"login": "octodog",
+		"id": 2,
+		"url": "https://api.github.com/users/octodog",
+		"type": "User",
+		"site_admin": false,
+		"name": "monalisa octodog",
+		"email": "octodog@github.com"
+	}`
+
+	mockGitHubUserBody3 = `{
+		"login": "octofox",
+		"id": 3,
+		"url": "https://api.github.com/users/octofox",
+		"type": "User",
+		"site_admin": false,
+		"name": "monalisa octofox",
+		"email": "octofox@github.com"
 	}`
 
 	mockGitHubCommitBody = `{
@@ -270,10 +297,9 @@ var (
 			State:  "open",
 			Title:  "v1.0",
 		},
-		PullRequest: nil,
-		CreatedAt:   parseGitHubTime("2020-10-10T10:00:00Z"),
-		UpdatedAt:   parseGitHubTime("2020-10-20T20:00:00Z"),
-		ClosedAt:    nil,
+		CreatedAt: parseGitHubTime("2020-10-10T10:00:00Z"),
+		UpdatedAt: parseGitHubTime("2020-10-20T20:00:00Z"),
+		ClosedAt:  nil,
 	}
 
 	gitHubIssue2 = issue{
@@ -284,8 +310,8 @@ var (
 		Title:  "Fixed a bug",
 		Body:   "I made this to work as expected!",
 		User: user{
-			ID:    1,
-			Login: "octocat",
+			ID:    2,
+			Login: "octodog",
 			Type:  "User",
 		},
 		Labels: []label{
@@ -302,7 +328,7 @@ var (
 			Title:  "v1.0",
 		},
 		PullRequest: &pullRequestURLs{
-			URL: "https://api.github.com/repos/octocat/Hello-World/pulls/1002",
+			URL: "https://api.github.com/repos/octodog/Hello-World/pulls/1002",
 		},
 		CreatedAt: parseGitHubTime("2020-10-15T15:00:00Z"),
 		UpdatedAt: parseGitHubTime("2020-10-22T22:00:00Z"),
@@ -318,8 +344,8 @@ var (
 		Title:  "Fixed a bug",
 		Body:   "I made this to work as expected!",
 		User: user{
-			ID:    1,
-			Login: "octocat",
+			ID:    2,
+			Login: "octodog",
 			Type:  "User",
 		},
 		Labels: []label{
@@ -336,14 +362,22 @@ var (
 			Title:  "v1.0",
 		},
 		Base: reference{
-			Label: "octocat:master",
+			Label: "octodog:master",
 			Ref:   "master",
 			SHA:   "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 		},
 		Head: reference{
-			Label: "octocat:new-topic",
+			Label: "octodog:new-topic",
 			Ref:   "new-topic",
 			SHA:   "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+		},
+		Merged:     true,
+		Mergeable:  nil,
+		Rebaseable: nil,
+		MergedBy: &user{
+			ID:    3,
+			Login: "octofox",
+			Type:  "User",
 		},
 		MergeCommitSHA: "e5bd3914e2e596debea16f433f57875b5b90bcd6",
 		CreatedAt:      parseGitHubTime("2020-10-15T15:00:00Z"),
@@ -369,26 +403,38 @@ var (
 		Event:    "merged",
 		CommitID: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 		Actor: user{
-			ID:    1,
-			Login: "octocat",
+			ID:    3,
+			Login: "octofox",
 			Type:  "User",
 		},
 		CreatedAt: parseGitHubTime("2020-10-20T20:00:00Z"),
 	}
 
-	gitHubUser = user{
-		ID:         1,
-		Login:      "octocat",
-		Type:       "User",
-		Email:      "octocat@github.com",
-		Name:       "monalisa octocat",
-		URL:        "https://api.github.com/users/octocat",
-		HTMLURL:    "https://github.com/octocat",
-		OrgsURL:    "https://api.github.com/users/octocat/orgs",
-		AvatarURL:  "https://github.com/images/error/octocat_happy.gif",
-		GravatarID: "",
-		CreatedAt:  parseGitHubTime("2008-01-14T04:33:35Z"),
-		UpdatedAt:  parseGitHubTime("2008-01-14T04:33:35Z"),
+	gitHubUser1 = user{
+		ID:    1,
+		Login: "octocat",
+		Type:  "User",
+		Email: "octocat@github.com",
+		Name:  "monalisa octocat",
+		URL:   "https://api.github.com/users/octocat",
+	}
+
+	gitHubUser2 = user{
+		ID:    2,
+		Login: "octodog",
+		Type:  "User",
+		Email: "octodog@github.com",
+		Name:  "monalisa octodog",
+		URL:   "https://api.github.com/users/octodog",
+	}
+
+	gitHubUser3 = user{
+		ID:    3,
+		Login: "octofox",
+		Type:  "User",
+		Email: "octofox@github.com",
+		Name:  "monalisa octofox",
+		URL:   "https://api.github.com/users/octofox",
 	}
 
 	gitHubCommit = commit{
@@ -424,7 +470,13 @@ var (
 		Labels:    []string{"bug"},
 		Milestone: "v1.0",
 		Time:      time.Time{},
-		User: remote.User{
+		Creator: remote.User{
+			Name:     "monalisa octocat",
+			Email:    "octocat@github.com",
+			Username: "octocat",
+			URL:      "https://api.github.com/users/octocat",
+		},
+		CloserOrMerger: remote.User{
 			Name:     "monalisa octocat",
 			Email:    "octocat@github.com",
 			Username: "octocat",
@@ -438,11 +490,17 @@ var (
 		Labels:    []string{"bug"},
 		Milestone: "v1.0",
 		Time:      parseGitHubTime("2020-10-20T19:59:59Z"),
-		User: remote.User{
-			Name:     "monalisa octocat",
-			Email:    "octocat@github.com",
-			Username: "octocat",
-			URL:      "https://api.github.com/users/octocat",
+		Creator: remote.User{
+			Name:     "monalisa octodog",
+			Email:    "octodog@github.com",
+			Username: "octodog",
+			URL:      "https://api.github.com/users/octodog",
+		},
+		CloserOrMerger: remote.User{
+			Name:     "monalisa octofox",
+			Email:    "octofox@github.com",
+			Username: "octofox",
+			URL:      "https://api.github.com/users/octofox",
 		},
 	}
 )
@@ -529,7 +587,7 @@ func TestRepo_CreateRequest(t *testing.T) {
 		accessToken   string
 		ctx           context.Context
 		method        string
-		endpoint      string
+		url           string
 		body          io.Reader
 		expectedError string
 	}{
@@ -538,7 +596,7 @@ func TestRepo_CreateRequest(t *testing.T) {
 			accessToken:   "github-token",
 			ctx:           nil,
 			method:        "",
-			endpoint:      "",
+			url:           "",
 			body:          nil,
 			expectedError: "net/http: nil Context",
 		},
@@ -547,7 +605,7 @@ func TestRepo_CreateRequest(t *testing.T) {
 			accessToken:   "github-token",
 			ctx:           context.Background(),
 			method:        "GET",
-			endpoint:      "/users/octocat",
+			url:           "/users/octocat",
 			body:          nil,
 			expectedError: "",
 		},
@@ -559,7 +617,7 @@ func TestRepo_CreateRequest(t *testing.T) {
 				accessToken: tc.accessToken,
 			}
 
-			req, err := r.createRequest(tc.ctx, tc.method, tc.endpoint, tc.body)
+			req, err := r.createRequest(tc.ctx, tc.method, tc.url, tc.body)
 
 			if tc.expectedError != "" {
 				assert.Nil(t, req)
@@ -1193,6 +1251,20 @@ func TestRepo_FindEvent(t *testing.T) {
 			eventName:     "closed",
 			expectedError: "GitHub closed event for issue 1001 not found",
 		},
+		/* {
+			name: "Found_SecondPage",
+			mockResponses: []MockResponse{
+				{
+					"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{
+						"Link": []string{`<https://api.github.com/repositories/1/issues/events?page=2>; rel="next", <>; rel="last"`},
+					}, mockGitHubEventsBody1,
+				},
+			},
+			ctx:           context.Background(),
+			issueNumber:   1001,
+			eventName:     "closed",
+			expectedEvent: gitHubEvent1,
+		}, */
 	}
 
 	for _, tc := range tests {
@@ -1331,11 +1403,11 @@ func TestRepo_FetchUser(t *testing.T) {
 		{
 			name: "Success",
 			mockResponses: []MockResponse{
-				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody},
+				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody1},
 			},
 			ctx:          context.Background(),
 			username:     "octocat",
-			expectedUser: gitHubUser,
+			expectedUser: gitHubUser1,
 		},
 	}
 
@@ -1458,7 +1530,7 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 			expectedError: "GET /repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e 404: 404 page not found\n",
 		},
 		{
-			name: "FetchUserFails",
+			name: "FetchUserFails#1",
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
 				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
@@ -1473,6 +1545,39 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 			expectedError: "GET /users/octocat 404: 404 page not found\n",
 		},
 		{
+			name: "FetchUserFails#2",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
+				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, mockGitHubPullBody},
+				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
+				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
+				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
+				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody1},
+			},
+			ctx:           context.Background(),
+			since:         since,
+			expectedError: "GET /users/octodog 404: 404 page not found\n",
+		},
+		{
+			name: "FetchUserFails#3",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/issues", 200, http.Header{}, ``},
+				{"GET", "/repos/octocat/Hello-World/issues", 200, http.Header{}, mockGitHubIssuesBody},
+				{"GET", "/repos/octocat/Hello-World/pulls/1002", 200, http.Header{}, mockGitHubPullBody},
+				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
+				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
+				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
+				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody1},
+				{"GET", "/users/octodog", 200, nil, mockGitHubUserBody2},
+			},
+			ctx:           context.Background(),
+			since:         since,
+			expectedError: "GET /users/octofox 404: 404 page not found\n",
+		},
+		{
 			name: "Success",
 			mockResponses: []MockResponse{
 				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
@@ -1482,7 +1587,9 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 				{"GET", "/repos/octocat/Hello-World/issues/1001/events", 200, http.Header{}, mockGitHubEventsBody1},
 				{"GET", "/repos/octocat/Hello-World/issues/1002/events", 200, http.Header{}, mockGitHubEventsBody2},
 				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody},
-				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody},
+				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody1},
+				{"GET", "/users/octodog", 200, nil, mockGitHubUserBody2},
+				{"GET", "/users/octofox", 200, nil, mockGitHubUserBody3},
 			},
 			ctx:            context.Background(),
 			since:          since,

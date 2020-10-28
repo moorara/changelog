@@ -56,8 +56,7 @@ func NewRepo(logger log.Logger, path, accessToken string) remote.Repo {
 	}
 }
 
-func (r *repo) createRequest(ctx context.Context, method, endpoint string, body io.Reader) (*http.Request, error) {
-	url := r.apiURL + endpoint
+func (r *repo) createRequest(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, err
@@ -90,7 +89,8 @@ func (r *repo) checkScopes(ctx context.Context, scopes ...scope) error {
 
 	r.logger.Debugf("Checking GitHub token scopes: %s", scopes)
 
-	req, err := r.createRequest(ctx, "HEAD", "/user", nil)
+	url := fmt.Sprintf("%s/user", r.apiURL)
+	req, err := r.createRequest(ctx, "HEAD", url, nil)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (r *repo) fetchIssuesPageCount(ctx context.Context, since time.Time) (int, 
 
 	r.logger.Debug("Fetching the total number of pages of GitHub issues ...")
 
-	url := fmt.Sprintf("/repos/%s/issues", r.path)
+	url := fmt.Sprintf("%s/repos/%s/issues", r.apiURL, r.path)
 	req, err := r.createRequest(ctx, "HEAD", url, nil)
 	if err != nil {
 		return -1, err
@@ -159,7 +159,7 @@ func (r *repo) fetchIssues(ctx context.Context, since time.Time, pageNo int) ([]
 
 	r.logger.Debugf("Fetching GitHub issues page %d ...", pageNo)
 
-	url := fmt.Sprintf("/repos/%s/issues", r.path)
+	url := fmt.Sprintf("%s/repos/%s/issues", r.apiURL, r.path)
 	req, err := r.createRequest(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -194,7 +194,7 @@ func (r *repo) fetchPullsPageCount(ctx context.Context) (int, error) {
 
 	r.logger.Debug("Fetching the total number of pages of GitHub pull requests ...")
 
-	url := fmt.Sprintf("/repos/%s/pulls", r.path)
+	url := fmt.Sprintf("%s/repos/%s/pulls", r.apiURL, r.path)
 	req, err := r.createRequest(ctx, "HEAD", url, nil)
 	if err != nil {
 		return -1, err
@@ -232,7 +232,7 @@ func (r *repo) fetchPulls(ctx context.Context, pageNo int) ([]pullRequest, error
 
 	r.logger.Debugf("Fetching GitHub pulls page %d ...", pageNo)
 
-	url := fmt.Sprintf("/repos/%s/pulls", r.path)
+	url := fmt.Sprintf("%s/repos/%s/pulls", r.apiURL, r.path)
 	req, err := r.createRequest(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (r *repo) fetchPull(ctx context.Context, number int) (pullRequest, error) {
 
 	r.logger.Debugf("Fetching GitHub pull %d ...", number)
 
-	url := fmt.Sprintf("/repos/%s/pulls/%d", r.path, number)
+	url := fmt.Sprintf("%s/repos/%s/pulls/%d", r.apiURL, r.path, number)
 	req, err := r.createRequest(ctx, "GET", url, nil)
 	if err != nil {
 		return pullRequest{}, err
@@ -290,7 +290,7 @@ func (r *repo) findEvent(ctx context.Context, number int, name string) (event, e
 
 	r.logger.Debugf("Finding %s event for issue %d ...", name, number)
 
-	url := fmt.Sprintf("/repos/%s/issues/%d/events", r.path, number)
+	url := fmt.Sprintf("%s/repos/%s/issues/%d/events", r.apiURL, r.path, number)
 	for {
 		req, err := r.createRequest(ctx, "GET", url, nil)
 		if err != nil {
@@ -342,7 +342,7 @@ func (r *repo) fetchCommit(ctx context.Context, ref string) (commit, error) {
 
 	r.logger.Debugf("Fetching GitHub commit %s ...", ref)
 
-	url := fmt.Sprintf("/repos/%s/commits/%s", r.path, ref)
+	url := fmt.Sprintf("%s/repos/%s/commits/%s", r.apiURL, r.path, ref)
 	req, err := r.createRequest(ctx, "GET", url, nil)
 	if err != nil {
 		return commit{}, err
@@ -368,7 +368,7 @@ func (r *repo) fetchUser(ctx context.Context, username string) (user, error) {
 
 	r.logger.Debugf("Fetching GitHub user %s ...", username)
 
-	url := fmt.Sprintf("/users/%s", username)
+	url := fmt.Sprintf("%s/users/%s", r.apiURL, username)
 	req, err := r.createRequest(ctx, "GET", url, nil)
 	if err != nil {
 		return user{}, err
@@ -446,7 +446,9 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 				if err != nil {
 					return err
 				}
-				gitHubPulls.Save(num, pull)
+				if pull.Merged {
+					gitHubPulls.Save(num, pull)
+				}
 				return nil
 			})
 		}
@@ -480,24 +482,23 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 		}
 
 		// Fetch the merged event only if the issue represents a merged pull request
-		if p, ok := gitHubPulls.Load(num); ok {
-			if p.MergedAt != nil {
-				g3.Go(func() error {
-					e, err := r.findEvent(ctx3, num, "merged")
-					if err != nil {
-						return err
-					}
-					gitHubEvents.Save(num, e)
+		if _, ok := gitHubPulls.Load(num); ok {
+			// All Pulls expected to be merged at this point
+			g3.Go(func() error {
+				e, err := r.findEvent(ctx3, num, "merged")
+				if err != nil {
+					return err
+				}
+				gitHubEvents.Save(num, e)
 
-					c, err := r.fetchCommit(ctx3, e.CommitID)
-					if err != nil {
-						return err
-					}
-					gitHubCommits.Save(e.CommitID, c)
+				c, err := r.fetchCommit(ctx3, e.CommitID)
+				if err != nil {
+					return err
+				}
+				gitHubCommits.Save(e.CommitID, c)
 
-					return nil
-				})
-			}
+				return nil
+			})
 		}
 
 		return nil
@@ -513,16 +514,49 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	gitHubUsers := newUserStore()
 
-	// Fetch users
+	// Fetch author users
 	err = gitHubIssues.ForEach(func(num int, i issue) error {
+		// Fetch author users for issues
+		if i.PullRequest == nil {
+			// Fetch the user if it is not already fetched
+			if _, ok := gitHubUsers.Load(i.User.Login); !ok {
+				u, err := r.fetchUser(ctx, i.User.Login)
+				if err != nil {
+					return err
+				}
+				gitHubUsers.Save(i.User.Login, u)
+			}
+		}
+
+		// Fetch author users for pull requests
+		if p, ok := gitHubPulls.Load(num); ok {
+			// All Pulls expected to be merged at this point
+			// Fetch the user if it is not already fetched
+			if _, ok := gitHubUsers.Load(p.User.Login); !ok {
+				u, err := r.fetchUser(ctx, p.User.Login)
+				if err != nil {
+					return err
+				}
+				gitHubUsers.Save(p.User.Login, u)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Fetch closer/merger users
+	err = gitHubEvents.ForEach(func(num int, e event) error {
 		// Fetch the user if it is not already fetched
-		username := i.User.Login
-		if _, ok := gitHubUsers.Load(username); !ok {
-			u, err := r.fetchUser(ctx, username)
+		if _, ok := gitHubUsers.Load(e.Actor.Login); !ok {
+			u, err := r.fetchUser(ctx, e.Actor.Login)
 			if err != nil {
 				return err
 			}
-			gitHubUsers.Save(username, u)
+			gitHubUsers.Save(e.Actor.Login, u)
 		}
 
 		return nil

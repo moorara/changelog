@@ -169,7 +169,7 @@ func TestUserStore(t *testing.T) {
 		{
 			name:     "OK",
 			username: "octocat",
-			u:        gitHubUser,
+			u:        gitHubUser1,
 		},
 	}
 

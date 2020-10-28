@@ -103,6 +103,10 @@ type (
 		Milestone      *milestone `json:"milestone"`
 		Base           reference  `json:"base"`
 		Head           reference  `json:"head"`
+		Merged         bool       `json:"merged"`
+		Mergeable      *bool      `json:"mergeable"`
+		Rebaseable     *bool      `json:"rebaseable"`
+		MergedBy       *user      `json:"merged_by"`
 		MergeCommitSHA string     `json:"merge_commit_sha"`
 		URL            string     `json:"url"`
 		HTMLURL        string     `json:"html_url"`
@@ -150,7 +154,7 @@ type (
 	}
 )
 
-func issueToChange(i issue, e event, u user) remote.Change {
+func issueToChange(i issue, e event, creator, closer user) remote.Change {
 	// e is the closed event of the issue
 
 	labels := make([]string, len(i.Labels))
@@ -169,24 +173,28 @@ func issueToChange(i issue, e event, u user) remote.Change {
 		time = *i.ClosedAt
 	}
 
-	user := remote.User{
-		Name:     u.Name,
-		Email:    u.Email,
-		Username: u.Login,
-		URL:      u.URL,
-	}
-
 	return remote.Change{
 		Number:    i.Number,
 		Title:     i.Title,
 		Labels:    labels,
 		Milestone: milestone,
 		Time:      time,
-		User:      user,
+		Creator: remote.User{
+			Name:     creator.Name,
+			Email:    creator.Email,
+			Username: creator.Login,
+			URL:      creator.URL,
+		},
+		CloserOrMerger: remote.User{
+			Name:     closer.Name,
+			Email:    closer.Email,
+			Username: closer.Login,
+			URL:      closer.URL,
+		},
 	}
 }
 
-func pullToChange(p pullRequest, e event, c commit, u user) remote.Change {
+func pullToChange(p pullRequest, e event, c commit, creator, merger user) remote.Change {
 	// e is the merged event of the pull request
 
 	labels := make([]string, len(p.Labels))
@@ -203,20 +211,24 @@ func pullToChange(p pullRequest, e event, c commit, u user) remote.Change {
 	// c.Commit.Author.Time is the actual time of merge
 	time := c.Commit.Author.Time
 
-	user := remote.User{
-		Name:     u.Name,
-		Email:    u.Email,
-		Username: u.Login,
-		URL:      u.URL,
-	}
-
 	return remote.Change{
 		Number:    p.Number,
 		Title:     p.Title,
 		Labels:    labels,
 		Milestone: milestone,
 		Time:      time,
-		User:      user,
+		Creator: remote.User{
+			Name:     creator.Name,
+			Email:    creator.Email,
+			Username: creator.Login,
+			URL:      creator.URL,
+		},
+		CloserOrMerger: remote.User{
+			Name:     merger.Name,
+			Email:    merger.Email,
+			Username: merger.Login,
+			URL:      merger.URL,
+		},
 	}
 }
 
@@ -232,18 +244,19 @@ func resolveIssuesAndMerges(
 
 	_ = gitHubIssues.ForEach(func(num int, i issue) error {
 		e, _ := gitHubEvents.Load(num)
-		u, _ := gitHubUsers.Load(i.User.Login)
+		creator, _ := gitHubUsers.Load(i.User.Login)
 
 		if i.PullRequest == nil {
-			issues = append(issues, issueToChange(i, e, u))
+			closer, _ := gitHubUsers.Load(e.Actor.Login)
+			issues = append(issues, issueToChange(i, e, creator, closer))
 		} else {
 			// Every GitHub pull request is also an issue (see https://docs.github.com/en/rest/reference/issues#list-repository-issues)
 			// For every closed issue that is a pull request, we also need to make sure it is merged.
 			if p, ok := gitHubPulls.Load(num); ok {
-				if p.MergedAt != nil {
-					c, _ := gitHubCommits.Load(e.CommitID)
-					merges = append(merges, pullToChange(p, e, c, u))
-				}
+				// All Pulls expected to be merged at this point
+				c, _ := gitHubCommits.Load(e.CommitID)
+				merger, _ := gitHubUsers.Load(e.Actor.Login)
+				merges = append(merges, pullToChange(p, e, c, creator, merger))
 			}
 		}
 

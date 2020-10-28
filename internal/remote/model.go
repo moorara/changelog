@@ -44,12 +44,13 @@ func (l Labels) String() string {
 // Change represents a single change.
 // It can be an issue or a merge/pull/change request.
 type Change struct {
-	Number    int
-	Title     string
-	Labels    Labels
-	Milestone string
-	Time      time.Time
-	User      User
+	Number         int
+	Title          string
+	Labels         Labels
+	Milestone      string
+	Time           time.Time
+	Creator        User
+	CloserOrMerger User
 }
 
 // Changes is a collection of changes.
