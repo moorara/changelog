@@ -267,3 +267,13 @@ func (t Tags) ExcludeRegex(regex *regexp.Regexp) Tags {
 
 	return new
 }
+
+// MapToString customizes the string representation of the tags collection.
+func (t Tags) MapToString(f func(t Tag) string) string {
+	vals := []string{}
+	for _, tag := range t {
+		vals = append(vals, f(tag))
+	}
+
+	return strings.Join(vals, ", ")
+}

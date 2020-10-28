@@ -243,6 +243,31 @@ func (g *Generator) Generate(ctx context.Context) error {
 		return nil
 	}
 
+	// Resolving all new tags eligible for changelog
+	var newTags git.Tags
+
+	if fromTag.IsZero() && toTag.IsZero() {
+		newTags = git.Tags{}
+	} else if fromTag.IsZero() {
+		j := tags.Index(toTag.Name)
+		newTags = tags[:j+1]
+	} else if toTag.IsZero() {
+		i := tags.Index(toTag.Name)
+		newTags = tags[i:]
+	} else {
+		i := tags.Index(toTag.Name)
+		j := tags.Index(toTag.Name)
+		newTags = tags[i : j+1]
+	}
+
+	if !futureTag.IsZero() {
+		newTags = append(newTags, futureTag)
+	}
+
+	g.logger.Debugf("New tags for generating changelog: %s", newTags.MapToString(func(t git.Tag) string {
+		return t.Name
+	}))
+
 	// ==============================> FETCH ISSUES AND MERGES <==============================
 
 	since := fromTag.Commit.Committer.Time

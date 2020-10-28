@@ -533,9 +533,7 @@ func TestGenerator_Generate(t *testing.T) {
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
-						{
-							OutChangelog: &changelog.Changelog{},
-						},
+						{OutChangelog: &changelog.Changelog{}},
 					},
 				},
 				gitRepo: &MockGitRepo{
@@ -554,7 +552,7 @@ func TestGenerator_Generate(t *testing.T) {
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
-						{OutChangelog: new(changelog.Changelog)},
+						{OutChangelog: &changelog.Changelog{}},
 					},
 				},
 				gitRepo: &MockGitRepo{
@@ -569,16 +567,20 @@ func TestGenerator_Generate(t *testing.T) {
 		{
 			name: "FetchIssuesAndMergesFails",
 			g: &Generator{
-				spec:   spec.Spec{},
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						Future: "v0.1.0",
+					},
+				},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
-						{OutChangelog: new(changelog.Changelog)},
+						{OutChangelog: &changelog.Changelog{}},
 					},
 				},
 				gitRepo: &MockGitRepo{
 					TagsMocks: []TagsMock{
-						{OutTags: git.Tags{tag1}},
+						{OutTags: git.Tags{}},
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
@@ -593,14 +595,82 @@ func TestGenerator_Generate(t *testing.T) {
 		{
 			name: "RenderFails",
 			g: &Generator{
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						Future: "v0.1.0",
+					},
+				},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: &changelog.Changelog{}},
+					},
+					RenderMocks: []RenderMock{
+						{OutError: errors.New("error on rendering changelog")},
+					},
+				},
+				gitRepo: &MockGitRepo{
+					TagsMocks: []TagsMock{
+						{OutTags: git.Tags{}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
+						{
+							OutIssues: remote.Changes{},
+							OutMerges: remote.Changes{},
+						},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on rendering changelog",
+		},
+		{
+			name: "Success_FutureTag",
+			g: &Generator{
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						Future: "v0.1.0",
+					},
+				},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: &changelog.Changelog{}},
+					},
+					RenderMocks: []RenderMock{
+						{OutContent: "changelog"},
+					},
+				},
+				gitRepo: &MockGitRepo{
+					TagsMocks: []TagsMock{
+						{OutTags: git.Tags{}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
+						{
+							OutIssues: remote.Changes{},
+							OutMerges: remote.Changes{},
+						},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "",
+		},
+		{
+			name: "Success_ToTag",
+			g: &Generator{
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
-						{OutChangelog: new(changelog.Changelog)},
+						{OutChangelog: &changelog.Changelog{}},
 					},
 					RenderMocks: []RenderMock{
-						{OutError: errors.New("error on rendering changelog")},
+						{OutContent: "changelog"},
 					},
 				},
 				gitRepo: &MockGitRepo{
@@ -618,16 +688,22 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
-			expectedError: "error on rendering changelog",
+			expectedError: "",
 		},
 		{
-			name: "Success",
+			name: "Success_FromAndToTags",
 			g: &Generator{
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
-						{OutChangelog: new(changelog.Changelog)},
+						{
+							OutChangelog: &changelog.Changelog{
+								Releases: []changelog.Release{
+									{GitTag: "v0.1.1"},
+								},
+							},
+						},
 					},
 					RenderMocks: []RenderMock{
 						{OutContent: "changelog"},
@@ -635,7 +711,7 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 				gitRepo: &MockGitRepo{
 					TagsMocks: []TagsMock{
-						{OutTags: git.Tags{tag1}},
+						{OutTags: git.Tags{tag2, tag1}},
 					},
 				},
 				remoteRepo: &MockRemoteRepo{

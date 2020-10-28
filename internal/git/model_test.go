@@ -486,3 +486,29 @@ func TestTags_ExcludeRegex(t *testing.T) {
 		})
 	}
 }
+
+func TestTags_MapToString(t *testing.T) {
+	tests := []struct {
+		name           string
+		t              Tags
+		f              func(Tag) string
+		expectedString string
+	}{
+		{
+			name: "OK",
+			t:    Tags{tag1, tag2},
+			f: func(t Tag) string {
+				return t.Name
+			},
+			expectedString: "v0.1.0, v0.2.0",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			str := tc.t.MapToString(tc.f)
+
+			assert.Equal(t, tc.expectedString, str)
+		})
+	}
+}
