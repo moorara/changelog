@@ -2,6 +2,7 @@ package git
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -38,6 +39,7 @@ type Commit struct {
 	Author    Signature
 	Committer Signature
 	Message   string
+	Parents   []string
 }
 
 // Equal determines if two commits are the same.
@@ -150,7 +152,7 @@ func annotatedTag(tagObj *object.Tag, commitObj *object.Commit) Tag {
 
 // IsZero determines if a tag is a zero tag instance.
 func (t Tag) IsZero() bool {
-	return t == Tag{}
+	return reflect.ValueOf(t).IsZero()
 }
 
 // Equal determines if two tags are the same.
@@ -173,7 +175,7 @@ func (t Tag) After(u Tag) bool {
 
 func (t Tag) String() string {
 	if t.IsZero() {
-		return "Zero"
+		return ""
 	}
 	return fmt.Sprintf("%s %s %s Commit[%s %s]", t.Type, t.Hash, t.Name, t.Commit.Hash, t.Commit.Message)
 }
@@ -204,14 +206,14 @@ func (t Tags) Find(name string) (Tag, bool) {
 	return Tag{}, false
 }
 
-// Sort sorts the list of tags by their Times from the most recent to the least recent.
+// Sort sorts the list of tags by their times from the most recent to the least recent.
 func (t Tags) Sort() Tags {
 	sorted := make(Tags, len(t))
 	copy(sorted, t)
 
 	sort.Slice(sorted, func(i, j int) bool {
 		// The order of the tags should be from the most recent to the least recent
-		return sorted[i].Commit.After(sorted[j].Commit)
+		return sorted[i].After(sorted[j])
 	})
 
 	return sorted

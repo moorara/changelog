@@ -299,8 +299,8 @@ func TestTag(t *testing.T) {
 			expectedEqual:   true,
 			expectedBefore:  false,
 			expectedAfter:   false,
-			expectedString1: "Zero",
-			expectedString2: "Zero",
+			expectedString1: "",
+			expectedString2: "",
 		},
 		{
 			name:            "Equal",

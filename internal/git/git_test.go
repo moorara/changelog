@@ -109,3 +109,39 @@ func TestRepo_Tags(t *testing.T) {
 		})
 	}
 }
+
+func TestRepo_Commit(t *testing.T) {
+	g, err := git.PlainOpen("../..")
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		hash          string
+		expectedError string
+	}{
+		{
+			name:          "InvalidHash",
+			hash:          "",
+			expectedError: "object not found",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				git:    g,
+			}
+
+			commit, err := r.Commit(tc.hash)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, commit)
+			} else {
+				assert.Empty(t, commit)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}

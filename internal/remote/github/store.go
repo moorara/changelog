@@ -2,38 +2,38 @@ package github
 
 import "sync"
 
-type issueStore struct {
+type userStore struct {
 	sync.Mutex
-	m map[int]issue
+	m map[string]user
 }
 
-func newIssueStore() *issueStore {
-	return &issueStore{
-		m: make(map[int]issue),
+func newUserStore() *userStore {
+	return &userStore{
+		m: make(map[string]user),
 	}
 }
 
-func (s *issueStore) Save(number int, i issue) {
+func (s *userStore) Save(username string, u user) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.m[number] = i
+	s.m[username] = u
 }
 
-func (s *issueStore) Load(number int) (issue, bool) {
+func (s *userStore) Load(username string) (user, bool) {
 	s.Lock()
 	defer s.Unlock()
 
-	i, ok := s.m[number]
-	return i, ok
+	u, ok := s.m[username]
+	return u, ok
 }
 
-func (s *issueStore) ForEach(f func(int, issue) error) error {
+func (s *userStore) ForEach(f func(string, user) error) error {
 	s.Lock()
 	defer s.Unlock()
 
-	for number, i := range s.m {
-		if err := f(number, i); err != nil {
+	for username, u := range s.m {
+		if err := f(username, u); err != nil {
 			return err
 		}
 	}
@@ -41,77 +41,38 @@ func (s *issueStore) ForEach(f func(int, issue) error) error {
 	return nil
 }
 
-type pullRequestStore struct {
+type tagStore struct {
 	sync.Mutex
-	m map[int]pullRequest
+	m map[string]tag
 }
 
-func newPullRequestStore() *pullRequestStore {
-	return &pullRequestStore{
-		m: make(map[int]pullRequest),
+func newTagStore() *tagStore {
+	return &tagStore{
+		m: make(map[string]tag),
 	}
 }
 
-func (s *pullRequestStore) Save(number int, p pullRequest) {
+func (s *tagStore) Save(name string, t tag) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.m[number] = p
+	s.m[name] = t
 }
 
-func (s *pullRequestStore) Load(number int) (pullRequest, bool) {
+func (s *tagStore) Load(name string) (tag, bool) {
 	s.Lock()
 	defer s.Unlock()
 
-	p, ok := s.m[number]
-	return p, ok
+	c, ok := s.m[name]
+	return c, ok
 }
 
-func (s *pullRequestStore) ForEach(f func(int, pullRequest) error) error {
+func (s *tagStore) ForEach(f func(string, tag) error) error {
 	s.Lock()
 	defer s.Unlock()
 
-	for number, p := range s.m {
-		if err := f(number, p); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-type eventStore struct {
-	sync.Mutex
-	m map[int]event
-}
-
-func newEventStore() *eventStore {
-	return &eventStore{
-		m: make(map[int]event),
-	}
-}
-
-func (s *eventStore) Save(number int, e event) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.m[number] = e
-}
-
-func (s *eventStore) Load(number int) (event, bool) {
-	s.Lock()
-	defer s.Unlock()
-
-	e, ok := s.m[number]
-	return e, ok
-}
-
-func (s *eventStore) ForEach(f func(int, event) error) error {
-	s.Lock()
-	defer s.Unlock()
-
-	for number, e := range s.m {
-		if err := f(number, e); err != nil {
+	for name, t := range s.m {
+		if err := f(name, t); err != nil {
 			return err
 		}
 	}
@@ -158,38 +119,116 @@ func (s *commitStore) ForEach(f func(string, commit) error) error {
 	return nil
 }
 
-type userStore struct {
+type issueStore struct {
 	sync.Mutex
-	m map[string]user
+	m map[int]issue
 }
 
-func newUserStore() *userStore {
-	return &userStore{
-		m: make(map[string]user),
+func newIssueStore() *issueStore {
+	return &issueStore{
+		m: make(map[int]issue),
 	}
 }
 
-func (s *userStore) Save(username string, u user) {
+func (s *issueStore) Save(number int, i issue) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.m[username] = u
+	s.m[number] = i
 }
 
-func (s *userStore) Load(username string) (user, bool) {
+func (s *issueStore) Load(number int) (issue, bool) {
 	s.Lock()
 	defer s.Unlock()
 
-	u, ok := s.m[username]
-	return u, ok
+	i, ok := s.m[number]
+	return i, ok
 }
 
-func (s *userStore) ForEach(f func(string, user) error) error {
+func (s *issueStore) ForEach(f func(int, issue) error) error {
 	s.Lock()
 	defer s.Unlock()
 
-	for username, u := range s.m {
-		if err := f(username, u); err != nil {
+	for number, i := range s.m {
+		if err := f(number, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type pullStore struct {
+	sync.Mutex
+	m map[int]pull
+}
+
+func newPullStore() *pullStore {
+	return &pullStore{
+		m: make(map[int]pull),
+	}
+}
+
+func (s *pullStore) Save(number int, p pull) {
+	s.Lock()
+	defer s.Unlock()
+
+	s.m[number] = p
+}
+
+func (s *pullStore) Load(number int) (pull, bool) {
+	s.Lock()
+	defer s.Unlock()
+
+	p, ok := s.m[number]
+	return p, ok
+}
+
+func (s *pullStore) ForEach(f func(int, pull) error) error {
+	s.Lock()
+	defer s.Unlock()
+
+	for number, p := range s.m {
+		if err := f(number, p); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type eventStore struct {
+	sync.Mutex
+	m map[int]event
+}
+
+func newEventStore() *eventStore {
+	return &eventStore{
+		m: make(map[int]event),
+	}
+}
+
+func (s *eventStore) Save(number int, e event) {
+	s.Lock()
+	defer s.Unlock()
+
+	s.m[number] = e
+}
+
+func (s *eventStore) Load(number int) (event, bool) {
+	s.Lock()
+	defer s.Unlock()
+
+	e, ok := s.m[number]
+	return e, ok
+}
+
+func (s *eventStore) ForEach(f func(int, event) error) error {
+	s.Lock()
+	defer s.Unlock()
+
+	for number, e := range s.m {
+		if err := f(number, e); err != nil {
 			return err
 		}
 	}

@@ -7,6 +7,117 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestUserStore(t *testing.T) {
+	tests := []struct {
+		name     string
+		username string
+		u        user
+	}{
+		{
+			name:     "OK",
+			username: "octocat",
+			u:        gitHubUser1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newUserStore()
+			s.Save(tc.username, tc.u)
+			u, ok := s.Load(tc.username)
+
+			assert.True(t, ok)
+			assert.Equal(t, tc.u, u)
+
+			assert.NoError(t, s.ForEach(func(username string, u user) error {
+				assert.Equal(t, tc.username, username)
+				assert.Equal(t, tc.u, u)
+				return nil
+			}))
+
+			assert.Error(t, s.ForEach(func(username string, u user) error {
+				assert.Equal(t, tc.username, username)
+				assert.Equal(t, tc.u, u)
+				return errors.New("dummy")
+			}))
+		})
+	}
+}
+
+func TestTagStore(t *testing.T) {
+	tests := []struct {
+		name    string
+		tagName string
+		tg      tag
+	}{
+		{
+			name:    "OK",
+			tagName: "v0.1.0",
+			tg:      gitHubTag1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTagStore()
+			s.Save(tc.tagName, tc.tg)
+			tg, ok := s.Load(tc.tagName)
+
+			assert.True(t, ok)
+			assert.Equal(t, tc.tg, tg)
+
+			assert.NoError(t, s.ForEach(func(tagName string, tg tag) error {
+				assert.Equal(t, tc.tagName, tagName)
+				assert.Equal(t, tc.tg, tg)
+				return nil
+			}))
+
+			assert.Error(t, s.ForEach(func(tagName string, tg tag) error {
+				assert.Equal(t, tc.tagName, tagName)
+				assert.Equal(t, tc.tg, tg)
+				return errors.New("dummy")
+			}))
+		})
+	}
+}
+
+func TestCommitStore(t *testing.T) {
+	tests := []struct {
+		name string
+		sha  string
+		c    commit
+	}{
+		{
+			name: "OK",
+			sha:  "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			c:    gitHubCommit2,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newCommitStore()
+			s.Save(tc.sha, tc.c)
+			c, ok := s.Load(tc.sha)
+
+			assert.True(t, ok)
+			assert.Equal(t, tc.c, c)
+
+			assert.NoError(t, s.ForEach(func(sha string, c commit) error {
+				assert.Equal(t, tc.sha, sha)
+				assert.Equal(t, tc.c, c)
+				return nil
+			}))
+
+			assert.Error(t, s.ForEach(func(sha string, c commit) error {
+				assert.Equal(t, tc.sha, sha)
+				assert.Equal(t, tc.c, c)
+				return errors.New("dummy")
+			}))
+		})
+	}
+}
+
 func TestIssueStore(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -44,11 +155,11 @@ func TestIssueStore(t *testing.T) {
 	}
 }
 
-func TestPullRequestStore(t *testing.T) {
+func TestPullStore(t *testing.T) {
 	tests := []struct {
 		name   string
 		number int
-		p      pullRequest
+		p      pull
 	}{
 		{
 			name:   "OK",
@@ -59,20 +170,20 @@ func TestPullRequestStore(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			s := newPullRequestStore()
+			s := newPullStore()
 			s.Save(tc.number, tc.p)
 			p, ok := s.Load(tc.number)
 
 			assert.True(t, ok)
 			assert.Equal(t, tc.p, p)
 
-			assert.NoError(t, s.ForEach(func(number int, p pullRequest) error {
+			assert.NoError(t, s.ForEach(func(number int, p pull) error {
 				assert.Equal(t, tc.number, number)
 				assert.Equal(t, tc.p, p)
 				return nil
 			}))
 
-			assert.Error(t, s.ForEach(func(number int, p pullRequest) error {
+			assert.Error(t, s.ForEach(func(number int, p pull) error {
 				assert.Equal(t, tc.number, number)
 				assert.Equal(t, tc.p, p)
 				return errors.New("dummy")
@@ -117,80 +228,6 @@ func TestEventStore(t *testing.T) {
 			assert.Error(t, s.ForEach(func(number int, e event) error {
 				assert.Equal(t, tc.number, number)
 				assert.Equal(t, tc.e, e)
-				return errors.New("dummy")
-			}))
-		})
-	}
-}
-
-func TestCommitStore(t *testing.T) {
-	tests := []struct {
-		name string
-		sha  string
-		c    commit
-	}{
-		{
-			name: "OK",
-			sha:  "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-			c:    gitHubCommit,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			s := newCommitStore()
-			s.Save(tc.sha, tc.c)
-			c, ok := s.Load(tc.sha)
-
-			assert.True(t, ok)
-			assert.Equal(t, tc.c, c)
-
-			assert.NoError(t, s.ForEach(func(sha string, c commit) error {
-				assert.Equal(t, tc.sha, sha)
-				assert.Equal(t, tc.c, c)
-				return nil
-			}))
-
-			assert.Error(t, s.ForEach(func(sha string, c commit) error {
-				assert.Equal(t, tc.sha, sha)
-				assert.Equal(t, tc.c, c)
-				return errors.New("dummy")
-			}))
-		})
-	}
-}
-
-func TestUserStore(t *testing.T) {
-	tests := []struct {
-		name     string
-		username string
-		u        user
-	}{
-		{
-			name:     "OK",
-			username: "octocat",
-			u:        gitHubUser1,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			s := newUserStore()
-			s.Save(tc.username, tc.u)
-			u, ok := s.Load(tc.username)
-
-			assert.True(t, ok)
-			assert.Equal(t, tc.u, u)
-
-			assert.NoError(t, s.ForEach(func(username string, u user) error {
-				assert.Equal(t, tc.username, username)
-				assert.Equal(t, tc.u, u)
-				return nil
-			}))
-
-			assert.Error(t, s.ForEach(func(username string, u user) error {
-				assert.Equal(t, tc.username, username)
-				assert.Equal(t, tc.u, u)
 				return errors.New("dummy")
 			}))
 		})

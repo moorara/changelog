@@ -42,6 +42,17 @@ func TestNewRepo(t *testing.T) {
 	}
 }
 
+func TestRepo_FetchAllTags(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	tags, err := r.FetchAllTags(context.Background())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, tags)
+}
+
 func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 	r := &repo{
 		logger: log.New(log.None),

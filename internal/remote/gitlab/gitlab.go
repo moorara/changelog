@@ -38,6 +38,11 @@ func NewRepo(logger log.Logger, path, accessToken string) remote.Repo {
 	}
 }
 
+// FetchAllTags retrieves all tags for a GitLab repository.
+func (r *repo) FetchAllTags(ctx context.Context) (remote.Tags, error) {
+	return remote.Tags{}, nil
+}
+
 // FetchIssuesAndMerges retrieves all closed issues and merged merge requests for a GitLab repository.
 func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Changes, remote.Changes, error) {
 	return remote.Changes{}, remote.Changes{}, nil

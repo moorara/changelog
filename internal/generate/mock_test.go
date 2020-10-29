@@ -21,12 +21,21 @@ type (
 		OutError error
 	}
 
+	CommitMock struct {
+		InHash    string
+		OutCommit git.Commit
+		OutError  error
+	}
+
 	MockGitRepo struct {
 		GetRemoteInfoIndex int
 		GetRemoteInfoMocks []GetRemoteInfoMock
 
 		TagsIndex int
 		TagsMocks []TagsMock
+
+		CommitIndex int
+		CommitMocks []CommitMock
 	}
 )
 
@@ -42,6 +51,12 @@ func (m *MockGitRepo) Tags() (git.Tags, error) {
 	return m.TagsMocks[i].OutTags, m.TagsMocks[i].OutError
 }
 
+func (m *MockGitRepo) Commit(hash string) (git.Commit, error) {
+	i := m.CommitIndex
+	m.CommitIndex++
+	return m.CommitMocks[i].OutCommit, m.CommitMocks[i].OutError
+}
+
 type (
 	FetchIssuesAndMergesMock struct {
 		InContext context.Context
@@ -51,11 +66,27 @@ type (
 		OutError  error
 	}
 
+	FetchAllTagsMock struct {
+		InContext context.Context
+		OutTags   remote.Tags
+		OutError  error
+	}
+
 	MockRemoteRepo struct {
+		FetchAllTagsIndex int
+		FetchAllTagsMocks []FetchAllTagsMock
+
 		FetchIssuesAndMergesIndex int
 		FetchIssuesAndMergesMocks []FetchIssuesAndMergesMock
 	}
 )
+
+func (m *MockRemoteRepo) FetchAllTags(ctx context.Context) (remote.Tags, error) {
+	i := m.FetchAllTagsIndex
+	m.FetchAllTagsIndex++
+	m.FetchAllTagsMocks[i].InContext = ctx
+	return m.FetchAllTagsMocks[i].OutTags, m.FetchAllTagsMocks[i].OutError
+}
 
 func (m *MockRemoteRepo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Changes, remote.Changes, error) {
 	i := m.FetchIssuesAndMergesIndex

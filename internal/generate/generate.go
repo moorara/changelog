@@ -44,7 +44,9 @@ func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
 	}
 }
 
-func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.Tag, git.Tag, git.Tag, error) {
+// TODO: Use either resolveGitTags or resolveRemoteTags
+
+func (g *Generator) resolveGitTags(tags git.Tags, chlog *changelog.Changelog) (git.Tag, git.Tag, git.Tag, error) {
 	g.logger.Debug("Resolving from and to tags ...")
 
 	var ok bool
@@ -98,7 +100,71 @@ func (g *Generator) resolveTags(tags git.Tags, chlog *changelog.Changelog) (git.
 	// Resolve the future tag
 	if g.spec.Tags.Future != "" {
 		futureTag = git.Tag{
-			Type: git.Void,
+			Name: g.spec.Tags.Future,
+		}
+	}
+
+	g.logger.Infof("From tag resolved: %s", fromTag.Name)
+	g.logger.Infof("To tag resolved: %s", toTag.Name)
+	g.logger.Infof("Future tag resolved: %s", futureTag.Name)
+
+	return fromTag, toTag, futureTag, nil
+}
+
+func (g *Generator) resolveRemoteTags(tags remote.Tags, chlog *changelog.Changelog) (remote.Tag, remote.Tag, remote.Tag, error) {
+	g.logger.Debug("Resolving from and to tags ...")
+
+	var ok bool
+	var zero remote.Tag
+	var lastGitTag, lastChangelogTag remote.Tag
+	var fromTag, toTag, futureTag remote.Tag
+
+	// Resolve the last git tag
+	if len(tags) == 0 {
+		lastGitTag = remote.Tag{} // Denotes the case where there is no git
+	} else {
+		lastGitTag = tags[0] // The most recent tag
+	}
+
+	// Resolve the last tag on changelog
+	if len(chlog.Releases) == 0 {
+		lastChangelogTag = remote.Tag{} // Denotes the case where the changelog is empty
+	} else {
+		if lastChangelogTag, ok = tags.Find(chlog.Releases[0].GitTag); !ok {
+			return zero, zero, zero, fmt.Errorf("changelog tag not found: %s", chlog.Releases[0].GitTag)
+		}
+	}
+
+	// Resolve the from tag
+	if g.spec.Tags.From == "" {
+		fromTag = lastChangelogTag
+	} else {
+		if fromTag, ok = tags.Find(g.spec.Tags.From); !ok {
+			return zero, zero, zero, fmt.Errorf("from-tag not found: %s", g.spec.Tags.From)
+		}
+
+		if fromTag.Before(lastChangelogTag) {
+			g.logger.Debugf("From tag updated to the last tag on changelog: %s", lastChangelogTag.Name)
+			fromTag = lastChangelogTag
+		}
+	}
+
+	// Resolve the to tag
+	if g.spec.Tags.To == "" {
+		toTag = lastGitTag
+	} else {
+		if toTag, ok = tags.Find(g.spec.Tags.To); !ok {
+			return zero, zero, zero, fmt.Errorf("to-tag not found: %s", g.spec.Tags.To)
+		}
+
+		if toTag.Before(fromTag) || toTag.Equal(fromTag) {
+			return zero, zero, zero, errors.New("to-tag should be after the from-tag")
+		}
+	}
+
+	// Resolve the future tag
+	if g.spec.Tags.Future != "" {
+		futureTag = remote.Tag{
 			Name: g.spec.Tags.Future,
 		}
 	}
@@ -197,7 +263,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 		return err
 	}
 
-	// ==============================> GET AND FILTER GIT TAGS <==============================
+	// ==============================> FETCH AND FILTER GIT TAGS <==============================
 
 	tags, err := g.gitRepo.Tags()
 	if err != nil {
@@ -217,7 +283,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 		tags = tags.ExcludeRegex(re)
 	}
 
-	fromTag, toTag, futureTag, err := g.resolveTags(tags, chlog)
+	fromTag, toTag, futureTag, err := g.resolveGitTags(tags, chlog)
 	if err != nil {
 		return err
 	}
@@ -237,7 +303,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 			|   1   |  1  |   1    ||    1    |     1    |      1     |
 	*/
 
-	if (fromTag == toTag || toTag.IsZero()) && futureTag.IsZero() {
+	if (fromTag.Equal(toTag) || toTag.IsZero()) && futureTag.IsZero() {
 		g.logger.Debug("No new tag or a future tag is detected.")
 		g.logger.Info("Changelog is up-to-date")
 		return nil

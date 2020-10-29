@@ -24,6 +24,7 @@ var (
 type Repo interface {
 	GetRemoteInfo() (string, string, error)
 	Tags() (Tags, error)
+	Commit(string) (Commit, error)
 }
 
 type repo struct {
@@ -93,8 +94,6 @@ func (r *repo) Tags() (Tags, error) {
 		return nil, err
 	}
 
-	r.logger.Debug("Parsing git tag references ...")
-
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
 		tagObj, err := r.git.TagObject(ref.Hash())
 		switch err {
@@ -127,7 +126,36 @@ func (r *repo) Tags() (Tags, error) {
 		return nil, err
 	}
 
-	r.logger.Debug("Git tags parsed.")
+	r.logger.Info("Git tags are read")
 
 	return tags, nil
+}
+
+func (r *repo) Commit(hash string) (Commit, error) {
+	r.logger.Debug("Reading git commit %s ...", hash)
+
+	h := plumbing.NewHash(hash)
+	commitObj, err := r.git.CommitObject(h)
+	if err != nil {
+		return Commit{}, err
+	}
+
+	commit := Commit{
+		Hash: commitObj.Hash.String(),
+		Author: Signature{
+			Name:  commitObj.Author.Name,
+			Email: commitObj.Author.Email,
+			Time:  commitObj.Author.When,
+		},
+		Committer: Signature{
+			Name:  commitObj.Committer.Name,
+			Email: commitObj.Committer.Email,
+			Time:  commitObj.Committer.When,
+		},
+		Message: commitObj.Message,
+	}
+
+	r.logger.Debug("Git commit %s read", hash)
+
+	return commit, nil
 }

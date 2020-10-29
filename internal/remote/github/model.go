@@ -31,6 +31,25 @@ type (
 		UpdatedAt  time.Time `json:"updated_at"`
 	}
 
+	repository struct {
+		ID            int       `json:"id"`
+		Name          string    `json:"name"`
+		FullName      string    `json:"full_name"`
+		Description   string    `json:"description"`
+		Topics        []string  `json:"topics"`
+		Private       bool      `json:"private"`
+		Fork          bool      `json:"fork"`
+		Archived      bool      `json:"archived"`
+		Disabled      bool      `json:"disabled"`
+		DefaultBranch string    `json:"default_branch"`
+		Owner         user      `json:"owner"`
+		URL           string    `json:"url"`
+		HTMLURL       string    `json:"html_url"`
+		CreatedAt     time.Time `json:"created_at"`
+		UpdatedAt     time.Time `json:"updated_at"`
+		PushedAt      time.Time `json:"pushed_at"`
+	}
+
 	label struct {
 		ID          int    `json:"id"`
 		Name        string `json:"name"`
@@ -58,7 +77,41 @@ type (
 		ClosedAt     time.Time `json:"closed_at"`
 	}
 
-	pullRequestURLs struct {
+	hash struct {
+		SHA string `json:"sha"`
+		URL string `json:"url"`
+	}
+
+	signature struct {
+		Name  string    `json:"name"`
+		Email string    `json:"email"`
+		Time  time.Time `json:"date"`
+	}
+
+	rawCommit struct {
+		Message   string    `json:"message"`
+		Author    signature `json:"author"`
+		Committer signature `json:"committer"`
+		Tree      hash      `json:"tree"`
+		URL       string    `json:"url"`
+	}
+
+	commit struct {
+		SHA       string    `json:"sha"`
+		Commit    rawCommit `json:"commit"`
+		Author    user      `json:"author"`
+		Committer user      `json:"committer"`
+		Parents   []hash    `json:"parents"`
+		URL       string    `json:"url"`
+		HTMLURL   string    `json:"html_url"`
+	}
+
+	tag struct {
+		Name   string `json:"name"`
+		Commit hash   `json:"commit"`
+	}
+
+	pullURLs struct {
 		URL      string `json:"url"`
 		HTMLURL  string `json:"html_url"`
 		DiffURL  string `json:"diff_url"`
@@ -66,31 +119,33 @@ type (
 	}
 
 	issue struct {
-		ID          int              `json:"id"`
-		Number      int              `json:"number"`
-		State       string           `json:"state"`
-		Locked      bool             `json:"locked"`
-		Title       string           `json:"title"`
-		Body        string           `json:"body"`
-		User        user             `json:"user"`
-		Labels      []label          `json:"labels"`
-		Milestone   *milestone       `json:"milestone"`
-		URL         string           `json:"url"`
-		HTMLURL     string           `json:"html_url"`
-		LabelsURL   string           `json:"labels_url"`
-		PullRequest *pullRequestURLs `json:"pull_request"`
-		CreatedAt   time.Time        `json:"created_at"`
-		UpdatedAt   time.Time        `json:"updated_at"`
-		ClosedAt    *time.Time       `json:"closed_at"`
+		ID          int        `json:"id"`
+		Number      int        `json:"number"`
+		State       string     `json:"state"`
+		Locked      bool       `json:"locked"`
+		Title       string     `json:"title"`
+		Body        string     `json:"body"`
+		User        user       `json:"user"`
+		Labels      []label    `json:"labels"`
+		Milestone   *milestone `json:"milestone"`
+		URL         string     `json:"url"`
+		HTMLURL     string     `json:"html_url"`
+		LabelsURL   string     `json:"labels_url"`
+		PullRequest *pullURLs  `json:"pull_request"`
+		CreatedAt   time.Time  `json:"created_at"`
+		UpdatedAt   time.Time  `json:"updated_at"`
+		ClosedAt    *time.Time `json:"closed_at"`
 	}
 
 	reference struct {
-		Label string `json:"label"`
-		Ref   string `json:"ref"`
-		SHA   string `json:"sha"`
+		Label string     `json:"label"`
+		Ref   string     `json:"ref"`
+		SHA   string     `json:"sha"`
+		User  user       `json:"user"`
+		Repo  repository `json:"repo"`
 	}
 
-	pullRequest struct {
+	pull struct {
 		ID             int        `json:"id"`
 		Number         int        `json:"number"`
 		State          string     `json:"state"`
@@ -130,31 +185,17 @@ type (
 		CommitURL string    `json:"commit_url"`
 		CreatedAt time.Time `json:"created_at"`
 	}
-
-	gitSignature struct {
-		Name  string    `json:"name"`
-		Email string    `json:"email"`
-		Time  time.Time `json:"date"`
-	}
-
-	gitCommit struct {
-		Message   string       `json:"message"`
-		Author    gitSignature `json:"author"`
-		Committer gitSignature `json:"committer"`
-		URL       string       `json:"url"`
-	}
-
-	commit struct {
-		SHA       string    `json:"sha"`
-		Commit    gitCommit `json:"commit"`
-		Author    user      `json:"author"`
-		Committer user      `json:"committer"`
-		URL       string    `json:"url"`
-		HTMLURL   string    `json:"html_url"`
-	}
 )
 
-func issueToChange(i issue, e event, creator, closer user) remote.Change {
+func toTag(t tag, c commit) remote.Tag {
+	return remote.Tag{
+		Name: t.Name,
+		SHA:  c.SHA,
+		Time: c.Commit.Committer.Time,
+	}
+}
+
+func toIssueChange(i issue, e event, creator, closer user) remote.Change {
 	// e is the closed event of the issue
 
 	labels := make([]string, len(i.Labels))
@@ -194,7 +235,7 @@ func issueToChange(i issue, e event, creator, closer user) remote.Change {
 	}
 }
 
-func pullToChange(p pullRequest, e event, c commit, creator, merger user) remote.Change {
+func toPullChange(p pull, e event, c commit, creator, merger user) remote.Change {
 	// e is the merged event of the pull request
 
 	labels := make([]string, len(p.Labels))
@@ -232,11 +273,24 @@ func pullToChange(p pullRequest, e event, c commit, creator, merger user) remote
 	}
 }
 
+func resolveTags(gitHubTags *tagStore, gitHubCommits *commitStore) remote.Tags {
+	tags := remote.Tags{}
+
+	_ = gitHubTags.ForEach(func(name string, t tag) error {
+		if c, ok := gitHubCommits.Load(t.Commit.SHA); ok {
+			tags = append(tags, toTag(t, c))
+		}
+		return nil
+	})
+
+	tags = tags.Sort()
+
+	return tags
+}
+
 func resolveIssuesAndMerges(
-	gitHubIssues *issueStore,
-	gitHubPulls *pullRequestStore,
-	gitHubEvents *eventStore,
-	gitHubCommits *commitStore,
+	gitHubIssues *issueStore, gitHubPulls *pullStore,
+	gitHubEvents *eventStore, gitHubCommits *commitStore,
 	gitHubUsers *userStore,
 ) (remote.Changes, remote.Changes) {
 	issues := remote.Changes{}
@@ -248,7 +302,7 @@ func resolveIssuesAndMerges(
 
 		if i.PullRequest == nil {
 			closer, _ := gitHubUsers.Load(e.Actor.Login)
-			issues = append(issues, issueToChange(i, e, creator, closer))
+			issues = append(issues, toIssueChange(i, e, creator, closer))
 		} else {
 			// Every GitHub pull request is also an issue (see https://docs.github.com/en/rest/reference/issues#list-repository-issues)
 			// For every closed issue that is a pull request, we also need to make sure it is merged.
@@ -256,7 +310,7 @@ func resolveIssuesAndMerges(
 				// All Pulls expected to be merged at this point
 				c, _ := gitHubCommits.Load(e.CommitID)
 				merger, _ := gitHubUsers.Load(e.Actor.Login)
-				merges = append(merges, pullToChange(p, e, c, creator, merger))
+				merges = append(merges, toPullChange(p, e, c, creator, merger))
 			}
 		}
 
