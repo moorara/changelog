@@ -42,6 +42,23 @@ type Commit struct {
 	Parents   []string
 }
 
+func toCommit(commitObj *object.Commit) Commit {
+	return Commit{
+		Hash: commitObj.Hash.String(),
+		Author: Signature{
+			Name:  commitObj.Author.Name,
+			Email: commitObj.Author.Email,
+			Time:  commitObj.Author.When,
+		},
+		Committer: Signature{
+			Name:  commitObj.Committer.Name,
+			Email: commitObj.Committer.Email,
+			Time:  commitObj.Committer.When,
+		},
+		Message: commitObj.Message,
+	}
+}
+
 // Equal determines if two commits are the same.
 // Two commits are the same if they both have the same hash.
 func (c Commit) Equal(d Commit) bool {
@@ -58,8 +75,40 @@ func (c Commit) After(d Commit) bool {
 	return c.Committer.After(d.Committer)
 }
 
+// ShortMessage returns a one-line truncated commit message.
+func (c Commit) ShortMessage() string {
+	message := strings.Split(c.Message, "\n")[0]
+	if len(message) > 100 {
+		message = message[:100] + " ..."
+	}
+	return message
+}
+
 func (c Commit) String() string {
-	return fmt.Sprintf("%s\nAuthor:    %s\nCommitter: %s\n%s\n", c.Hash[:7], c.Author, c.Committer, c.Message)
+	return fmt.Sprintf("%s %s", c.Hash[:7], c.ShortMessage())
+}
+
+// Text returns a multi-line commit string.
+func (c Commit) Text() string {
+	return fmt.Sprintf("%s\nAuthor:    %s\nCommitter: %s\n%s", c.Hash, c.Author, c.Committer, c.Message)
+}
+
+// Commits is a map of Git commits.
+type Commits map[string]Commit
+
+// Sort sorts the map of commits by their commit times from the most recent to the least recent.
+func (c Commits) Sort() []Commit {
+	sorted := make([]Commit, 0)
+	for _, commit := range c {
+		sorted = append(sorted, commit)
+	}
+
+	sort.Slice(sorted, func(i, j int) bool {
+		// The order of the commits should be from the most recent to the least recent
+		return sorted[i].Committer.After(sorted[j].Committer)
+	})
+
+	return sorted
 }
 
 // TagType determines type a Git tag.
@@ -97,32 +146,19 @@ type Tag struct {
 	Commit  Commit
 }
 
-func lightweightTag(ref *plumbing.Reference, commitObj *object.Commit) Tag {
+func toLightweightTag(ref *plumbing.Reference, commitObj *object.Commit) Tag {
 	// It is assumed that the given reference is a tag reference
 	name := strings.TrimPrefix(string(ref.Name()), "refs/tags/")
 
 	return Tag{
-		Type: Lightweight,
-		Hash: ref.Hash().String(),
-		Name: name,
-		Commit: Commit{
-			Hash: commitObj.Hash.String(),
-			Author: Signature{
-				Name:  commitObj.Author.Name,
-				Email: commitObj.Author.Email,
-				Time:  commitObj.Author.When,
-			},
-			Committer: Signature{
-				Name:  commitObj.Committer.Name,
-				Email: commitObj.Committer.Email,
-				Time:  commitObj.Committer.When,
-			},
-			Message: commitObj.Message,
-		},
+		Type:   Lightweight,
+		Hash:   ref.Hash().String(),
+		Name:   name,
+		Commit: toCommit(commitObj),
 	}
 }
 
-func annotatedTag(tagObj *object.Tag, commitObj *object.Commit) Tag {
+func toAnnotatedTag(tagObj *object.Tag, commitObj *object.Commit) Tag {
 	return Tag{
 		Type: Annotated,
 		Hash: tagObj.Hash.String(),
@@ -133,20 +169,7 @@ func annotatedTag(tagObj *object.Tag, commitObj *object.Commit) Tag {
 			Time:  tagObj.Tagger.When,
 		},
 		Message: &tagObj.Message,
-		Commit: Commit{
-			Hash: commitObj.Hash.String(),
-			Author: Signature{
-				Name:  commitObj.Author.Name,
-				Email: commitObj.Author.Email,
-				Time:  commitObj.Author.When,
-			},
-			Committer: Signature{
-				Name:  commitObj.Committer.Name,
-				Email: commitObj.Committer.Email,
-				Time:  commitObj.Committer.When,
-			},
-			Message: commitObj.Message,
-		},
+		Commit:  toCommit(commitObj),
 	}
 }
 
@@ -177,7 +200,8 @@ func (t Tag) String() string {
 	if t.IsZero() {
 		return ""
 	}
-	return fmt.Sprintf("%s %s %s Commit[%s %s]", t.Type, t.Hash, t.Name, t.Commit.Hash, t.Commit.Message)
+
+	return fmt.Sprintf("%s %s %s Commit[%s %s]", t.Type, t.Hash, t.Name, t.Commit.Hash, t.Commit.ShortMessage())
 }
 
 // Tags is a list of Git tags.
@@ -270,12 +294,12 @@ func (t Tags) ExcludeRegex(regex *regexp.Regexp) Tags {
 	return new
 }
 
-// MapToString customizes the string representation of the tags collection.
-func (t Tags) MapToString(f func(t Tag) string) string {
-	vals := []string{}
+// Map converts a list of tags to a list of strings.
+func (t Tags) Map(f func(t Tag) string) []string {
+	mapped := []string{}
 	for _, tag := range t {
-		vals = append(vals, f(tag))
+		mapped = append(mapped, f(tag))
 	}
 
-	return strings.Join(vals, ", ")
+	return mapped
 }

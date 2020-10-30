@@ -189,9 +189,9 @@ type (
 
 func toTag(t tag, c commit) remote.Tag {
 	return remote.Tag{
-		Name: t.Name,
-		SHA:  c.SHA,
-		Time: c.Commit.Committer.Time,
+		Name:       t.Name,
+		CommitHash: c.SHA,
+		Time:       c.Commit.Committer.Time,
 	}
 }
 

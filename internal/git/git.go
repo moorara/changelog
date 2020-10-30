@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 
 	"github.com/moorara/changelog/pkg/log"
 )
@@ -23,8 +24,11 @@ var (
 // Repo is a Git repository.
 type Repo interface {
 	GetRemoteInfo() (string, string, error)
-	Tags() (Tags, error)
+	Commits() (Commits, error)
 	Commit(string) (Commit, error)
+	Tags() (Tags, error)
+	Tag(string) (Tag, error)
+	CommitsFromRevision(string) (Commits, error)
 }
 
 type repo struct {
@@ -83,16 +87,51 @@ func (r *repo) GetRemoteInfo() (string, string, error) {
 	return "", "", fmt.Errorf("invalid git remote url: %s", remoteURL)
 }
 
-// Tags returns all tags for the Git repository.
-func (r *repo) Tags() (Tags, error) {
-	r.logger.Debug("Reading git tag references ...")
+func (r *repo) Commits() (Commits, error) {
+	r.logger.Debug("Reading git commits ...")
 
-	tags := Tags{}
+	commitObjs, err := r.git.CommitObjects()
+	if err != nil {
+		return nil, err
+	}
+
+	commits := Commits{}
+
+	_ = commitObjs.ForEach(func(commitObj *object.Commit) error {
+		commit := toCommit(commitObj)
+		commits[commit.Hash] = commit
+		return nil
+	})
+
+	r.logger.Debugf("Git commits are read: %d", len(commits))
+
+	return commits, nil
+}
+
+func (r *repo) Commit(hash string) (Commit, error) {
+	r.logger.Debugf("Reading git commit %s ...", hash)
+
+	commitObj, err := r.git.CommitObject(plumbing.NewHash(hash))
+	if err != nil {
+		return Commit{}, err
+	}
+
+	commit := toCommit(commitObj)
+
+	r.logger.Debugf("Git commit %s is read", hash)
+
+	return commit, nil
+}
+
+func (r *repo) Tags() (Tags, error) {
+	r.logger.Debug("Reading git tags ...")
 
 	refs, err := r.git.Tags()
 	if err != nil {
 		return nil, err
 	}
+
+	tags := Tags{}
 
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
 		tagObj, err := r.git.TagObject(ref.Hash())
@@ -103,7 +142,7 @@ func (r *repo) Tags() (Tags, error) {
 			if err != nil {
 				return err
 			}
-			tag := annotatedTag(tagObj, commitObj)
+			tag := toAnnotatedTag(tagObj, commitObj)
 			tags = append(tags, tag)
 
 		// Lightweight tag
@@ -112,7 +151,7 @@ func (r *repo) Tags() (Tags, error) {
 			if err != nil {
 				return err
 			}
-			tag := lightweightTag(ref, commitObj)
+			tag := toLightweightTag(ref, commitObj)
 			tags = append(tags, tag)
 
 		default:
@@ -126,36 +165,86 @@ func (r *repo) Tags() (Tags, error) {
 		return nil, err
 	}
 
-	r.logger.Info("Git tags are read")
+	r.logger.Infof("Git tags are read: %d", len(tags))
 
 	return tags, nil
 }
 
-func (r *repo) Commit(hash string) (Commit, error) {
-	r.logger.Debug("Reading git commit %s ...", hash)
+func (r *repo) Tag(name string) (Tag, error) {
+	r.logger.Debugf("Reading git tag %s ...", name)
 
-	h := plumbing.NewHash(hash)
-	commitObj, err := r.git.CommitObject(h)
+	ref, err := r.git.Tag(name)
 	if err != nil {
-		return Commit{}, err
+		return Tag{}, err
 	}
 
-	commit := Commit{
-		Hash: commitObj.Hash.String(),
-		Author: Signature{
-			Name:  commitObj.Author.Name,
-			Email: commitObj.Author.Email,
-			Time:  commitObj.Author.When,
-		},
-		Committer: Signature{
-			Name:  commitObj.Committer.Name,
-			Email: commitObj.Committer.Email,
-			Time:  commitObj.Committer.When,
-		},
-		Message: commitObj.Message,
+	var tag Tag
+
+	tagObj, err := r.git.TagObject(ref.Hash())
+	switch err {
+	// Annotated tag
+	case nil:
+		commitObj, err := r.git.CommitObject(tagObj.Target)
+		if err != nil {
+			return Tag{}, err
+		}
+		tag = toAnnotatedTag(tagObj, commitObj)
+
+	// Lightweight tag
+	case plumbing.ErrObjectNotFound:
+		commitObj, err := r.git.CommitObject(ref.Hash())
+		if err != nil {
+			return Tag{}, err
+		}
+		tag = toLightweightTag(ref, commitObj)
+
+	default:
+		return Tag{}, err
 	}
 
-	r.logger.Debug("Git commit %s read", hash)
+	r.logger.Debugf("Git tag %s is read", name)
 
-	return commit, nil
+	return tag, nil
+}
+
+func (r *repo) CommitsFromRevision(rev string) (Commits, error) {
+	r.logger.Debugf("Resolving git commits reachable from %s ...", rev)
+
+	hash, err := r.git.ResolveRevision(plumbing.Revision(rev))
+	if err != nil {
+		return nil, err
+	}
+
+	commits := Commits{}
+	err = r.commitsFromHash(commits, *hash)
+	if err != nil {
+		return nil, err
+	}
+
+	r.logger.Debugf("Resolved git commits reachable from %s: %d", rev, len(commits))
+
+	return commits, nil
+}
+
+func (r *repo) commitsFromHash(commits Commits, hash plumbing.Hash) error {
+	if _, ok := commits[hash.String()]; ok {
+		return nil
+	}
+
+	commitObj, err := r.git.CommitObject(hash)
+	if err != nil {
+		return err
+	}
+
+	c := toCommit(commitObj)
+	commits[c.Hash] = c
+
+	for _, parentHash := range commitObj.ParentHashes {
+		err := r.commitsFromHash(commits, parentHash)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

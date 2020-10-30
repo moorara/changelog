@@ -2,7 +2,6 @@ package remote
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -19,14 +18,14 @@ type User struct {
 
 // Tag represents a tag.
 type Tag struct {
-	Name string
-	SHA  string
-	Time time.Time
+	Name       string
+	CommitHash string
+	Time       time.Time
 }
 
 // IsZero determines if a tag is a zero tag instance.
 func (t Tag) IsZero() bool {
-	return reflect.ValueOf(t).IsZero()
+	return t == Tag{}
 }
 
 // Equal determines if two tags are the same.
@@ -51,7 +50,7 @@ func (t Tag) String() string {
 	if t.IsZero() {
 		return ""
 	}
-	return fmt.Sprintf("%s %s", t.SHA, t.Name)
+	return fmt.Sprintf("%s Commit[%s]", t.Name, t.CommitHash)
 }
 
 // Tags is a collection of tags.
@@ -126,14 +125,14 @@ func (t Tags) ExcludeRegex(regex *regexp.Regexp) Tags {
 	return new
 }
 
-// MapToString customizes the string representation of the tags collection.
-func (t Tags) MapToString(f func(t Tag) string) string {
-	vals := []string{}
+// Map converts a list of tags to a list of strings.
+func (t Tags) Map(f func(t Tag) string) []string {
+	mapped := []string{}
 	for _, tag := range t {
-		vals = append(vals, f(tag))
+		mapped = append(mapped, f(tag))
 	}
 
-	return strings.Join(vals, ", ")
+	return mapped
 }
 
 // Labels is a collection of labels.

@@ -101,45 +101,117 @@ func TestSignature(t *testing.T) {
 	}
 }
 
-func TestCommit(t *testing.T) {
+func TestToCommit(t *testing.T) {
 	tests := []struct {
-		name            string
-		c1, c2          Commit
-		expectedEqual   bool
-		expectedBefore  bool
-		expectedAfter   bool
-		expectedString1 string
-		expectedString2 string
+		name           string
+		commitObj      *object.Commit
+		expectedCommit Commit
 	}{
 		{
-			name:            "Equal",
-			c1:              commit1,
-			c2:              commit1,
-			expectedEqual:   true,
-			expectedBefore:  false,
-			expectedAfter:   false,
-			expectedString1: "25aa2bd\nAuthor:    John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nCommitter: John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nfoo\n",
-			expectedString2: "25aa2bd\nAuthor:    John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nCommitter: John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nfoo\n",
+			name: "OK",
+			commitObj: &object.Commit{
+				Hash: plumbing.NewHash("25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378"),
+				Author: object.Signature{
+					Name:  "John Doe",
+					Email: "john@doe.com",
+					When:  t1,
+				},
+				Committer: object.Signature{
+					Name:  "John Doe",
+					Email: "john@doe.com",
+					When:  t1,
+				},
+				Message: "foo",
+			},
+			expectedCommit: commit1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			commit := toCommit(tc.commitObj)
+
+			assert.Equal(t, tc.expectedCommit, commit)
+		})
+	}
+}
+
+func TestCommit(t *testing.T) {
+	tests := []struct {
+		name                 string
+		c                    Commit
+		expectedShortMessage string
+		expectedString       string
+		expectedText         string
+	}{
+		{
+			name:                 "Commit1",
+			c:                    commit1,
+			expectedShortMessage: "foo",
+			expectedString:       "25aa2bd foo",
+			expectedText:         "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378\nAuthor:    John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nCommitter: John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nfoo",
 		},
 		{
-			name:            "Before",
-			c1:              commit1,
-			c2:              commit2,
-			expectedEqual:   false,
-			expectedBefore:  true,
-			expectedAfter:   false,
-			expectedString1: "25aa2bd\nAuthor:    John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nCommitter: John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nfoo\n",
-			expectedString2: "0251a42\nAuthor:    Jane Doe <jane@doe.com> 2020-10-22T16:00:00-04:00\nCommitter: Jane Doe <jane@doe.com> 2020-10-22T16:00:00-04:00\nbar\n",
+			name:                 "Commit2",
+			c:                    commit2,
+			expectedShortMessage: "bar",
+			expectedString:       "0251a42 bar",
+			expectedText:         "0251a422d2038967eeaaaa5c8aa76c7067fdef05\nAuthor:    Jane Doe <jane@doe.com> 2020-10-22T16:00:00-04:00\nCommitter: Jane Doe <jane@doe.com> 2020-10-22T16:00:00-04:00\nbar",
 		},
 		{
-			name:            "After",
-			c1:              commit2,
-			c2:              commit1,
-			expectedEqual:   false,
-			expectedBefore:  false,
-			expectedAfter:   true,
-			expectedString1: "0251a42\nAuthor:    Jane Doe <jane@doe.com> 2020-10-22T16:00:00-04:00\nCommitter: Jane Doe <jane@doe.com> 2020-10-22T16:00:00-04:00\nbar\n",
-			expectedString2: "25aa2bd\nAuthor:    John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nCommitter: John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nfoo\n",
+			name: "LongMessage",
+			c: Commit{
+				Hash:      "c414d1004154c6c324bd78c69d10ee101e676059",
+				Author:    JohnDoe,
+				Committer: JaneDoe,
+				Message:   "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+			},
+			expectedShortMessage: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore  ...",
+			expectedString:       "c414d10 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore  ...",
+			expectedText:         "c414d1004154c6c324bd78c69d10ee101e676059\nAuthor:    John Doe <john@doe.com> 2020-10-12T09:00:00-04:00\nCommitter: Jane Doe <jane@doe.com> 2020-10-22T16:00:00-04:00\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedShortMessage, tc.c.ShortMessage())
+			assert.Equal(t, tc.expectedString, tc.c.String())
+			assert.Equal(t, tc.expectedText, tc.c.Text())
+		})
+	}
+}
+
+func TestCommit_Comparison(t *testing.T) {
+	tests := []struct {
+		name           string
+		c1, c2         Commit
+		expectedEqual  bool
+		expectedBefore bool
+		expectedAfter  bool
+	}{
+		{
+			name:           "Equal",
+			c1:             commit1,
+			c2:             commit1,
+			expectedEqual:  true,
+			expectedBefore: false,
+			expectedAfter:  false,
+		},
+		{
+			name:           "Before",
+			c1:             commit1,
+			c2:             commit2,
+			expectedEqual:  false,
+			expectedBefore: true,
+			expectedAfter:  false,
+		},
+		{
+			name:           "After",
+			c1:             commit2,
+			c2:             commit1,
+			expectedEqual:  false,
+			expectedBefore: false,
+			expectedAfter:  true,
 		},
 	}
 
@@ -148,8 +220,31 @@ func TestCommit(t *testing.T) {
 			assert.Equal(t, tc.expectedEqual, tc.c1.Equal(tc.c2))
 			assert.Equal(t, tc.expectedBefore, tc.c1.Before(tc.c2))
 			assert.Equal(t, tc.expectedAfter, tc.c1.After(tc.c2))
-			assert.Equal(t, tc.expectedString1, tc.c1.String())
-			assert.Equal(t, tc.expectedString2, tc.c2.String())
+		})
+	}
+}
+
+func TestCommits_Sort(t *testing.T) {
+	tests := []struct {
+		name            string
+		c               Commits
+		expectedCommits []Commit
+	}{
+		{
+			name: "OK",
+			c: Commits{
+				commit1.Hash: commit1,
+				commit2.Hash: commit2,
+			},
+			expectedCommits: []Commit{commit2, commit1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			commits := tc.c.Sort()
+
+			assert.Equal(t, tc.expectedCommits, commits)
 		})
 	}
 }
@@ -189,7 +284,7 @@ func TestTagType(t *testing.T) {
 	}
 }
 
-func TestLightweightTag(t *testing.T) {
+func TestToLightweightTag(t *testing.T) {
 	tests := []struct {
 		name        string
 		ref         *plumbing.Reference
@@ -222,14 +317,14 @@ func TestLightweightTag(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tag := lightweightTag(tc.ref, tc.commitObj)
+			tag := toLightweightTag(tc.ref, tc.commitObj)
 
 			assert.Equal(t, tc.expectedTag, tag)
 		})
 	}
 }
 
-func TestAnnotatedTag(t *testing.T) {
+func TestToAnnotatedTag(t *testing.T) {
 	t1, _ := time.Parse(time.RFC3339, "2020-10-12T09:00:00-04:00")
 	t2, _ := time.Parse(time.RFC3339, "2020-10-22T16:00:00-04:00")
 
@@ -271,7 +366,7 @@ func TestAnnotatedTag(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tag := annotatedTag(tc.tagObj, tc.commitObj)
+			tag := toAnnotatedTag(tc.tagObj, tc.commitObj)
 
 			assert.Equal(t, tc.expectedTag, tag)
 		})
@@ -280,75 +375,86 @@ func TestAnnotatedTag(t *testing.T) {
 
 func TestTag(t *testing.T) {
 	tests := []struct {
-		name            string
-		t1, t2          Tag
-		expectedIsZero1 bool
-		expectedIsZero2 bool
-		expectedEqual   bool
-		expectedBefore  bool
-		expectedAfter   bool
-		expectedString1 string
-		expectedString2 string
+		name           string
+		t              Tag
+		expectedIsZero bool
+		expectedString string
 	}{
 		{
-			name:            "Zero",
-			t1:              Tag{},
-			t2:              Tag{},
-			expectedIsZero1: true,
-			expectedIsZero2: true,
-			expectedEqual:   true,
-			expectedBefore:  false,
-			expectedAfter:   false,
-			expectedString1: "",
-			expectedString2: "",
+			name:           "Zero",
+			t:              Tag{},
+			expectedIsZero: true,
+			expectedString: "",
 		},
 		{
-			name:            "Equal",
-			t1:              tag1,
-			t2:              tag1,
-			expectedIsZero1: false,
-			expectedIsZero2: false,
-			expectedEqual:   true,
-			expectedBefore:  false,
-			expectedAfter:   false,
-			expectedString1: "Lightweight 25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 v0.1.0 Commit[25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 foo]",
-			expectedString2: "Lightweight 25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 v0.1.0 Commit[25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 foo]",
+			name:           "Tag1",
+			t:              tag1,
+			expectedIsZero: false,
+			expectedString: "Lightweight 25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 v0.1.0 Commit[25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 foo]",
 		},
 		{
-			name:            "Before",
-			t1:              tag1,
-			t2:              tag2,
-			expectedIsZero1: false,
-			expectedIsZero2: false,
-			expectedEqual:   false,
-			expectedBefore:  true,
-			expectedAfter:   false,
-			expectedString1: "Lightweight 25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 v0.1.0 Commit[25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 foo]",
-			expectedString2: "Annotated 4ff025213432eee78526e2a75f2e043d34962b5a v0.2.0 Commit[0251a422d2038967eeaaaa5c8aa76c7067fdef05 bar]",
-		},
-		{
-			name:            "After",
-			t1:              tag2,
-			t2:              tag1,
-			expectedIsZero1: false,
-			expectedIsZero2: false,
-			expectedEqual:   false,
-			expectedBefore:  false,
-			expectedAfter:   true,
-			expectedString1: "Annotated 4ff025213432eee78526e2a75f2e043d34962b5a v0.2.0 Commit[0251a422d2038967eeaaaa5c8aa76c7067fdef05 bar]",
-			expectedString2: "Lightweight 25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 v0.1.0 Commit[25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378 foo]",
+			name:           "Tag2",
+			t:              tag2,
+			expectedIsZero: false,
+			expectedString: "Annotated 4ff025213432eee78526e2a75f2e043d34962b5a v0.2.0 Commit[0251a422d2038967eeaaaa5c8aa76c7067fdef05 bar]",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expectedIsZero1, tc.t1.IsZero())
-			assert.Equal(t, tc.expectedIsZero2, tc.t2.IsZero())
+			assert.Equal(t, tc.expectedIsZero, tc.t.IsZero())
+			assert.Equal(t, tc.expectedString, tc.t.String())
+		})
+	}
+}
+
+func TestTag_Comparison(t *testing.T) {
+	tests := []struct {
+		name           string
+		t1, t2         Tag
+		expectedEqual  bool
+		expectedBefore bool
+		expectedAfter  bool
+	}{
+		{
+			name:           "Zero",
+			t1:             Tag{},
+			t2:             Tag{},
+			expectedEqual:  true,
+			expectedBefore: false,
+			expectedAfter:  false,
+		},
+		{
+			name:           "Equal",
+			t1:             tag1,
+			t2:             tag1,
+			expectedEqual:  true,
+			expectedBefore: false,
+			expectedAfter:  false,
+		},
+		{
+			name:           "Before",
+			t1:             tag1,
+			t2:             tag2,
+			expectedEqual:  false,
+			expectedBefore: true,
+			expectedAfter:  false,
+		},
+		{
+			name:           "After",
+			t1:             tag2,
+			t2:             tag1,
+			expectedEqual:  false,
+			expectedBefore: false,
+			expectedAfter:  true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.expectedEqual, tc.t1.Equal(tc.t2))
 			assert.Equal(t, tc.expectedBefore, tc.t1.Before(tc.t2))
 			assert.Equal(t, tc.expectedAfter, tc.t1.After(tc.t2))
-			assert.Equal(t, tc.expectedString1, tc.t1.String())
-			assert.Equal(t, tc.expectedString2, tc.t2.String())
 		})
 	}
 }
@@ -487,28 +593,28 @@ func TestTags_ExcludeRegex(t *testing.T) {
 	}
 }
 
-func TestTags_MapToString(t *testing.T) {
+func TestTags_Map(t *testing.T) {
 	tests := []struct {
-		name           string
-		t              Tags
-		f              func(Tag) string
-		expectedString string
+		name         string
+		t            Tags
+		f            func(Tag) string
+		expectedList []string
 	}{
 		{
 			name: "OK",
-			t:    Tags{tag1, tag2},
+			t:    Tags{tag2, tag1},
 			f: func(t Tag) string {
 				return t.Name
 			},
-			expectedString: "v0.1.0, v0.2.0",
+			expectedList: []string{"v0.2.0", "v0.1.0"},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			str := tc.t.MapToString(tc.f)
+			list := tc.t.Map(tc.f)
 
-			assert.Equal(t, tc.expectedString, str)
+			assert.Equal(t, tc.expectedList, list)
 		})
 	}
 }

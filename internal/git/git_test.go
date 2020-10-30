@@ -76,6 +76,76 @@ func TestRepo_GetRemoteInfo(t *testing.T) {
 	}
 }
 
+func TestRepo_Commits(t *testing.T) {
+	g, err := git.PlainOpen("../..")
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		expectedError string
+	}{
+		{
+			name:          "OK",
+			expectedError: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				git:    g,
+			}
+
+			commits, err := r.Commits()
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.NotNil(t, commits)
+			} else {
+				assert.Nil(t, commits)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
+func TestRepo_Commit(t *testing.T) {
+	g, err := git.PlainOpen("../..")
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		hash          string
+		expectedError string
+	}{
+		{
+			name:          "Invalid",
+			hash:          "invalid",
+			expectedError: "object not found",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				git:    g,
+			}
+
+			commit, err := r.Commit(tc.hash)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, commit)
+			} else {
+				assert.Empty(t, commit)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
 func TestRepo_Tags(t *testing.T) {
 	g, err := git.PlainOpen("../..")
 	assert.NoError(t, err)
@@ -110,19 +180,19 @@ func TestRepo_Tags(t *testing.T) {
 	}
 }
 
-func TestRepo_Commit(t *testing.T) {
+func TestRepo_Tag(t *testing.T) {
 	g, err := git.PlainOpen("../..")
 	assert.NoError(t, err)
 
 	tests := []struct {
 		name          string
-		hash          string
+		tagName       string
 		expectedError string
 	}{
 		{
-			name:          "InvalidHash",
-			hash:          "",
-			expectedError: "object not found",
+			name:          "Invalid",
+			tagName:       "invalid",
+			expectedError: "tag not found",
 		},
 	}
 
@@ -133,13 +203,54 @@ func TestRepo_Commit(t *testing.T) {
 				git:    g,
 			}
 
-			commit, err := r.Commit(tc.hash)
+			tag, err := r.Tag(tc.tagName)
 
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
-				assert.NotEmpty(t, commit)
+				assert.NotEmpty(t, tag)
 			} else {
-				assert.Empty(t, commit)
+				assert.Empty(t, tag)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
+func TestRepo_CommitsFromRevision(t *testing.T) {
+	g, err := git.PlainOpen("../..")
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		rev           string
+		expectedError string
+	}{
+		{
+			name:          "Invalid",
+			rev:           "Invalid",
+			expectedError: "reference not found",
+		},
+		{
+			name:          "OK",
+			rev:           "HEAD",
+			expectedError: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				git:    g,
+			}
+
+			commits, err := r.CommitsFromRevision(tc.rev)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.NotNil(t, commits)
+			} else {
+				assert.Nil(t, commits)
 				assert.EqualError(t, err, tc.expectedError)
 			}
 		})

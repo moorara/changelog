@@ -38,6 +38,9 @@ type repo struct {
 	apiURL      string
 	path        string
 	accessToken string
+
+	users   *userStore
+	commits *commitStore
 }
 
 // NewRepo creates a new GitHub repository.
@@ -53,6 +56,9 @@ func NewRepo(logger log.Logger, path, accessToken string) remote.Repo {
 		apiURL:      githubAPIURL,
 		path:        path,
 		accessToken: accessToken,
+
+		users:   newUserStore(),
+		commits: newCommitStore(),
 	}
 }
 
@@ -116,6 +122,11 @@ func (r *repo) checkScopes(ctx context.Context, scopes ...scope) error {
 func (r *repo) fetchUser(ctx context.Context, username string) (user, error) {
 	// See https://docs.github.com/en/rest/reference/users#get-a-user
 
+	// Check if the user is already fetched
+	if u, ok := r.users.Load(username); ok {
+		return u, nil
+	}
+
 	r.logger.Debugf("Fetching GitHub user %s ...", username)
 
 	url := fmt.Sprintf("%s/users/%s", r.apiURL, username)
@@ -134,6 +145,8 @@ func (r *repo) fetchUser(ctx context.Context, username string) (user, error) {
 		return user{}, err
 	}
 
+	r.users.Save(u.Login, u)
+
 	r.logger.Debugf("Fetched GitHub user %s", username)
 
 	return u, nil
@@ -141,6 +154,11 @@ func (r *repo) fetchUser(ctx context.Context, username string) (user, error) {
 
 func (r *repo) fetchCommit(ctx context.Context, ref string) (commit, error) {
 	// See https://docs.github.com/en/rest/reference/repos#get-a-commit
+
+	// Check if the commit is already fetched
+	if c, ok := r.commits.Load(ref); ok {
+		return c, nil
+	}
 
 	r.logger.Debugf("Fetching GitHub commit %s ...", ref)
 
@@ -159,6 +177,8 @@ func (r *repo) fetchCommit(ctx context.Context, ref string) (commit, error) {
 	if err = json.NewDecoder(resp.Body).Decode(&c); err != nil {
 		return commit{}, err
 	}
+
+	r.commits.Save(c.SHA, c)
 
 	r.logger.Debugf("Fetched GitHub commit %s", ref)
 
@@ -459,8 +479,8 @@ func (r *repo) fetchPulls(ctx context.Context, pageNo int) ([]pull, error) {
 	return pulls, nil
 }
 
-// FetchAllTags retrieves all tags for a GitHub repository.
-func (r *repo) FetchAllTags(ctx context.Context) (remote.Tags, error) {
+// FetchTags retrieves all tags for a GitHub repository.
+func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 	if err := r.checkScopes(ctx, scopeRepo); err != nil {
 		return nil, err
 	}
@@ -501,17 +521,12 @@ func (r *repo) FetchAllTags(ctx context.Context) (remote.Tags, error) {
 	r.logger.Debug("Fetching GitHub commits for tags ...")
 
 	g2, ctx2 := errgroup.WithContext(ctx)
-	gitHubCommits := newCommitStore()
 
 	// Fetch closed pull requests
 	_ = gitHubTags.ForEach(func(name string, t tag) error {
 		g2.Go(func() error {
-			commit, err := r.fetchCommit(ctx2, t.Commit.SHA)
-			if err != nil {
-				return err
-			}
-			gitHubCommits.Save(commit.SHA, commit)
-			return nil
+			_, err := r.fetchCommit(ctx2, t.Commit.SHA)
+			return err
 		})
 		return nil
 	})
@@ -522,7 +537,7 @@ func (r *repo) FetchAllTags(ctx context.Context) (remote.Tags, error) {
 
 	// ==============================> JOINING TAGS & COMMITS <==============================
 
-	tags := resolveTags(gitHubTags, gitHubCommits)
+	tags := resolveTags(gitHubTags, r.commits)
 
 	r.logger.Debugf("Resolved and sorted GitHub tags: %d", len(tags))
 	r.logger.Info("GitHub tags are fetched")
@@ -605,7 +620,6 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	g3, ctx3 := errgroup.WithContext(ctx)
 	gitHubEvents := newEventStore()
-	gitHubCommits := newCommitStore()
 
 	// Fetch and search events
 	_ = gitHubIssues.ForEach(func(num int, i issue) error {
@@ -631,13 +645,8 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 				}
 				gitHubEvents.Save(num, e)
 
-				c, err := r.fetchCommit(ctx3, e.CommitID)
-				if err != nil {
-					return err
-				}
-				gitHubCommits.Save(e.CommitID, c)
-
-				return nil
+				_, err = r.fetchCommit(ctx3, e.CommitID)
+				return err
 			})
 		}
 
@@ -652,33 +661,19 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	r.logger.Info("Fetching GitHub users for issues and pull requests ...")
 
-	gitHubUsers := newUserStore()
-
 	// Fetch author users
 	err = gitHubIssues.ForEach(func(num int, i issue) error {
 		// Fetch author users for issues
 		if i.PullRequest == nil {
-			// Fetch the user if it is not already fetched
-			if _, ok := gitHubUsers.Load(i.User.Login); !ok {
-				u, err := r.fetchUser(ctx, i.User.Login)
-				if err != nil {
-					return err
-				}
-				gitHubUsers.Save(i.User.Login, u)
-			}
+			_, err := r.fetchUser(ctx, i.User.Login)
+			return err
 		}
 
 		// Fetch author users for pull requests
 		if p, ok := gitHubPulls.Load(num); ok {
 			// All Pulls expected to be merged at this point
-			// Fetch the user if it is not already fetched
-			if _, ok := gitHubUsers.Load(p.User.Login); !ok {
-				u, err := r.fetchUser(ctx, p.User.Login)
-				if err != nil {
-					return err
-				}
-				gitHubUsers.Save(p.User.Login, u)
-			}
+			_, err := r.fetchUser(ctx, p.User.Login)
+			return err
 		}
 
 		return nil
@@ -690,16 +685,8 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	// Fetch closer/merger users
 	err = gitHubEvents.ForEach(func(num int, e event) error {
-		// Fetch the user if it is not already fetched
-		if _, ok := gitHubUsers.Load(e.Actor.Login); !ok {
-			u, err := r.fetchUser(ctx, e.Actor.Login)
-			if err != nil {
-				return err
-			}
-			gitHubUsers.Save(e.Actor.Login, u)
-		}
-
-		return nil
+		_, err := r.fetchUser(ctx, e.Actor.Login)
+		return err
 	})
 
 	if err != nil {
@@ -708,7 +695,7 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	// ==============================> JOINING ISSUES, PULLS, EVENTS, COMMITS, & USERS <==============================
 
-	issues, merges := resolveIssuesAndMerges(gitHubIssues, gitHubPulls, gitHubEvents, gitHubCommits, gitHubUsers)
+	issues, merges := resolveIssuesAndMerges(gitHubIssues, gitHubPulls, gitHubEvents, r.commits, r.users)
 
 	r.logger.Debugf("Resolved and sorted GitHub issues and pull requests: %d, %d", len(issues), len(merges))
 	r.logger.Infof("All GitHub issues and pull requests are fetched: %d, %d", len(issues), len(merges))

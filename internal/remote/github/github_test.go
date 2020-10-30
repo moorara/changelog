@@ -517,9 +517,9 @@ var (
 	}
 
 	remoteTag = remote.Tag{
-		Name: "v0.1.0",
-		SHA:  "c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c",
-		Time: parseGitHubTime("2020-10-27T23:59:59Z"),
+		Name:       "v0.1.0",
+		CommitHash: "c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c",
+		Time:       parseGitHubTime("2020-10-27T23:59:59Z"),
 	}
 
 	remoteIssue = remote.Change{
@@ -635,11 +635,13 @@ func TestNewRepo(t *testing.T) {
 			assert.Equal(t, githubAPIURL, gr.apiURL)
 			assert.Equal(t, tc.path, gr.path)
 			assert.Equal(t, tc.accessToken, gr.accessToken)
+			assert.NotNil(t, gr.users)
+			assert.NotNil(t, gr.commits)
 		})
 	}
 }
 
-func TestRepo_CreateRequest(t *testing.T) {
+func TestRepo_createRequest(t *testing.T) {
 	tests := []struct {
 		name          string
 		accessToken   string
@@ -692,7 +694,7 @@ func TestRepo_CreateRequest(t *testing.T) {
 	}
 }
 
-func TestRepo_MakeRequest(t *testing.T) {
+func TestRepo_makeRequest(t *testing.T) {
 	tests := []struct {
 		name               string
 		mockResponses      []MockResponse
@@ -772,7 +774,7 @@ func TestRepo_MakeRequest(t *testing.T) {
 	}
 }
 
-func TestRepo_CheckScopes(t *testing.T) {
+func TestRepo_checkScopes(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
@@ -840,18 +842,32 @@ func TestRepo_CheckScopes(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchUser(t *testing.T) {
+func TestRepo_fetchUser(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
+		users         *userStore
 		ctx           context.Context
 		username      string
 		expectedError string
 		expectedUser  user
 	}{
 		{
+			name:          "CacheHit",
+			mockResponses: []MockResponse{},
+			users: &userStore{
+				m: map[string]user{
+					"octocat": gitHubUser1,
+				},
+			},
+			ctx:          context.Background(),
+			username:     "octocat",
+			expectedUser: gitHubUser1,
+		},
+		{
 			name:          "NilContext",
 			mockResponses: []MockResponse{},
+			users:         newUserStore(),
 			ctx:           nil,
 			username:      "octocat",
 			expectedError: "net/http: nil Context",
@@ -861,6 +877,7 @@ func TestRepo_FetchUser(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"GET", "/users/octocat", 401, nil, `bad credentials`},
 			},
+			users:         newUserStore(),
 			ctx:           context.Background(),
 			username:      "octocat",
 			expectedError: "GET /users/octocat 401: bad credentials",
@@ -870,6 +887,7 @@ func TestRepo_FetchUser(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"GET", "/users/octocat", 200, nil, `[`},
 			},
+			users:         newUserStore(),
 			ctx:           context.Background(),
 			username:      "octocat",
 			expectedError: "unexpected EOF",
@@ -879,6 +897,7 @@ func TestRepo_FetchUser(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"GET", "/users/octocat", 200, nil, mockGitHubUserBody1},
 			},
+			users:        newUserStore(),
 			ctx:          context.Background(),
 			username:     "octocat",
 			expectedUser: gitHubUser1,
@@ -890,6 +909,7 @@ func TestRepo_FetchUser(t *testing.T) {
 			r := &repo{
 				logger: log.New(log.None),
 				client: new(http.Client),
+				users:  tc.users,
 			}
 
 			if len(tc.mockResponses) > 0 {
@@ -911,10 +931,11 @@ func TestRepo_FetchUser(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchCommit(t *testing.T) {
+func TestRepo_fetchCommit(t *testing.T) {
 	tests := []struct {
 		name           string
 		mockResponses  []MockResponse
+		commits        *commitStore
 		ctx            context.Context
 		ref            string
 		expectedError  string
@@ -923,6 +944,19 @@ func TestRepo_FetchCommit(t *testing.T) {
 		{
 			name:          "NilContext",
 			mockResponses: []MockResponse{},
+			commits: &commitStore{
+				m: map[string]commit{
+					"6dcb09b5b57875f334f61aebed695e2e4193db5e": gitHubCommit2,
+				},
+			},
+			ctx:            context.Background(),
+			ref:            "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			expectedCommit: gitHubCommit2,
+		},
+		{
+			name:          "NilContext",
+			mockResponses: []MockResponse{},
+			commits:       newCommitStore(),
 			ctx:           nil,
 			ref:           "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 			expectedError: "net/http: nil Context",
@@ -932,6 +966,7 @@ func TestRepo_FetchCommit(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 401, nil, `bad credentials`},
 			},
+			commits:       newCommitStore(),
 			ctx:           context.Background(),
 			ref:           "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 			expectedError: "GET /repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e 401: bad credentials",
@@ -941,6 +976,7 @@ func TestRepo_FetchCommit(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, `[`},
 			},
+			commits:       newCommitStore(),
 			ctx:           context.Background(),
 			ref:           "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 			expectedError: "unexpected EOF",
@@ -950,6 +986,7 @@ func TestRepo_FetchCommit(t *testing.T) {
 			mockResponses: []MockResponse{
 				{"GET", "/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e", 200, nil, mockGitHubCommitBody2},
 			},
+			commits:        newCommitStore(),
 			ctx:            context.Background(),
 			ref:            "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 			expectedCommit: gitHubCommit2,
@@ -959,9 +996,10 @@ func TestRepo_FetchCommit(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &repo{
-				logger: log.New(log.None),
-				client: new(http.Client),
-				path:   "octocat/Hello-World",
+				logger:  log.New(log.None),
+				client:  new(http.Client),
+				path:    "octocat/Hello-World",
+				commits: tc.commits,
 			}
 
 			if len(tc.mockResponses) > 0 {
@@ -983,7 +1021,7 @@ func TestRepo_FetchCommit(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchPull(t *testing.T) {
+func TestRepo_fetchPull(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
@@ -1055,7 +1093,7 @@ func TestRepo_FetchPull(t *testing.T) {
 	}
 }
 
-func TestRepo_FindEvent(t *testing.T) {
+func TestRepo_findEvent(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
@@ -1170,7 +1208,7 @@ func TestRepo_FindEvent(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchTagsPageCount(t *testing.T) {
+func TestRepo_fetchTagsPageCount(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
@@ -1253,7 +1291,7 @@ func TestRepo_FetchTagsPageCount(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchTags(t *testing.T) {
+func TestRepo_fetchTags(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
@@ -1325,7 +1363,7 @@ func TestRepo_FetchTags(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchIssuesPageCount(t *testing.T) {
+func TestRepo_fetchIssuesPageCount(t *testing.T) {
 	since, _ := time.Parse(time.RFC3339, "2020-10-20T22:30:00-04:00")
 
 	tests := []struct {
@@ -1416,7 +1454,7 @@ func TestRepo_FetchIssuesPageCount(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchIssues(t *testing.T) {
+func TestRepo_fetchIssues(t *testing.T) {
 	since, _ := time.Parse(time.RFC3339, "2020-10-20T22:30:00-04:00")
 
 	tests := []struct {
@@ -1495,7 +1533,7 @@ func TestRepo_FetchIssues(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchPullsPageCount(t *testing.T) {
+func TestRepo_fetchPullsPageCount(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
@@ -1578,7 +1616,7 @@ func TestRepo_FetchPullsPageCount(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchPulls(t *testing.T) {
+func TestRepo_fetchPulls(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
@@ -1650,7 +1688,7 @@ func TestRepo_FetchPulls(t *testing.T) {
 	}
 }
 
-func TestRepo_FetchAllTags(t *testing.T) {
+func TestRepo_FetchTags(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses []MockResponse
@@ -1709,9 +1747,10 @@ func TestRepo_FetchAllTags(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &repo{
-				logger: log.New(log.None),
-				client: new(http.Client),
-				path:   "octocat/Hello-World",
+				logger:  log.New(log.None),
+				client:  new(http.Client),
+				path:    "octocat/Hello-World",
+				commits: newCommitStore(),
 			}
 
 			if len(tc.mockResponses) > 0 {
@@ -1720,7 +1759,7 @@ func TestRepo_FetchAllTags(t *testing.T) {
 				r.apiURL = ts.URL
 			}
 
-			tags, err := r.FetchAllTags(tc.ctx)
+			tags, err := r.FetchTags(tc.ctx)
 
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
@@ -1897,9 +1936,11 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &repo{
-				logger: log.New(log.None),
-				client: new(http.Client),
-				path:   "octocat/Hello-World",
+				logger:  log.New(log.None),
+				client:  new(http.Client),
+				path:    "octocat/Hello-World",
+				users:   newUserStore(),
+				commits: newCommitStore(),
 			}
 
 			if len(tc.mockResponses) > 0 {

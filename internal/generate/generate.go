@@ -44,74 +44,7 @@ func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
 	}
 }
 
-// TODO: Use either resolveGitTags or resolveRemoteTags
-
-func (g *Generator) resolveGitTags(tags git.Tags, chlog *changelog.Changelog) (git.Tag, git.Tag, git.Tag, error) {
-	g.logger.Debug("Resolving from and to tags ...")
-
-	var ok bool
-	var zero git.Tag
-	var lastGitTag, lastChangelogTag git.Tag
-	var fromTag, toTag, futureTag git.Tag
-
-	// Resolve the last git tag
-	if len(tags) == 0 {
-		lastGitTag = git.Tag{} // Denotes the case where there is no git
-	} else {
-		lastGitTag = tags[0] // The most recent tag
-	}
-
-	// Resolve the last tag on changelog
-	if len(chlog.Releases) == 0 {
-		lastChangelogTag = git.Tag{} // Denotes the case where the changelog is empty
-	} else {
-		if lastChangelogTag, ok = tags.Find(chlog.Releases[0].GitTag); !ok {
-			return zero, zero, zero, fmt.Errorf("changelog tag not found: %s", chlog.Releases[0].GitTag)
-		}
-	}
-
-	// Resolve the from tag
-	if g.spec.Tags.From == "" {
-		fromTag = lastChangelogTag
-	} else {
-		if fromTag, ok = tags.Find(g.spec.Tags.From); !ok {
-			return zero, zero, zero, fmt.Errorf("from-tag not found: %s", g.spec.Tags.From)
-		}
-
-		if fromTag.Before(lastChangelogTag) {
-			g.logger.Debugf("From tag updated to the last tag on changelog: %s", lastChangelogTag.Name)
-			fromTag = lastChangelogTag
-		}
-	}
-
-	// Resolve the to tag
-	if g.spec.Tags.To == "" {
-		toTag = lastGitTag
-	} else {
-		if toTag, ok = tags.Find(g.spec.Tags.To); !ok {
-			return zero, zero, zero, fmt.Errorf("to-tag not found: %s", g.spec.Tags.To)
-		}
-
-		if toTag.Before(fromTag) || toTag.Equal(fromTag) {
-			return zero, zero, zero, errors.New("to-tag should be after the from-tag")
-		}
-	}
-
-	// Resolve the future tag
-	if g.spec.Tags.Future != "" {
-		futureTag = git.Tag{
-			Name: g.spec.Tags.Future,
-		}
-	}
-
-	g.logger.Infof("From tag resolved: %s", fromTag.Name)
-	g.logger.Infof("To tag resolved: %s", toTag.Name)
-	g.logger.Infof("Future tag resolved: %s", futureTag.Name)
-
-	return fromTag, toTag, futureTag, nil
-}
-
-func (g *Generator) resolveRemoteTags(tags remote.Tags, chlog *changelog.Changelog) (remote.Tag, remote.Tag, remote.Tag, error) {
+func (g *Generator) resolveTags(tags remote.Tags, chlog *changelog.Changelog) (remote.Tag, remote.Tag, remote.Tag, error) {
 	g.logger.Debug("Resolving from and to tags ...")
 
 	var ok bool
@@ -265,7 +198,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 
 	// ==============================> FETCH AND FILTER GIT TAGS <==============================
 
-	tags, err := g.gitRepo.Tags()
+	tags, err := g.remoteRepo.FetchTags(ctx)
 	if err != nil {
 		return err
 	}
@@ -283,7 +216,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 		tags = tags.ExcludeRegex(re)
 	}
 
-	fromTag, toTag, futureTag, err := g.resolveGitTags(tags, chlog)
+	fromTag, toTag, futureTag, err := g.resolveTags(tags, chlog)
 	if err != nil {
 		return err
 	}
@@ -309,34 +242,33 @@ func (g *Generator) Generate(ctx context.Context) error {
 		return nil
 	}
 
-	// Resolving all new tags eligible for changelog
-	var newTags git.Tags
-
+	// Resolving all tags eligible for changelog
+	// Tags are sorted from the most recent to the least recent
 	if fromTag.IsZero() && toTag.IsZero() {
-		newTags = git.Tags{}
+		tags = remote.Tags{}
 	} else if fromTag.IsZero() {
-		j := tags.Index(toTag.Name)
-		newTags = tags[:j+1]
-	} else if toTag.IsZero() {
 		i := tags.Index(toTag.Name)
-		newTags = tags[i:]
+		tags = tags[i:]
+	} else if toTag.IsZero() {
+		j := tags.Index(fromTag.Name)
+		tags = tags[:j+1]
 	} else {
 		i := tags.Index(toTag.Name)
-		j := tags.Index(toTag.Name)
-		newTags = tags[i : j+1]
+		j := tags.Index(fromTag.Name)
+		tags = tags[i : j+1]
 	}
 
 	if !futureTag.IsZero() {
-		newTags = append(newTags, futureTag)
+		tags = append(tags, futureTag)
 	}
 
-	g.logger.Debugf("New tags for generating changelog: %s", newTags.MapToString(func(t git.Tag) string {
+	g.logger.Debugf("New tags for generating changelog: %v", tags.Map(func(t remote.Tag) string {
 		return t.Name
 	}))
 
 	// ==============================> FETCH ISSUES AND MERGES <==============================
 
-	since := fromTag.Commit.Committer.Time
+	since := fromTag.Time
 	issues, merges, err := g.remoteRepo.FetchIssuesAndMerges(ctx, since)
 	if err != nil {
 		return err

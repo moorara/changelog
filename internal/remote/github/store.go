@@ -41,45 +41,6 @@ func (s *userStore) ForEach(f func(string, user) error) error {
 	return nil
 }
 
-type tagStore struct {
-	sync.Mutex
-	m map[string]tag
-}
-
-func newTagStore() *tagStore {
-	return &tagStore{
-		m: make(map[string]tag),
-	}
-}
-
-func (s *tagStore) Save(name string, t tag) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.m[name] = t
-}
-
-func (s *tagStore) Load(name string) (tag, bool) {
-	s.Lock()
-	defer s.Unlock()
-
-	c, ok := s.m[name]
-	return c, ok
-}
-
-func (s *tagStore) ForEach(f func(string, tag) error) error {
-	s.Lock()
-	defer s.Unlock()
-
-	for name, t := range s.m {
-		if err := f(name, t); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 type commitStore struct {
 	sync.Mutex
 	m map[string]commit
@@ -112,6 +73,45 @@ func (s *commitStore) ForEach(f func(string, commit) error) error {
 
 	for sha, c := range s.m {
 		if err := f(sha, c); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type tagStore struct {
+	sync.Mutex
+	m map[string]tag
+}
+
+func newTagStore() *tagStore {
+	return &tagStore{
+		m: make(map[string]tag),
+	}
+}
+
+func (s *tagStore) Save(name string, t tag) {
+	s.Lock()
+	defer s.Unlock()
+
+	s.m[name] = t
+}
+
+func (s *tagStore) Load(name string) (tag, bool) {
+	s.Lock()
+	defer s.Unlock()
+
+	c, ok := s.m[name]
+	return c, ok
+}
+
+func (s *tagStore) ForEach(f func(string, tag) error) error {
+	s.Lock()
+	defer s.Unlock()
+
+	for name, t := range s.m {
+		if err := f(name, t); err != nil {
 			return err
 		}
 	}

@@ -44,43 +44,6 @@ func TestUserStore(t *testing.T) {
 	}
 }
 
-func TestTagStore(t *testing.T) {
-	tests := []struct {
-		name    string
-		tagName string
-		tg      tag
-	}{
-		{
-			name:    "OK",
-			tagName: "v0.1.0",
-			tg:      gitHubTag1,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			s := newTagStore()
-			s.Save(tc.tagName, tc.tg)
-			tg, ok := s.Load(tc.tagName)
-
-			assert.True(t, ok)
-			assert.Equal(t, tc.tg, tg)
-
-			assert.NoError(t, s.ForEach(func(tagName string, tg tag) error {
-				assert.Equal(t, tc.tagName, tagName)
-				assert.Equal(t, tc.tg, tg)
-				return nil
-			}))
-
-			assert.Error(t, s.ForEach(func(tagName string, tg tag) error {
-				assert.Equal(t, tc.tagName, tagName)
-				assert.Equal(t, tc.tg, tg)
-				return errors.New("dummy")
-			}))
-		})
-	}
-}
-
 func TestCommitStore(t *testing.T) {
 	tests := []struct {
 		name string
@@ -112,6 +75,43 @@ func TestCommitStore(t *testing.T) {
 			assert.Error(t, s.ForEach(func(sha string, c commit) error {
 				assert.Equal(t, tc.sha, sha)
 				assert.Equal(t, tc.c, c)
+				return errors.New("dummy")
+			}))
+		})
+	}
+}
+
+func TestTagStore(t *testing.T) {
+	tests := []struct {
+		name    string
+		tagName string
+		tg      tag
+	}{
+		{
+			name:    "OK",
+			tagName: "v0.1.0",
+			tg:      gitHubTag1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTagStore()
+			s.Save(tc.tagName, tc.tg)
+			tg, ok := s.Load(tc.tagName)
+
+			assert.True(t, ok)
+			assert.Equal(t, tc.tg, tg)
+
+			assert.NoError(t, s.ForEach(func(tagName string, tg tag) error {
+				assert.Equal(t, tc.tagName, tagName)
+				assert.Equal(t, tc.tg, tg)
+				return nil
+			}))
+
+			assert.Error(t, s.ForEach(func(tagName string, tg tag) error {
+				assert.Equal(t, tc.tagName, tagName)
+				assert.Equal(t, tc.tg, tg)
 				return errors.New("dummy")
 			}))
 		})

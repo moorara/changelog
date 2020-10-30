@@ -38,8 +38,8 @@ func NewRepo(logger log.Logger, path, accessToken string) remote.Repo {
 	}
 }
 
-// FetchAllTags retrieves all tags for a GitLab repository.
-func (r *repo) FetchAllTags(ctx context.Context) (remote.Tags, error) {
+// FetchTags retrieves all tags for a GitLab repository.
+func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 	return remote.Tags{}, nil
 }
 
