@@ -16,95 +16,125 @@ import (
 )
 
 var (
-	t1, _ = time.Parse(time.RFC3339, "2020-10-02T02:00:00-04:00")
-	t2, _ = time.Parse(time.RFC3339, "2020-10-12T09:00:00-04:00")
-	t3, _ = time.Parse(time.RFC3339, "2020-10-22T16:00:00-04:00")
+	t1 = parseGitHubTime("2020-10-02T02:00:00-04:00")
+	t2 = parseGitHubTime("2020-10-12T12:00:00-04:00")
+	t3 = parseGitHubTime("2020-10-22T22:00:00-04:00")
+	t4 = parseGitHubTime("2020-10-31T23:00:00-04:00")
 
-	JohnDoe = git.Signature{
-		Name:  "John Doe",
-		Email: "john@doe.com",
-		Time:  t1,
+	user1 = remote.User{
+		Name:     "monalisa octocat",
+		Email:    "octocat@github.com",
+		Username: "octocat",
 	}
 
-	JaneDoe = git.Signature{
-		Name:  "Jane Doe",
-		Email: "jane@doe.com",
-		Time:  t2,
+	user2 = remote.User{
+		Name:     "monalisa octodog",
+		Email:    "octodog@github.com",
+		Username: "octodog",
 	}
 
-	JimDoe = git.Signature{
-		Name:  "Jim Doe",
-		Email: "jim@doe.com",
-		Time:  t3,
+	commit1 = remote.Commit{
+		Hash: "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378",
+		Time: t1,
 	}
 
-	commit1 = git.Commit{
-		Hash:      "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378",
-		Author:    JohnDoe,
-		Committer: JohnDoe,
-		Message:   "foo",
+	commit2 = remote.Commit{
+		Hash: "0251a422d2038967eeaaaa5c8aa76c7067fdef05",
+		Time: t2,
 	}
 
-	commit2 = git.Commit{
-		Hash:      "0251a422d2038967eeaaaa5c8aa76c7067fdef05",
-		Author:    JaneDoe,
-		Committer: JaneDoe,
-		Message:   "bar",
+	commit3 = remote.Commit{
+		Hash: "c414d1004154c6c324bd78c69d10ee101e676059",
+		Time: t3,
 	}
 
-	commit3 = git.Commit{
-		Hash:      "c414d1004154c6c324bd78c69d10ee101e676059",
-		Author:    JimDoe,
-		Committer: JimDoe,
-		Message:   "baz",
+	commit4 = remote.Commit{
+		Hash: "20c5414eccaa147f2d6644de4ca36f35293fa43e",
+		Time: t4,
+	}
+
+	branch = remote.Branch{
+		Name:   "main",
+		Commit: commit3,
 	}
 
 	tag1 = remote.Tag{
-		Name:       "v0.1.1",
-		CommitHash: "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378",
-		Time:       t1,
+		Name:   "v0.1.1",
+		Time:   t1,
+		Commit: commit1,
 	}
 
 	tag2 = remote.Tag{
-		Name:       "v0.1.2",
-		CommitHash: "0251a422d2038967eeaaaa5c8aa76c7067fdef05",
-		Time:       t2,
+		Name:   "v0.1.2",
+		Time:   t2,
+		Commit: commit2,
 	}
 
 	tag3 = remote.Tag{
-		Name:       "v0.1.3",
-		CommitHash: "c414d1004154c6c324bd78c69d10ee101e676059",
-		Time:       t3,
+		Name:   "v0.1.3",
+		Time:   t3,
+		Commit: commit3,
 	}
 
-	change1 = remote.Change{
-		Number:    1001,
-		Title:     "Found a bug",
-		Labels:    []string{"bug"},
-		Milestone: "v1.0",
+	issue1 = remote.Issue{
+		Change: remote.Change{
+			Number:    1001,
+			Title:     "Found a bug",
+			Labels:    []string{"bug"},
+			Milestone: "v1.0",
+			Time:      t3,
+			Creator:   user1,
+		},
+		Closer: user1,
 	}
 
-	change2 = remote.Change{
-		Number:    1002,
-		Title:     "Discovered a vulnerability",
-		Labels:    []string{"invalid"},
-		Milestone: "",
+	issue2 = remote.Issue{
+		Change: remote.Change{
+			Number:    1002,
+			Title:     "Discovered a vulnerability",
+			Labels:    []string{"invalid"},
+			Milestone: "",
+			Time:      t4, // Unrleased change for future tag
+			Creator:   user1,
+		},
+		Closer: user2,
 	}
 
-	change3 = remote.Change{
-		Number:    1003,
-		Title:     "Added a feature",
-		Labels:    []string{"enhancement"},
-		Milestone: "v1.0",
+	merge1 = remote.Merge{
+		Change: remote.Change{
+			Number:    1003,
+			Title:     "Added a feature",
+			Labels:    []string{"enhancement"},
+			Milestone: "v1.0",
+			Time:      t3,
+			Creator:   user1,
+		},
+		Merger: user1,
+		Commit: commit3,
 	}
 
-	change4 = remote.Change{
-		Number:    1004,
-		Title:     "Refactored code",
-		Labels:    nil,
-		Milestone: "v1.0",
+	merge2 = remote.Merge{
+		Change: remote.Change{
+			Number:    1004,
+			Title:     "Refactored code",
+			Labels:    nil,
+			Milestone: "v1.0",
+			Time:      t4, // Unrleased change for future tag
+			Creator:   user1,
+		},
+		Merger: user2,
+		Commit: commit4,
 	}
 )
+
+func parseGitHubTime(s string) time.Time {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		panic(err)
+	}
+
+	return t
+}
 
 func TestNew(t *testing.T) {
 	specGitHub := spec.Spec{}
@@ -146,7 +176,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestGenerator_ResolveTags(t *testing.T) {
+func TestGenerator_resolveTags(t *testing.T) {
 	tests := []struct {
 		name              string
 		g                 *Generator
@@ -383,14 +413,14 @@ func TestGenerator_ResolveTags(t *testing.T) {
 	}
 }
 
-func TestGenerator_FilterByLabels(t *testing.T) {
+func TestGenerator_filterByLabels(t *testing.T) {
 	tests := []struct {
 		name           string
 		g              *Generator
-		issues         remote.Changes
-		merges         remote.Changes
-		expectedIssues remote.Changes
-		expectedMerges remote.Changes
+		issues         remote.Issues
+		merges         remote.Merges
+		expectedIssues remote.Issues
+		expectedMerges remote.Merges
 	}{
 		{
 			name: "None",
@@ -405,10 +435,10 @@ func TestGenerator_FilterByLabels(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			issues:         remote.Changes{change1, change2},
-			merges:         remote.Changes{change3, change4},
-			expectedIssues: remote.Changes{},
-			expectedMerges: remote.Changes{},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
+			expectedIssues: remote.Issues{},
+			expectedMerges: remote.Merges{},
 		},
 		{
 			name: "AllWithIncludeLabels",
@@ -425,10 +455,10 @@ func TestGenerator_FilterByLabels(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			issues:         remote.Changes{change1, change2},
-			merges:         remote.Changes{change3, change4},
-			expectedIssues: remote.Changes{change1},
-			expectedMerges: remote.Changes{change3, change4},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
+			expectedIssues: remote.Issues{issue1},
+			expectedMerges: remote.Merges{merge1, merge2},
 		},
 		{
 			name: "AllWithExcludeLabels",
@@ -445,10 +475,10 @@ func TestGenerator_FilterByLabels(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			issues:         remote.Changes{change1, change2},
-			merges:         remote.Changes{change3, change4},
-			expectedIssues: remote.Changes{change1},
-			expectedMerges: remote.Changes{change4},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
+			expectedIssues: remote.Issues{issue1},
+			expectedMerges: remote.Merges{merge2},
 		},
 		{
 			name: "LabeledWithIncludeLabels",
@@ -465,10 +495,10 @@ func TestGenerator_FilterByLabels(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			issues:         remote.Changes{change1, change2},
-			merges:         remote.Changes{change3, change4},
-			expectedIssues: remote.Changes{change1},
-			expectedMerges: remote.Changes{change3},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
+			expectedIssues: remote.Issues{issue1},
+			expectedMerges: remote.Merges{merge1},
 		},
 		{
 			name: "LabeledWithExcludeLabels",
@@ -485,10 +515,10 @@ func TestGenerator_FilterByLabels(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			issues:         remote.Changes{change1, change2},
-			merges:         remote.Changes{change3, change4},
-			expectedIssues: remote.Changes{change1},
-			expectedMerges: remote.Changes{},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
+			expectedIssues: remote.Issues{issue1},
+			expectedMerges: remote.Merges{},
 		},
 	}
 
@@ -498,6 +528,194 @@ func TestGenerator_FilterByLabels(t *testing.T) {
 
 			assert.Equal(t, tc.expectedIssues, issues)
 			assert.Equal(t, tc.expectedMerges, merges)
+		})
+	}
+}
+
+func TestGenerator_resolveCommitMap(t *testing.T) {
+	tests := []struct {
+		name              string
+		g                 *Generator
+		ctx               context.Context
+		branch            remote.Branch
+		sortedTags        remote.Tags
+		expectedError     string
+		expectedCommitMap commitMap
+	}{
+		{
+			name: "FetchParentCommitsFails_Branch",
+			g: &Generator{
+				remoteRepo: &MockRemoteRepo{
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutError: errors.New("error on fetching parent commits for branch")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			branch:        branch,
+			sortedTags:    remote.Tags{tag2, tag1},
+			expectedError: "error on fetching parent commits for branch",
+		},
+		{
+			name: "FetchParentCommitsFails_FirstTag",
+			g: &Generator{
+				remoteRepo: &MockRemoteRepo{
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutError: errors.New("error on fetching parent commits for tag")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			branch:        branch,
+			sortedTags:    remote.Tags{tag2, tag1},
+			expectedError: "error on fetching parent commits for tag",
+		},
+		{
+			name: "FetchParentCommitsFails_SecondTag",
+			g: &Generator{
+				remoteRepo: &MockRemoteRepo{
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+						{OutError: errors.New("error on fetching parent commits for tag")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			branch:        branch,
+			sortedTags:    remote.Tags{tag2, tag1},
+			expectedError: "error on fetching parent commits for tag",
+		},
+		{
+			name: "Success",
+			g: &Generator{
+				remoteRepo: &MockRemoteRepo{
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+						{OutCommits: remote.Commits{commit1}},
+					},
+				},
+			},
+			ctx:        context.Background(),
+			branch:     branch,
+			sortedTags: remote.Tags{tag2, tag1},
+			expectedCommitMap: commitMap{
+				"c414d1004154c6c324bd78c69d10ee101e676059": &revisions{
+					Branch: "main",
+				},
+				"0251a422d2038967eeaaaa5c8aa76c7067fdef05": &revisions{
+					Branch: "main",
+					Tags:   []string{"v0.1.2"},
+				},
+				"25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378": &revisions{
+					Branch: "main",
+					Tags:   []string{"v0.1.2", "v0.1.1"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			commitMap, err := tc.g.resolveCommitMap(tc.ctx, tc.branch, tc.sortedTags)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, commitMap, tc.expectedCommitMap)
+			} else {
+				assert.Nil(t, commitMap)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
+func TestGenerator_resolveIssueMap(t *testing.T) {
+	tests := []struct {
+		name             string
+		issues           remote.Issues
+		sortedTags       remote.Tags
+		futureTag        remote.Tag
+		expectedIssueMap issueMap
+	}{
+		{
+			name:       "OK",
+			issues:     remote.Issues{issue1, issue2},
+			sortedTags: remote.Tags{tag3, tag2, tag1},
+			futureTag: remote.Tag{
+				Name: "v0.1.4",
+			},
+			expectedIssueMap: issueMap{
+				"v0.1.4": remote.Issues{issue2},
+				"v0.1.3": remote.Issues{issue1},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &Generator{
+				logger: log.New(log.None),
+			}
+
+			issueMap := g.resolveIssueMap(tc.issues, tc.sortedTags, tc.futureTag)
+
+			assert.Equal(t, tc.expectedIssueMap, issueMap)
+		})
+	}
+}
+
+func TestGenerator_resolveMergeMap(t *testing.T) {
+	cm := commitMap{
+		"20c5414eccaa147f2d6644de4ca36f35293fa43e": &revisions{
+			Branch: "main",
+		},
+		"c414d1004154c6c324bd78c69d10ee101e676059": &revisions{
+			Branch: "main",
+			Tags:   []string{"v0.1.3"},
+		},
+		"0251a422d2038967eeaaaa5c8aa76c7067fdef05": &revisions{
+			Branch: "main",
+			Tags:   []string{"v0.1.3", "v0.1.2"},
+		},
+		"25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378": &revisions{
+			Branch: "main",
+			Tags:   []string{"v0.1.3", "v0.1.2", "v0.1.1"},
+		},
+	}
+
+	tests := []struct {
+		name             string
+		merges           remote.Merges
+		cm               commitMap
+		futureTag        remote.Tag
+		expectedMergeMap mergeMap
+	}{
+		{
+			name:   "OK",
+			merges: remote.Merges{merge1, merge2},
+			cm:     cm,
+			futureTag: remote.Tag{
+				Name: "v0.1.4",
+			},
+			expectedMergeMap: mergeMap{
+				"v0.1.4": remote.Merges{merge2},
+				"v0.1.3": remote.Merges{merge1},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &Generator{
+				logger: log.New(log.None),
+			}
+
+			mergeMap := g.resolveMergeMap(tc.merges, tc.cm, tc.futureTag)
+
+			assert.Equal(t, tc.expectedMergeMap, mergeMap)
 		})
 	}
 }
@@ -524,6 +742,48 @@ func TestGenerator_Generate(t *testing.T) {
 			expectedError: "error on parsing the changelog file",
 		},
 		{
+			name: "FetchBranchFails",
+			g: &Generator{
+				spec: spec.Spec{
+					Merges: spec.Merges{
+						Branch: "main",
+					},
+				},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: &changelog.Changelog{}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchBranchMocks: []FetchBranchMock{
+						{OutError: errors.New("error on getting remote branch")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on getting remote branch",
+		},
+		{
+			name: "FetchDefaultBranchFails",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: &changelog.Changelog{}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutError: errors.New("error on getting default remote branch")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on getting default remote branch",
+		},
+		{
 			name: "FetchTagsFails",
 			g: &Generator{
 				spec:   spec.Spec{},
@@ -534,13 +794,16 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
 					FetchTagsMocks: []FetchTagsMock{
-						{OutError: errors.New("error on getting git tags")},
+						{OutError: errors.New("error on getting remote tags")},
 					},
 				},
 			},
 			ctx:           context.Background(),
-			expectedError: "error on getting git tags",
+			expectedError: "error on getting remote tags",
 		},
 		{
 			name: "NoNewTag",
@@ -553,6 +816,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{}},
 					},
@@ -564,11 +830,7 @@ func TestGenerator_Generate(t *testing.T) {
 		{
 			name: "FetchIssuesAndMergesFails",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						Future: "v0.1.0",
-					},
-				},
+				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -576,8 +838,11 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
 					FetchTagsMocks: []FetchTagsMock{
-						{OutTags: remote.Tags{}},
+						{OutTags: remote.Tags{tag1}},
 					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{OutError: errors.New("error on fetching issues and merges")},
@@ -588,13 +853,9 @@ func TestGenerator_Generate(t *testing.T) {
 			expectedError: "error on fetching issues and merges",
 		},
 		{
-			name: "RenderFails",
+			name: "FetchParentCommitsFails_Branch",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						Future: "v0.1.0",
-					},
-				},
+				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -605,51 +866,95 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
 					FetchTagsMocks: []FetchTagsMock{
-						{OutTags: remote.Tags{}},
+						{OutTags: remote.Tags{tag1}},
 					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{
-							OutIssues: remote.Changes{},
-							OutMerges: remote.Changes{},
+							OutIssues: remote.Issues{},
+							OutMerges: remote.Merges{},
 						},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutError: errors.New("error on fetching parent commits for branch")},
 					},
 				},
 			},
 			ctx:           context.Background(),
-			expectedError: "error on rendering changelog",
+			expectedError: "error on fetching parent commits for branch",
 		},
 		{
-			name: "Success_FutureTag",
+			name: "FetchParentCommitsFails_Tag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						Future: "v0.1.0",
-					},
-				},
+				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
 						{OutChangelog: &changelog.Changelog{}},
 					},
 					RenderMocks: []RenderMock{
-						{OutContent: "changelog"},
+						{OutError: errors.New("error on rendering changelog")},
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
 					FetchTagsMocks: []FetchTagsMock{
-						{OutTags: remote.Tags{}},
+						{OutTags: remote.Tags{tag1}},
 					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{
-							OutIssues: remote.Changes{},
-							OutMerges: remote.Changes{},
+							OutIssues: remote.Issues{},
+							OutMerges: remote.Merges{},
 						},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutError: errors.New("error on fetching parent commits for tag")},
 					},
 				},
 			},
 			ctx:           context.Background(),
-			expectedError: "",
+			expectedError: "error on fetching parent commits for tag",
+		},
+		{
+			name: "RenderFails",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: &changelog.Changelog{}},
+					},
+					RenderMocks: []RenderMock{
+						{OutError: errors.New("error on rendering changelog")},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
+					FetchTagsMocks: []FetchTagsMock{
+						{OutTags: remote.Tags{tag1}},
+					},
+					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
+						{
+							OutIssues: remote.Issues{},
+							OutMerges: remote.Merges{},
+						},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on rendering changelog",
 		},
 		{
 			name: "Success_ToTag",
@@ -665,14 +970,21 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag1}},
 					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{
-							OutIssues: remote.Changes{},
-							OutMerges: remote.Changes{},
+							OutIssues: remote.Issues{},
+							OutMerges: remote.Merges{},
 						},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
 					},
 				},
 			},
@@ -699,14 +1011,61 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag2, tag1}},
 					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{
-							OutIssues: remote.Changes{},
-							OutMerges: remote.Changes{},
+							OutIssues: remote.Issues{},
+							OutMerges: remote.Merges{},
 						},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+						{OutCommits: remote.Commits{commit1}},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "",
+		},
+		{
+			name: "Success_FutureTag",
+			g: &Generator{
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						Future: "v0.1.0",
+					},
+				},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: &changelog.Changelog{}},
+					},
+					RenderMocks: []RenderMock{
+						{OutContent: "changelog"},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
+					FetchTagsMocks: []FetchTagsMock{
+						{OutTags: remote.Tags{}},
+					},
+					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
+						{
+							OutIssues: remote.Issues{},
+							OutMerges: remote.Merges{},
+						},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
 					},
 				},
 			},

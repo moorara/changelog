@@ -35,7 +35,7 @@ func TestDefault(t *testing.T) {
 	assert.Equal(t, []string{"bug"}, spec.Issues.BugLabels)
 	assert.Equal(t, []string{"security"}, spec.Issues.SecurityLabels)
 	assert.Equal(t, SelectionAll, spec.Merges.Selection)
-	assert.Equal(t, "master", spec.Merges.Branch)
+	assert.Equal(t, "", spec.Merges.Branch)
 	assert.Nil(t, spec.Merges.IncludeLabels)
 	assert.Nil(t, spec.Merges.ExcludeLabels)
 	assert.False(t, spec.Merges.Grouping)

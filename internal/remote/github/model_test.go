@@ -8,6 +8,50 @@ import (
 	"github.com/moorara/changelog/internal/remote"
 )
 
+func TestToCommit(t *testing.T) {
+	tests := []struct {
+		name           string
+		c              commit
+		expectedCommit remote.Commit
+	}{
+		{
+			name:           "OK",
+			c:              gitHubCommit1,
+			expectedCommit: remoteCommit1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			commit := toCommit(tc.c)
+
+			assert.Equal(t, tc.expectedCommit, commit)
+		})
+	}
+}
+
+func TestToBranch(t *testing.T) {
+	tests := []struct {
+		name           string
+		b              branch
+		expectedBranch remote.Branch
+	}{
+		{
+			name:           "OK",
+			b:              gitHubBranch,
+			expectedBranch: remoteBranch,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			branch := toBranch(tc.b)
+
+			assert.Equal(t, tc.expectedBranch, branch)
+		})
+	}
+}
+
 func TestToTag(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -16,7 +60,7 @@ func TestToTag(t *testing.T) {
 		expectedTag remote.Tag
 	}{
 		{
-			name:        "Tag",
+			name:        "OK",
 			t:           gitHubTag1,
 			c:           gitHubCommit1,
 			expectedTag: remoteTag,
@@ -32,58 +76,58 @@ func TestToTag(t *testing.T) {
 	}
 }
 
-func TestToIssueChange(t *testing.T) {
+func TestToIssue(t *testing.T) {
 	tests := []struct {
 		name            string
 		i               issue
 		e               event
 		creator, closer user
-		expectedChange  remote.Change
+		expectedIssue   remote.Issue
 	}{
 		{
-			name:           "Issue",
-			i:              gitHubIssue1,
-			e:              gitHubEvent1,
-			creator:        gitHubUser1,
-			closer:         gitHubUser1,
-			expectedChange: remoteIssue,
+			name:          "OK",
+			i:             gitHubIssue1,
+			e:             gitHubEvent1,
+			creator:       gitHubUser1,
+			closer:        gitHubUser1,
+			expectedIssue: remoteIssue,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			change := toIssueChange(tc.i, tc.e, tc.creator, tc.closer)
+			issue := toIssue(tc.i, tc.e, tc.creator, tc.closer)
 
-			assert.Equal(t, tc.expectedChange, change)
+			assert.Equal(t, tc.expectedIssue, issue)
 		})
 	}
 }
 
-func TestToPullChange(t *testing.T) {
+func TestToMerge(t *testing.T) {
 	tests := []struct {
 		name            string
-		p               pull
+		i               issue
 		e               event
 		c               commit
 		creator, merger user
-		expectedChange  remote.Change
+		expectedMerge   remote.Merge
 	}{
 		{
-			name:           "Merge",
-			p:              gitHubPull1,
-			e:              gitHubEvent2,
-			c:              gitHubCommit2,
-			creator:        gitHubUser2,
-			merger:         gitHubUser3,
-			expectedChange: remoteMerge,
+			name:          "OK",
+			i:             gitHubIssue2,
+			e:             gitHubEvent2,
+			c:             gitHubCommit2,
+			creator:       gitHubUser2,
+			merger:        gitHubUser3,
+			expectedMerge: remoteMerge,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			change := toPullChange(tc.p, tc.e, tc.c, tc.creator, tc.merger)
+			merge := toMerge(tc.i, tc.e, tc.c, tc.creator, tc.merger)
 
-			assert.Equal(t, tc.expectedChange, change)
+			assert.Equal(t, tc.expectedMerge, merge)
 		})
 	}
 }
@@ -124,12 +168,11 @@ func TestResolveIssuesAndMerges(t *testing.T) {
 	tests := []struct {
 		name           string
 		gitHubIssues   *issueStore
-		gitHubPulls    *pullStore
 		gitHubEvents   *eventStore
 		gitHubCommits  *commitStore
 		gitHubUsers    *userStore
-		expectedIssues remote.Changes
-		expectedMerges remote.Changes
+		expectedIssues remote.Issues
+		expectedMerges remote.Merges
 	}{
 		{
 			name: "OK",
@@ -137,11 +180,6 @@ func TestResolveIssuesAndMerges(t *testing.T) {
 				m: map[int]issue{
 					1001: gitHubIssue1,
 					1002: gitHubIssue2,
-				},
-			},
-			gitHubPulls: &pullStore{
-				m: map[int]pull{
-					1002: gitHubPull1,
 				},
 			},
 			gitHubEvents: &eventStore{
@@ -162,14 +200,14 @@ func TestResolveIssuesAndMerges(t *testing.T) {
 					"octofox": gitHubUser3,
 				},
 			},
-			expectedIssues: remote.Changes{remoteIssue},
-			expectedMerges: remote.Changes{remoteMerge},
+			expectedIssues: remote.Issues{remoteIssue},
+			expectedMerges: remote.Merges{remoteMerge},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			issues, merges := resolveIssuesAndMerges(tc.gitHubIssues, tc.gitHubPulls, tc.gitHubEvents, tc.gitHubCommits, tc.gitHubUsers)
+			issues, merges := resolveIssuesAndMerges(tc.gitHubIssues, tc.gitHubEvents, tc.gitHubCommits, tc.gitHubUsers)
 
 			assert.Equal(t, tc.expectedIssues, issues)
 			assert.Equal(t, tc.expectedMerges, merges)

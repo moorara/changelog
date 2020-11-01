@@ -106,6 +106,12 @@ type (
 		HTMLURL   string    `json:"html_url"`
 	}
 
+	branch struct {
+		Name      string `json:"name"`
+		Protected bool   `json:"protected"`
+		Commit    commit `json:"commit"`
+	}
+
 	tag struct {
 		Name   string `json:"name"`
 		Commit hash   `json:"commit"`
@@ -187,15 +193,29 @@ type (
 	}
 )
 
-func toTag(t tag, c commit) remote.Tag {
-	return remote.Tag{
-		Name:       t.Name,
-		CommitHash: c.SHA,
-		Time:       c.Commit.Committer.Time,
+func toCommit(c commit) remote.Commit {
+	return remote.Commit{
+		Hash: c.SHA,
+		Time: c.Commit.Committer.Time,
 	}
 }
 
-func toIssueChange(i issue, e event, creator, closer user) remote.Change {
+func toBranch(b branch) remote.Branch {
+	return remote.Branch{
+		Name:   b.Name,
+		Commit: toCommit(b.Commit),
+	}
+}
+
+func toTag(t tag, c commit) remote.Tag {
+	return remote.Tag{
+		Name:   t.Name,
+		Time:   c.Commit.Committer.Time,
+		Commit: toCommit(c),
+	}
+}
+
+func toIssue(i issue, e event, creator, closer user) remote.Issue {
 	// e is the closed event of the issue
 
 	labels := make([]string, len(i.Labels))
@@ -214,19 +234,21 @@ func toIssueChange(i issue, e event, creator, closer user) remote.Change {
 		time = *i.ClosedAt
 	}
 
-	return remote.Change{
-		Number:    i.Number,
-		Title:     i.Title,
-		Labels:    labels,
-		Milestone: milestone,
-		Time:      time,
-		Creator: remote.User{
-			Name:     creator.Name,
-			Email:    creator.Email,
-			Username: creator.Login,
-			URL:      creator.URL,
+	return remote.Issue{
+		Change: remote.Change{
+			Number:    i.Number,
+			Title:     i.Title,
+			Labels:    labels,
+			Milestone: milestone,
+			Time:      time,
+			Creator: remote.User{
+				Name:     creator.Name,
+				Email:    creator.Email,
+				Username: creator.Login,
+				URL:      creator.URL,
+			},
 		},
-		CloserOrMerger: remote.User{
+		Closer: remote.User{
 			Name:     closer.Name,
 			Email:    closer.Email,
 			Username: closer.Login,
@@ -235,41 +257,44 @@ func toIssueChange(i issue, e event, creator, closer user) remote.Change {
 	}
 }
 
-func toPullChange(p pull, e event, c commit, creator, merger user) remote.Change {
+func toMerge(i issue, e event, c commit, creator, merger user) remote.Merge {
 	// e is the merged event of the pull request
 
-	labels := make([]string, len(p.Labels))
-	for i, l := range p.Labels {
+	labels := make([]string, len(i.Labels))
+	for i, l := range i.Labels {
 		labels[i] = l.Name
 	}
 
 	var milestone string
-	if p.Milestone != nil {
-		milestone = p.Milestone.Title
+	if i.Milestone != nil {
+		milestone = i.Milestone.Title
 	}
 
-	// *p.MergedAt and e.CreatedAt are the same times
-	// c.Commit.Author.Time is the actual time of merge
-	time := c.Commit.Author.Time
+	// p.MergedAt and e.CreatedAt are the same times
+	// c.Commit.Committer.Time is the actual time of merge
+	time := c.Commit.Committer.Time
 
-	return remote.Change{
-		Number:    p.Number,
-		Title:     p.Title,
-		Labels:    labels,
-		Milestone: milestone,
-		Time:      time,
-		Creator: remote.User{
-			Name:     creator.Name,
-			Email:    creator.Email,
-			Username: creator.Login,
-			URL:      creator.URL,
+	return remote.Merge{
+		Change: remote.Change{
+			Number:    i.Number,
+			Title:     i.Title,
+			Labels:    labels,
+			Milestone: milestone,
+			Time:      time,
+			Creator: remote.User{
+				Name:     creator.Name,
+				Email:    creator.Email,
+				Username: creator.Login,
+				URL:      creator.URL,
+			},
 		},
-		CloserOrMerger: remote.User{
+		Merger: remote.User{
 			Name:     merger.Name,
 			Email:    merger.Email,
 			Username: merger.Login,
 			URL:      merger.URL,
 		},
+		Commit: toCommit(c),
 	}
 }
 
@@ -288,29 +313,23 @@ func resolveTags(gitHubTags *tagStore, gitHubCommits *commitStore) remote.Tags {
 	return tags
 }
 
-func resolveIssuesAndMerges(
-	gitHubIssues *issueStore, gitHubPulls *pullStore,
-	gitHubEvents *eventStore, gitHubCommits *commitStore,
-	gitHubUsers *userStore,
-) (remote.Changes, remote.Changes) {
-	issues := remote.Changes{}
-	merges := remote.Changes{}
+func resolveIssuesAndMerges(gitHubIssues *issueStore, gitHubEvents *eventStore, gitHubCommits *commitStore, gitHubUsers *userStore) (remote.Issues, remote.Merges) {
+	issues := remote.Issues{}
+	merges := remote.Merges{}
 
 	_ = gitHubIssues.ForEach(func(num int, i issue) error {
-		e, _ := gitHubEvents.Load(num)
-		creator, _ := gitHubUsers.Load(i.User.Login)
-
-		if i.PullRequest == nil {
+		if i.PullRequest == nil { // Issue
+			e, _ := gitHubEvents.Load(num)
+			creator, _ := gitHubUsers.Load(i.User.Login)
 			closer, _ := gitHubUsers.Load(e.Actor.Login)
-			issues = append(issues, toIssueChange(i, e, creator, closer))
-		} else {
-			// Every GitHub pull request is also an issue (see https://docs.github.com/en/rest/reference/issues#list-repository-issues)
-			// For every closed issue that is a pull request, we also need to make sure it is merged.
-			if p, ok := gitHubPulls.Load(num); ok {
-				// All Pulls expected to be merged at this point
+			issues = append(issues, toIssue(i, e, creator, closer))
+		} else { // Pull request
+			// If no event found, the pull request is closed without being merged
+			if e, ok := gitHubEvents.Load(num); ok {
 				c, _ := gitHubCommits.Load(e.CommitID)
+				creator, _ := gitHubUsers.Load(i.User.Login)
 				merger, _ := gitHubUsers.Load(e.Actor.Login)
-				merges = append(merges, toPullChange(p, e, c, creator, merger))
+				merges = append(merges, toMerge(i, e, c, creator, merger))
 			}
 		}
 

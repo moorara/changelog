@@ -9,37 +9,220 @@ import (
 )
 
 var (
-	t1, _ = time.Parse(time.RFC3339, "2020-10-24T09:00:00-04:00")
-	t2, _ = time.Parse(time.RFC3339, "2020-10-25T16:00:00-04:00")
+	t1, _ = time.Parse(time.RFC3339, "2020-10-05T05:00:00-04:00")
+	t2, _ = time.Parse(time.RFC3339, "2020-10-10T10:00:00-04:00")
+	t3, _ = time.Parse(time.RFC3339, "2020-10-15T15:00:00-04:00")
+	t4, _ = time.Parse(time.RFC3339, "2020-10-20T20:00:00-04:00")
+
+	user1 = User{
+		Name:     "monalisa octocat",
+		Email:    "octocat@github.com",
+		Username: "octocat",
+		URL:      "https://api.github.com/users/octocat",
+	}
+
+	user2 = User{
+		Name:     "monalisa octodog",
+		Email:    "octodog@github.com",
+		Username: "octodog",
+		URL:      "https://api.github.com/users/octodog",
+	}
+
+	user3 = User{
+		Name:     "monalisa octofox",
+		Email:    "octofox@github.com",
+		Username: "octofox",
+		URL:      "https://api.github.com/users/octofox",
+	}
+
+	commit1 = Commit{
+		Hash: "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378",
+		Time: t1,
+	}
+
+	commit2 = Commit{
+		Hash: "0251a422d2038967eeaaaa5c8aa76c7067fdef05",
+		Time: t2,
+	}
+
+	branch = Branch{
+		Name:   "main",
+		Commit: commit2,
+	}
 
 	tag1 = Tag{
-		Name:       "v0.1.0",
-		CommitHash: "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378",
-		Time:       t1,
+		Name:   "v0.1.0",
+		Time:   t1,
+		Commit: commit1,
 	}
 
 	tag2 = Tag{
-		Name:       "v0.2.0",
-		CommitHash: "0251a422d2038967eeaaaa5c8aa76c7067fdef05",
-		Time:       t2,
+		Name:   "v0.2.0",
+		Time:   t2,
+		Commit: commit2,
 	}
 
-	change1 = Change{
-		Number:    1001,
-		Title:     "Found a bug",
-		Labels:    []string{"bug"},
-		Milestone: "v1.0",
-		Time:      t1,
+	issue1 = Issue{
+		Change: Change{
+			Number:    1001,
+			Title:     "Found a bug",
+			Labels:    []string{"bug"},
+			Milestone: "v1.0",
+			Time:      t1,
+			Creator:   user1,
+		},
+		Closer: user1,
 	}
 
-	change2 = Change{
-		Number:    1002,
-		Title:     "Added a feature",
-		Labels:    []string{"enhancement"},
-		Milestone: "v1.0",
-		Time:      t2,
+	issue2 = Issue{
+		Change: Change{
+			Number:    1002,
+			Title:     "Add a feature",
+			Labels:    []string{"enhancement"},
+			Milestone: "v1.0",
+			Time:      t2,
+			Creator:   user2,
+		},
+		Closer: user2,
+	}
+
+	merge1 = Merge{
+		Change: Change{
+			Number:    1003,
+			Title:     "Fixed a bug",
+			Labels:    []string{"bug"},
+			Milestone: "v1.0",
+			Time:      t3,
+			Creator:   user1,
+		},
+		Merger: user1,
+		Commit: commit1,
+	}
+
+	merge2 = Merge{
+		Change: Change{
+			Number:    1004,
+			Title:     "Added a feature",
+			Labels:    []string{"enhancement"},
+			Milestone: "v1.0",
+			Time:      t4,
+			Creator:   user2,
+		},
+		Merger: user3,
+		Commit: commit2,
 	}
 )
+
+func TestCommit(t *testing.T) {
+	tests := []struct {
+		name           string
+		c              Commit
+		expectedString string
+	}{
+		{
+			name:           "Zero",
+			c:              Commit{},
+			expectedString: "",
+		},
+		{
+			name:           "Commit1",
+			c:              commit1,
+			expectedString: "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378",
+		},
+		{
+			name:           "Commit2",
+			c:              commit2,
+			expectedString: "0251a422d2038967eeaaaa5c8aa76c7067fdef05",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedString, tc.c.String())
+		})
+	}
+}
+
+func TestCommits_Any(t *testing.T) {
+	tests := []struct {
+		name           string
+		c              Commits
+		hash           string
+		expectedAny    bool
+		expectedAll    bool
+		expectedString string
+	}{
+		{
+			name:        "Found",
+			c:           Commits{commit2, commit1},
+			hash:        "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378",
+			expectedAny: true,
+		},
+		{
+			name:        "NotFound",
+			c:           Commits{commit2, commit1},
+			hash:        "c414d1004154c6c324bd78c69d10ee101e676059",
+			expectedAny: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedAny, tc.c.Any(tc.hash))
+		})
+	}
+}
+
+func TestCommits_Map(t *testing.T) {
+	tests := []struct {
+		name         string
+		c            Commits
+		f            func(Commit) string
+		expectedList []string
+	}{
+		{
+			name: "OK",
+			c:    Commits{commit2, commit1},
+			f: func(c Commit) string {
+				return c.Hash
+			},
+			expectedList: []string{"0251a422d2038967eeaaaa5c8aa76c7067fdef05", "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			list := tc.c.Map(tc.f)
+
+			assert.Equal(t, tc.expectedList, list)
+		})
+	}
+}
+
+func TestBranch(t *testing.T) {
+	tests := []struct {
+		name           string
+		b              Branch
+		expectedString string
+	}{
+		{
+			name:           "Zero",
+			b:              Branch{},
+			expectedString: "",
+		},
+		{
+			name:           "Branch",
+			b:              branch,
+			expectedString: "main",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedString, tc.b.String())
+		})
+	}
+}
 
 func TestTag(t *testing.T) {
 	tests := []struct {
@@ -191,22 +374,104 @@ func TestTags_Find(t *testing.T) {
 	}
 }
 
+func TestTags_First(t *testing.T) {
+	t1 := tag1
+	t2 := tag1
+
+	tests := []struct {
+		name        string
+		t           Tags
+		f           func(Tag) bool
+		expectedTag Tag
+		expectedOK  bool
+	}{
+		{
+			name: "Found",
+			t:    Tags{t1, t2},
+			f: func(t Tag) bool {
+				return t.Name == "v0.1.0"
+			},
+			expectedTag: t1,
+			expectedOK:  true,
+		},
+		{
+			name: "NotFound",
+			t:    Tags{t1, t2},
+			f: func(t Tag) bool {
+				return t.Name == "v0.3.0"
+			},
+			expectedTag: Tag{},
+			expectedOK:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tag, ok := tc.t.First(tc.f)
+
+			assert.Equal(t, tc.expectedTag, tag)
+			assert.Equal(t, tc.expectedOK, ok)
+		})
+	}
+}
+
+func TestTags_Last(t *testing.T) {
+	t1 := tag1
+	t2 := tag1
+
+	tests := []struct {
+		name        string
+		t           Tags
+		f           func(Tag) bool
+		expectedTag Tag
+		expectedOK  bool
+	}{
+		{
+			name: "Found",
+			t:    Tags{t1, t2},
+			f: func(t Tag) bool {
+				return t.Name == "v0.1.0"
+			},
+			expectedTag: t2,
+			expectedOK:  true,
+		},
+		{
+			name: "NotFound",
+			t:    Tags{t1, t2},
+			f: func(t Tag) bool {
+				return t.Name == "v0.3.0"
+			},
+			expectedTag: Tag{},
+			expectedOK:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tag, ok := tc.t.Last(tc.f)
+
+			assert.Equal(t, tc.expectedTag, tag)
+			assert.Equal(t, tc.expectedOK, ok)
+		})
+	}
+}
+
 func TestTags_Sort(t *testing.T) {
 	tests := []struct {
 		name         string
-		tags         Tags
+		t            Tags
 		expectedTags Tags
 	}{
 		{
 			name:         "OK",
-			tags:         Tags{tag1, tag2},
+			t:            Tags{tag1, tag2},
 			expectedTags: Tags{tag2, tag1},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tags := tc.tags.Sort()
+			tags := tc.t.Sort()
 
 			assert.Equal(t, tc.expectedTags, tags)
 		})
@@ -261,6 +526,28 @@ func TestTags_ExcludeRegex(t *testing.T) {
 	}
 }
 
+func TestTags_Reverse(t *testing.T) {
+	tests := []struct {
+		name         string
+		t            Tags
+		expectedTags Tags
+	}{
+		{
+			name:         "OK",
+			t:            Tags{tag1, tag2},
+			expectedTags: Tags{tag2, tag1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tags := tc.t.Reverse()
+
+			assert.Equal(t, tc.expectedTags, tags)
+		})
+	}
+}
+
 func TestTags_Map(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -287,91 +574,163 @@ func TestTags_Map(t *testing.T) {
 	}
 }
 
-func TestLabels_Any(t *testing.T) {
+func TestLabels(t *testing.T) {
 	tests := []struct {
 		name           string
-		labels         Labels
-		names          []string
-		expectedAny    bool
-		expectedAll    bool
+		l              Labels
 		expectedString string
 	}{
 		{
-			name:           "Found",
-			labels:         Labels{"bug", "documentation", "enhancement", "question"},
-			names:          []string{"bug", "duplicate", "invalid"},
-			expectedAny:    true,
-			expectedString: "bug,documentation,enhancement,question",
-		},
-		{
-			name:           "NotFound",
-			labels:         Labels{"bug", "documentation", "enhancement", "question"},
-			names:          []string{"duplicate", "invalid"},
-			expectedAny:    false,
+			name:           "OK",
+			l:              Labels{"bug", "documentation", "enhancement", "question"},
 			expectedString: "bug,documentation,enhancement,question",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expectedAny, tc.labels.Any(tc.names...))
-			assert.Equal(t, tc.expectedString, tc.labels.String())
+			assert.Equal(t, tc.expectedString, tc.l.String())
 		})
 	}
 }
 
-func TestChanges_Select(t *testing.T) {
+func TestLabels_Any(t *testing.T) {
 	tests := []struct {
-		name            string
-		changes         Changes
-		f               func(Change) bool
-		expectedChanges Changes
+		name        string
+		l           Labels
+		names       []string
+		expectedAny bool
+		expectedAll bool
 	}{
 		{
-			name:    "Labeled",
-			changes: Changes{change1, change2, Change{}},
-			f: func(c Change) bool {
-				return len(c.Labels) > 0
-			},
-			expectedChanges: Changes{change1, change2},
+			name:        "Found",
+			l:           Labels{"bug", "documentation", "enhancement", "question"},
+			names:       []string{"bug", "duplicate", "invalid"},
+			expectedAny: true,
 		},
 		{
-			name:    "Unlabeled",
-			changes: Changes{change1, change2, Change{}},
-			f: func(c Change) bool {
-				return len(c.Labels) == 0
-			},
-			expectedChanges: Changes{Change{}},
+			name:        "NotFound",
+			l:           Labels{"bug", "documentation", "enhancement", "question"},
+			names:       []string{"duplicate", "invalid"},
+			expectedAny: false,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			changes := tc.changes.Select(tc.f)
-
-			assert.Equal(t, tc.expectedChanges, changes)
+			assert.Equal(t, tc.expectedAny, tc.l.Any(tc.names...))
 		})
 	}
 }
 
-func TestChanges_Sort(t *testing.T) {
+func TestIssues_Select(t *testing.T) {
 	tests := []struct {
-		name            string
-		changes         Changes
-		expectedChanges Changes
+		name           string
+		i              Issues
+		f              func(Issue) bool
+		expectedIssues Issues
 	}{
 		{
-			name:            "OK",
-			changes:         Changes{change1, change2},
-			expectedChanges: Changes{change2, change1},
+			name: "Labeled",
+			i:    Issues{issue1, issue2, Issue{}},
+			f: func(i Issue) bool {
+				return len(i.Labels) > 0
+			},
+			expectedIssues: Issues{issue1, issue2},
+		},
+		{
+			name: "Unlabeled",
+			i:    Issues{issue1, issue2, Issue{}},
+			f: func(i Issue) bool {
+				return len(i.Labels) == 0
+			},
+			expectedIssues: Issues{Issue{}},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			changes := tc.changes.Sort()
+			issues := tc.i.Select(tc.f)
 
-			assert.Equal(t, tc.expectedChanges, changes)
+			assert.Equal(t, tc.expectedIssues, issues)
+		})
+	}
+}
+
+func TestIssues_Sort(t *testing.T) {
+	tests := []struct {
+		name           string
+		i              Issues
+		expectedIssues Issues
+	}{
+		{
+			name:           "OK",
+			i:              Issues{issue1, issue2},
+			expectedIssues: Issues{issue2, issue1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			issues := tc.i.Sort()
+
+			assert.Equal(t, tc.expectedIssues, issues)
+		})
+	}
+}
+
+func TestMerges_Select(t *testing.T) {
+	tests := []struct {
+		name           string
+		m              Merges
+		f              func(Merge) bool
+		expectedMerges Merges
+	}{
+		{
+			name: "Labeled",
+			m:    Merges{merge1, merge2, Merge{}},
+			f: func(m Merge) bool {
+				return len(m.Labels) > 0
+			},
+			expectedMerges: Merges{merge1, merge2},
+		},
+		{
+			name: "Unlabeled",
+			m:    Merges{merge1, merge2, Merge{}},
+			f: func(m Merge) bool {
+				return len(m.Labels) == 0
+			},
+			expectedMerges: Merges{Merge{}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			merges := tc.m.Select(tc.f)
+
+			assert.Equal(t, tc.expectedMerges, merges)
+		})
+	}
+}
+
+func TestMerges_Sort(t *testing.T) {
+	tests := []struct {
+		name           string
+		m              Merges
+		expectedMerges Merges
+	}{
+		{
+			name:           "OK",
+			m:              Merges{merge1, merge2},
+			expectedMerges: Merges{merge2, merge1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			merges := tc.m.Sort()
+
+			assert.Equal(t, tc.expectedMerges, merges)
 		})
 	}
 }

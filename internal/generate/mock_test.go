@@ -105,11 +105,16 @@ func (m *MockGitRepo) CommitsFromRevision(rev string) (git.Commits, error) {
 }
 
 type (
-	FetchIssuesAndMergesMock struct {
+	FetchBranchMock struct {
 		InContext context.Context
-		InSince   time.Time
-		OutIssues remote.Changes
-		OutMerges remote.Changes
+		InName    string
+		OutBranch remote.Branch
+		OutError  error
+	}
+
+	FetchDefaultBranchMock struct {
+		InContext context.Context
+		OutBranch remote.Branch
 		OutError  error
 	}
 
@@ -119,14 +124,53 @@ type (
 		OutError  error
 	}
 
+	FetchIssuesAndMergesMock struct {
+		InContext context.Context
+		InSince   time.Time
+		OutIssues remote.Issues
+		OutMerges remote.Merges
+		OutError  error
+	}
+
+	FetchParentCommitsMock struct {
+		InContext  context.Context
+		InHash     string
+		OutCommits remote.Commits
+		OutError   error
+	}
+
 	MockRemoteRepo struct {
+		FetchBranchIndex int
+		FetchBranchMocks []FetchBranchMock
+
+		FetchDefaultBranchIndex int
+		FetchDefaultBranchMocks []FetchDefaultBranchMock
+
 		FetchTagsIndex int
 		FetchTagsMocks []FetchTagsMock
 
 		FetchIssuesAndMergesIndex int
 		FetchIssuesAndMergesMocks []FetchIssuesAndMergesMock
+
+		FetchParentCommitsIndex int
+		FetchParentCommitsMocks []FetchParentCommitsMock
 	}
 )
+
+func (m *MockRemoteRepo) FetchBranch(ctx context.Context, name string) (remote.Branch, error) {
+	i := m.FetchBranchIndex
+	m.FetchBranchIndex++
+	m.FetchBranchMocks[i].InContext = ctx
+	m.FetchBranchMocks[i].InName = name
+	return m.FetchBranchMocks[i].OutBranch, m.FetchBranchMocks[i].OutError
+}
+
+func (m *MockRemoteRepo) FetchDefaultBranch(ctx context.Context) (remote.Branch, error) {
+	i := m.FetchDefaultBranchIndex
+	m.FetchDefaultBranchIndex++
+	m.FetchDefaultBranchMocks[i].InContext = ctx
+	return m.FetchDefaultBranchMocks[i].OutBranch, m.FetchDefaultBranchMocks[i].OutError
+}
 
 func (m *MockRemoteRepo) FetchTags(ctx context.Context) (remote.Tags, error) {
 	i := m.FetchTagsIndex
@@ -135,12 +179,20 @@ func (m *MockRemoteRepo) FetchTags(ctx context.Context) (remote.Tags, error) {
 	return m.FetchTagsMocks[i].OutTags, m.FetchTagsMocks[i].OutError
 }
 
-func (m *MockRemoteRepo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Changes, remote.Changes, error) {
+func (m *MockRemoteRepo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Issues, remote.Merges, error) {
 	i := m.FetchIssuesAndMergesIndex
 	m.FetchIssuesAndMergesIndex++
 	m.FetchIssuesAndMergesMocks[i].InContext = ctx
 	m.FetchIssuesAndMergesMocks[i].InSince = since
 	return m.FetchIssuesAndMergesMocks[i].OutIssues, m.FetchIssuesAndMergesMocks[i].OutMerges, m.FetchIssuesAndMergesMocks[i].OutError
+}
+
+func (m *MockRemoteRepo) FetchParentCommits(ctx context.Context, hash string) (remote.Commits, error) {
+	i := m.FetchParentCommitsIndex
+	m.FetchParentCommitsIndex++
+	m.FetchParentCommitsMocks[i].InContext = ctx
+	m.FetchParentCommitsMocks[i].InHash = hash
+	return m.FetchParentCommitsMocks[i].OutCommits, m.FetchParentCommitsMocks[i].OutError
 }
 
 type (

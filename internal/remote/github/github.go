@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,13 +24,21 @@ const (
 	userAgentHeader   = "gelato"
 	acceptHeader      = "application/vnd.github.v3+json"
 	contentTypeHeader = "application/json"
-	pageSize          = 50
+	pageSize          = 100
 )
 
 var (
 	relNextRE = regexp.MustCompile(`<(https://api.github.com/[\w\?=&-_]+page=\d+)>; rel="next"`)
 	relLastRE = regexp.MustCompile(`<https://api.github.com/[\w\?=&-_]+page=(\d+)>; rel="last"`)
 )
+
+type notFoundError struct {
+	message string
+}
+
+func (e *notFoundError) Error() string {
+	return e.message
+}
 
 // repo implements the remote.Repo interface for GitHub.
 type repo struct {
@@ -114,7 +123,7 @@ func (r *repo) checkScopes(ctx context.Context, scopes ...scope) error {
 		}
 	}
 
-	r.logger.Infof("GitHub token scopes verified: %s", scopes)
+	r.logger.Debugf("GitHub token scopes verified: %s", scopes)
 
 	return nil
 }
@@ -152,6 +161,32 @@ func (r *repo) fetchUser(ctx context.Context, username string) (user, error) {
 	return u, nil
 }
 
+func (r *repo) fetchRepository(ctx context.Context) (repository, error) {
+	// See https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#get-a-repository
+
+	r.logger.Debugf("Fetching GitHub repository %s ...", r.path)
+
+	url := fmt.Sprintf("%s/repos/%s", r.apiURL, r.path)
+	req, err := r.createRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return repository{}, err
+	}
+
+	resp, err := r.makeRequest(req, 200)
+	if err != nil {
+		return repository{}, err
+	}
+
+	rp := repository{}
+	if err = json.NewDecoder(resp.Body).Decode(&rp); err != nil {
+		return repository{}, err
+	}
+
+	r.logger.Debugf("GitHub repository %s is fetched", r.path)
+
+	return rp, nil
+}
+
 func (r *repo) fetchCommit(ctx context.Context, ref string) (commit, error) {
 	// See https://docs.github.com/en/rest/reference/repos#get-a-commit
 
@@ -183,6 +218,52 @@ func (r *repo) fetchCommit(ctx context.Context, ref string) (commit, error) {
 	r.logger.Debugf("Fetched GitHub commit %s", ref)
 
 	return c, nil
+}
+
+func (r *repo) fetchParentCommits(ctx context.Context, ref string) (remote.Commits, error) {
+	commits := remote.Commits{}
+
+	c, err := r.fetchCommit(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+	commits = append(commits, toCommit(c))
+
+	for _, parent := range c.Parents {
+		parentCommits, err := r.fetchParentCommits(ctx, parent.SHA)
+		if err != nil {
+			return nil, err
+		}
+		commits = append(commits, parentCommits...)
+	}
+
+	return commits, nil
+}
+
+func (r *repo) fetchBranch(ctx context.Context, name string) (branch, error) {
+	// See https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#get-a-branch
+
+	r.logger.Debugf("Fetching GitHub branch %s ...", name)
+
+	url := fmt.Sprintf("%s/repos/%s/branches/%s", r.apiURL, r.path, name)
+	req, err := r.createRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return branch{}, err
+	}
+
+	resp, err := r.makeRequest(req, 200)
+	if err != nil {
+		return branch{}, err
+	}
+
+	b := branch{}
+	if err = json.NewDecoder(resp.Body).Decode(&b); err != nil {
+		return branch{}, err
+	}
+
+	r.logger.Debugf("GitHub branch %s is fetched", name)
+
+	return b, nil
 }
 
 func (r *repo) fetchPull(ctx context.Context, number int) (pull, error) {
@@ -260,7 +341,9 @@ func (r *repo) findEvent(ctx context.Context, number int, name string) (event, e
 		url = sm[1]
 	}
 
-	return event{}, fmt.Errorf("GitHub %s event for issue %d not found", name, number)
+	return event{}, &notFoundError{
+		message: fmt.Sprintf("GitHub %s event for issue %d not found", name, number),
+	}
 }
 
 func (r *repo) fetchTagsPageCount(ctx context.Context) (int, error) {
@@ -479,6 +562,47 @@ func (r *repo) fetchPulls(ctx context.Context, pageNo int) ([]pull, error) {
 	return pulls, nil
 }
 
+// FetchBranch retrieves a branch by name for a GitHub repository.
+func (r *repo) FetchBranch(ctx context.Context, name string) (remote.Branch, error) {
+	if err := r.checkScopes(ctx, scopeRepo); err != nil {
+		return remote.Branch{}, err
+	}
+
+	b, err := r.fetchBranch(ctx, name)
+	if err != nil {
+		return remote.Branch{}, err
+	}
+
+	branch := toBranch(b)
+
+	return branch, nil
+}
+
+// FetchDefaultBranch retrieves the default branch for a GitHub repository.
+func (r *repo) FetchDefaultBranch(ctx context.Context) (remote.Branch, error) {
+	if err := r.checkScopes(ctx, scopeRepo); err != nil {
+		return remote.Branch{}, err
+	}
+
+	r.logger.Debug("Fetching the GitHub default branch ...")
+
+	rp, err := r.fetchRepository(ctx)
+	if err != nil {
+		return remote.Branch{}, err
+	}
+
+	b, err := r.fetchBranch(ctx, rp.DefaultBranch)
+	if err != nil {
+		return remote.Branch{}, err
+	}
+
+	branch := toBranch(b)
+
+	r.logger.Debugf("GitHub default branch is fetched: %s", b.Name)
+
+	return branch, nil
+}
+
 // FetchTags retrieves all tags for a GitHub repository.
 func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 	if err := r.checkScopes(ctx, scopeRepo); err != nil {
@@ -546,7 +670,7 @@ func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 }
 
 // FetchIssuesAndMerges retrieves all closed issues and merged pull requests for a GitHub repository.
-func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Changes, remote.Changes, error) {
+func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Issues, remote.Merges, error) {
 	if err := r.checkScopes(ctx, scopeRepo); err != nil {
 		return nil, nil, err
 	}
@@ -586,34 +710,6 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 		return nil, nil, err
 	}
 
-	// ==============================> FETCH PULL REQUESTS <==============================
-
-	r.logger.Info("Fetching GitHub pull requests for issues ...")
-
-	g2, ctx2 := errgroup.WithContext(ctx)
-	gitHubPulls := newPullStore()
-
-	// Fetch closed pull requests
-	_ = gitHubIssues.ForEach(func(num int, i issue) error {
-		if i.PullRequest != nil {
-			g2.Go(func() error {
-				pull, err := r.fetchPull(ctx2, num)
-				if err != nil {
-					return err
-				}
-				if pull.Merged {
-					gitHubPulls.Save(num, pull)
-				}
-				return nil
-			})
-		}
-		return nil
-	})
-
-	if err := g2.Wait(); err != nil {
-		return nil, nil, err
-	}
-
 	// ==============================> FETCH EVENTS & COMMITS <==============================
 
 	r.logger.Info("Fetching GitHub events and commits for issues and pull requests ...")
@@ -623,8 +719,7 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	// Fetch and search events
 	_ = gitHubIssues.ForEach(func(num int, i issue) error {
-
-		if i.PullRequest == nil {
+		if i.PullRequest == nil { // Issue
 			g3.Go(func() error {
 				e, err := r.findEvent(ctx3, num, "closed")
 				if err != nil {
@@ -633,18 +728,17 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 				gitHubEvents.Save(num, e)
 				return nil
 			})
-		}
-
-		// Fetch the merged event only if the issue represents a merged pull request
-		if _, ok := gitHubPulls.Load(num); ok {
-			// All Pulls expected to be merged at this point
+		} else { // Pull Request
 			g3.Go(func() error {
 				e, err := r.findEvent(ctx3, num, "merged")
 				if err != nil {
+					var notFoundErr *notFoundError
+					if errors.As(err, &notFoundErr) {
+						return nil
+					}
 					return err
 				}
 				gitHubEvents.Save(num, e)
-
 				_, err = r.fetchCommit(ctx3, e.CommitID)
 				return err
 			})
@@ -661,21 +755,13 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	r.logger.Info("Fetching GitHub users for issues and pull requests ...")
 
-	// Fetch author users
+	// Fetch author users for issues and pull requests
 	err = gitHubIssues.ForEach(func(num int, i issue) error {
-		// Fetch author users for issues
-		if i.PullRequest == nil {
+		// Only fetch the user of the issue is closed or the pull request is merged
+		if _, ok := gitHubEvents.Load(num); ok {
 			_, err := r.fetchUser(ctx, i.User.Login)
 			return err
 		}
-
-		// Fetch author users for pull requests
-		if p, ok := gitHubPulls.Load(num); ok {
-			// All Pulls expected to be merged at this point
-			_, err := r.fetchUser(ctx, p.User.Login)
-			return err
-		}
-
 		return nil
 	})
 
@@ -695,10 +781,28 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	// ==============================> JOINING ISSUES, PULLS, EVENTS, COMMITS, & USERS <==============================
 
-	issues, merges := resolveIssuesAndMerges(gitHubIssues, gitHubPulls, gitHubEvents, r.commits, r.users)
+	issues, merges := resolveIssuesAndMerges(gitHubIssues, gitHubEvents, r.commits, r.users)
 
 	r.logger.Debugf("Resolved and sorted GitHub issues and pull requests: %d, %d", len(issues), len(merges))
 	r.logger.Infof("All GitHub issues and pull requests are fetched: %d, %d", len(issues), len(merges))
 
 	return issues, merges, nil
+}
+
+// FetchParentCommits retrieves all parent commits of a given commit hash for a GitHub repository.
+func (r *repo) FetchParentCommits(ctx context.Context, ref string) (remote.Commits, error) {
+	if err := r.checkScopes(ctx, scopeRepo); err != nil {
+		return nil, err
+	}
+
+	r.logger.Debugf("Fetching all GitHub parent commits for %s ...", ref)
+
+	commits, err := r.fetchParentCommits(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	r.logger.Debugf("All GitHub parent commits for %s are fetched", ref)
+
+	return commits, nil
 }

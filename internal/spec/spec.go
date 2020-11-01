@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/moorara/color"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,8 +27,8 @@ const helpTemplate = `
     -help                         Show the help text
     -version                      Print the version number
 
-    -access-token                 The OAuth access token for making API calls
-                                  The default value is read from the CHANGELOG_ACCESS_TOKEN environment variable
+    {{ yellow "-access-token                 The OAuth access token for making API calls" }}
+    {{ yellow "                              The default value is read from the CHANGELOG_ACCESS_TOKEN environment variable" }}
 
     -file                         The output file for the generated changelog (default: {{.General.File}})
     -base                         An optional file for appending the generated changelog to it (default: {{.General.Base}})
@@ -54,7 +55,7 @@ const helpTemplate = `
     -issues-security-labels       Labels for security group {{if .Issues.SecurityLabels}}(default: {{Join .Issues.SecurityLabels ","}}){{end}}
 
     -merges-selection             Include merged pull/merge requests in changelog (values: none|all|labeled) (default: {{.Merges.Selection}})
-    -merges-branch                Include pull/merge requests merged into this branch (default: {{.Merges.Branch}})
+    -merges-branch                Include pull/merge requests merged into this branch (default: default remote branch)
     -merges-include-labels        Include merges with these labels {{if .Merges.IncludeLabels}}(default: {{Join .Merges.IncludeLabels ","}}){{end}}
     -merges-exclude-labels        Exclude merges with these labels {{if .Merges.ExcludeLabels}}(default: {{Join .Merges.ExcludeLabels ","}}){{end}}
     -merges-grouping              Grouping pull/merge requests by labels (default: {{.Merges.Grouping}})
@@ -279,7 +280,7 @@ func Default(domain, path string) Spec {
 		},
 		Merges: Merges{
 			Selection:         SelectionAll,
-			Branch:            "master",
+			Branch:            "",  // Default branch
 			IncludeLabels:     nil, // All labels
 			ExcludeLabels:     nil, // No label excluded
 			Grouping:          false,
@@ -323,9 +324,24 @@ func FromFile(s Spec) (Spec, error) {
 
 // PrintHelp prints the help text.
 func (s Spec) PrintHelp() error {
+	blue := color.New(color.FgBlue)
+	cyan := color.New(color.FgCyan)
+	green := color.New(color.FgGreen)
+	magenta := color.New(color.FgMagenta)
+	red := color.New(color.FgRed)
+	white := color.New(color.FgWhite)
+	yellow := color.New(color.FgYellow)
+
 	tmpl := template.New("help")
 	tmpl = tmpl.Funcs(template.FuncMap{
-		"Join": strings.Join,
+		"Join":    strings.Join,
+		"blue":    blue.Sprintf,
+		"green":   green.Sprintf,
+		"cyan":    cyan.Sprintf,
+		"magenta": magenta.Sprintf,
+		"red":     red.Sprintf,
+		"white":   white.Sprintf,
+		"yellow":  yellow.Sprintf,
 	})
 
 	tmpl, err := tmpl.Parse(helpTemplate)

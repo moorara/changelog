@@ -42,6 +42,28 @@ func TestNewRepo(t *testing.T) {
 	}
 }
 
+func TestRepo_FetchBranch(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	branch, err := r.FetchBranch(context.Background(), "main")
+
+	assert.NoError(t, err)
+	assert.Empty(t, branch)
+}
+
+func TestRepo_FetchDefaultBranch(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	branch, err := r.FetchDefaultBranch(context.Background())
+
+	assert.NoError(t, err)
+	assert.Empty(t, branch)
+}
+
 func TestRepo_FetchTags(t *testing.T) {
 	r := &repo{
 		logger: log.New(log.None),
@@ -63,4 +85,15 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, issues)
 	assert.NotNil(t, merges)
+}
+
+func TestRepo_FetchParentCommits(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	commits, err := r.FetchParentCommits(context.Background(), "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, commits)
 }

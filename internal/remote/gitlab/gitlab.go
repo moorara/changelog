@@ -38,12 +38,27 @@ func NewRepo(logger log.Logger, path, accessToken string) remote.Repo {
 	}
 }
 
+// FetchBranch retrieves a branch by name for a GitLab repository.
+func (r *repo) FetchBranch(ctx context.Context, name string) (remote.Branch, error) {
+	return remote.Branch{}, nil
+}
+
+// FetchDefaultBranch retrieves the default branch for a GitLab repository.
+func (r *repo) FetchDefaultBranch(ctx context.Context) (remote.Branch, error) {
+	return remote.Branch{}, nil
+}
+
 // FetchTags retrieves all tags for a GitLab repository.
 func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 	return remote.Tags{}, nil
 }
 
 // FetchIssuesAndMerges retrieves all closed issues and merged merge requests for a GitLab repository.
-func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Changes, remote.Changes, error) {
-	return remote.Changes{}, remote.Changes{}, nil
+func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remote.Issues, remote.Merges, error) {
+	return remote.Issues{}, remote.Merges{}, nil
+}
+
+// FetchParentCommits retrieves all parent commits of a given commit hash for a GitLab repository.
+func (r *repo) FetchParentCommits(ctx context.Context, hash string) (remote.Commits, error) {
+	return remote.Commits{}, nil
 }
