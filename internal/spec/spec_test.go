@@ -28,7 +28,7 @@ func TestDefault(t *testing.T) {
 	assert.True(t, spec.Issues.Grouping)
 	assert.Equal(t, []string{"summary", "release-summary"}, spec.Issues.SummaryLabels)
 	assert.Equal(t, []string{"removed"}, spec.Issues.RemovedLabels)
-	assert.Equal(t, []string{"breaking"}, spec.Issues.BreakingLabels)
+	assert.Equal(t, []string{"breaking", "backward-incompatible"}, spec.Issues.BreakingLabels)
 	assert.Equal(t, []string{"deprecated"}, spec.Issues.DeprecatedLabels)
 	assert.Equal(t, []string{"feature"}, spec.Issues.FeatureLabels)
 	assert.Equal(t, []string{"enhancement"}, spec.Issues.EnhancementLabels)
@@ -109,7 +109,7 @@ func TestFromFile(t *testing.T) {
 					Grouping:          true,
 					SummaryLabels:     []string{"summary", "release-summary"},
 					RemovedLabels:     []string{"removed"},
-					BreakingLabels:    []string{"breaking"},
+					BreakingLabels:    []string{"breaking", "backward-incompatible"},
 					DeprecatedLabels:  []string{"deprecated"},
 					FeatureLabels:     []string{"feature"},
 					EnhancementLabels: []string{"enhancement"},
@@ -164,14 +164,14 @@ func TestFromFile(t *testing.T) {
 				},
 				Issues: Issues{
 					Selection:         SelectionLabeled,
-					IncludeLabels:     []string{"breaking", "bug", "defect", "deprecated", "dropped", "enhancement", "feature", "highlight", "improvement", "incompatible", "new", "not-supported", "privacy", "removed", "security", "summary"},
+					IncludeLabels:     []string{"breaking", "bug", "defect", "deprecated", "enhancement", "feature", "highlight", "improvement", "incompatible", "privacy", "removed", "security", "summary"},
 					ExcludeLabels:     []string{"documentation", "duplicate", "invalid", "question", "wontfix"},
 					Grouping:          true,
 					SummaryLabels:     []string{"summary", "highlight"},
-					RemovedLabels:     []string{"removed", "dropped"},
+					RemovedLabels:     []string{"removed"},
 					BreakingLabels:    []string{"breaking", "incompatible"},
-					DeprecatedLabels:  []string{"deprecated", "not-supported"},
-					FeatureLabels:     []string{"feature", "new"},
+					DeprecatedLabels:  []string{"deprecated"},
+					FeatureLabels:     []string{"feature"},
 					EnhancementLabels: []string{"enhancement", "improvement"},
 					BugLabels:         []string{"bug", "defect"},
 					SecurityLabels:    []string{"security", "privacy"},
@@ -179,14 +179,14 @@ func TestFromFile(t *testing.T) {
 				Merges: Merges{
 					Selection:         SelectionLabeled,
 					Branch:            "production",
-					IncludeLabels:     []string{"breaking", "bug", "defect", "deprecated", "dropped", "enhancement", "feature", "highlight", "improvement", "incompatible", "new", "not-supported", "privacy", "removed", "security", "summary"},
+					IncludeLabels:     []string{"breaking", "bug", "defect", "deprecated", "enhancement", "feature", "highlight", "improvement", "incompatible", "privacy", "removed", "security", "summary"},
 					ExcludeLabels:     []string{"documentation", "duplicate", "invalid", "question", "wontfix"},
 					Grouping:          true,
 					SummaryLabels:     []string{"summary", "highlight"},
-					RemovedLabels:     []string{"removed", "dropped"},
+					RemovedLabels:     []string{"removed"},
 					BreakingLabels:    []string{"breaking", "incompatible"},
-					DeprecatedLabels:  []string{"deprecated", "not-supported"},
-					FeatureLabels:     []string{"feature", "new"},
+					DeprecatedLabels:  []string{"deprecated"},
+					FeatureLabels:     []string{"feature"},
 					EnhancementLabels: []string{"enhancement", "improvement"},
 					BugLabels:         []string{"bug", "defect"},
 					SecurityLabels:    []string{"security", "privacy"},
@@ -227,4 +227,100 @@ func TestSpec_String(t *testing.T) {
 	str := s.String()
 
 	assert.NotEmpty(t, str)
+}
+
+func TestIssues_Groups(t *testing.T) {
+	tests := []struct {
+		name           string
+		issues         Issues
+		expectedGroups []Group
+	}{
+		{
+			name: "WithoutGrouping",
+			issues: Issues{
+				Grouping: false,
+			},
+			expectedGroups: []Group{},
+		},
+		{
+			name: "WithGrouping",
+			issues: Issues{
+				Grouping:          true,
+				SummaryLabels:     []string{"summary", "release-summary"},
+				RemovedLabels:     []string{"removed"},
+				BreakingLabels:    []string{"breaking", "backward-incompatible"},
+				DeprecatedLabels:  []string{"deprecated"},
+				FeatureLabels:     []string{"feature"},
+				EnhancementLabels: []string{"enhancement"},
+				BugLabels:         []string{"bug"},
+				SecurityLabels:    []string{"security"},
+			},
+			expectedGroups: []Group{
+				{Title: "Release Summary", Labels: []string{"summary", "release-summary"}},
+				{Title: "Removed", Labels: []string{"removed"}},
+				{Title: "Breaking Changes", Labels: []string{"breaking", "backward-incompatible"}},
+				{Title: "Deprecated", Labels: []string{"deprecated"}},
+				{Title: "New Features", Labels: []string{"feature"}},
+				{Title: "Enhancements", Labels: []string{"enhancement"}},
+				{Title: "Fixed Bugs", Labels: []string{"bug"}},
+				{Title: "Security Fixes", Labels: []string{"security"}},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			groups := tc.issues.Groups()
+
+			assert.Equal(t, tc.expectedGroups, groups)
+		})
+	}
+}
+
+func TestMerges_Groups(t *testing.T) {
+	tests := []struct {
+		name           string
+		merges         Merges
+		expectedGroups []Group
+	}{
+		{
+			name: "WithoutGrouping",
+			merges: Merges{
+				Grouping: false,
+			},
+			expectedGroups: []Group{},
+		},
+		{
+			name: "WithGrouping",
+			merges: Merges{
+				Grouping:          true,
+				SummaryLabels:     []string{"summary", "release-summary"},
+				RemovedLabels:     []string{"removed"},
+				BreakingLabels:    []string{"breaking", "backward-incompatible"},
+				DeprecatedLabels:  []string{"deprecated"},
+				FeatureLabels:     []string{"feature"},
+				EnhancementLabels: []string{"enhancement"},
+				BugLabels:         []string{"bug"},
+				SecurityLabels:    []string{"security"},
+			},
+			expectedGroups: []Group{
+				{Title: "Release Summary", Labels: []string{"summary", "release-summary"}},
+				{Title: "Removed", Labels: []string{"removed"}},
+				{Title: "Breaking Changes", Labels: []string{"breaking", "backward-incompatible"}},
+				{Title: "Deprecated", Labels: []string{"deprecated"}},
+				{Title: "New Features", Labels: []string{"feature"}},
+				{Title: "Enhancements", Labels: []string{"enhancement"}},
+				{Title: "Fixed Bugs", Labels: []string{"bug"}},
+				{Title: "Security Fixes", Labels: []string{"security"}},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			groups := tc.merges.Groups()
+
+			assert.Equal(t, tc.expectedGroups, groups)
+		})
+	}
 }

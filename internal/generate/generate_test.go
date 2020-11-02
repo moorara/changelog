@@ -25,12 +25,14 @@ var (
 		Name:     "monalisa octocat",
 		Email:    "octocat@github.com",
 		Username: "octocat",
+		URL:      "https://github.com/octocat",
 	}
 
 	user2 = remote.User{
 		Name:     "monalisa octodog",
 		Email:    "octodog@github.com",
 		Username: "octodog",
+		URL:      "https://github.com/octodog",
 	}
 
 	commit1 = remote.Commit{
@@ -125,6 +127,66 @@ var (
 		Merger: user2,
 		Commit: commit4,
 	}
+
+	changelogIssue1 = changelog.Issue{
+		Number: 1001,
+		Title:  "Found a bug",
+		OpenedBy: changelog.User{
+			Name:     "monalisa octocat",
+			Username: "octocat",
+			URL:      "https://github.com/octocat",
+		},
+		ClosedBy: changelog.User{
+			Name:     "monalisa octocat",
+			Username: "octocat",
+			URL:      "https://github.com/octocat",
+		},
+	}
+
+	changelogIssue2 = changelog.Issue{
+		Number: 1002,
+		Title:  "Discovered a vulnerability",
+		OpenedBy: changelog.User{
+			Name:     "monalisa octocat",
+			Username: "octocat",
+			URL:      "https://github.com/octocat",
+		},
+		ClosedBy: changelog.User{
+			Name:     "monalisa octodog",
+			Username: "octodog",
+			URL:      "https://github.com/octodog",
+		},
+	}
+
+	changelogMerge1 = changelog.Merge{
+		Number: 1003,
+		Title:  "Added a feature",
+		OpenedBy: changelog.User{
+			Name:     "monalisa octocat",
+			Username: "octocat",
+			URL:      "https://github.com/octocat",
+		},
+		MergedBy: changelog.User{
+			Name:     "monalisa octocat",
+			Username: "octocat",
+			URL:      "https://github.com/octocat",
+		},
+	}
+
+	changelogMerge2 = changelog.Merge{
+		Number: 1004,
+		Title:  "Refactored code",
+		OpenedBy: changelog.User{
+			Name:     "monalisa octocat",
+			Username: "octocat",
+			URL:      "https://github.com/octocat",
+		},
+		MergedBy: changelog.User{
+			Name:     "monalisa octodog",
+			Username: "octodog",
+			URL:      "https://github.com/octodog",
+		},
+	}
 )
 
 func parseGitHubTime(s string) time.Time {
@@ -180,8 +242,8 @@ func TestGenerator_resolveTags(t *testing.T) {
 	tests := []struct {
 		name              string
 		g                 *Generator
-		tags              remote.Tags
 		chlog             *changelog.Changelog
+		sortedTags        remote.Tags
 		expectedFromTag   remote.Tag
 		expectedToTag     remote.Tag
 		expectedFutureTag remote.Tag
@@ -193,8 +255,8 @@ func TestGenerator_resolveTags(t *testing.T) {
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
-			tags:              remote.Tags{},
 			chlog:             &changelog.Changelog{},
+			sortedTags:        remote.Tags{},
 			expectedFromTag:   remote.Tag{},
 			expectedToTag:     remote.Tag{},
 			expectedFutureTag: remote.Tag{},
@@ -210,8 +272,8 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			tags:            remote.Tags{},
 			chlog:           &changelog.Changelog{},
+			sortedTags:      remote.Tags{},
 			expectedFromTag: remote.Tag{},
 			expectedToTag:   remote.Tag{},
 			expectedFutureTag: remote.Tag{
@@ -225,8 +287,8 @@ func TestGenerator_resolveTags(t *testing.T) {
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
-			tags:              remote.Tags{tag1},
 			chlog:             &changelog.Changelog{},
+			sortedTags:        remote.Tags{tag1},
 			expectedFromTag:   remote.Tag{},
 			expectedToTag:     tag1,
 			expectedFutureTag: remote.Tag{},
@@ -238,12 +300,12 @@ func TestGenerator_resolveTags(t *testing.T) {
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
-			tags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
-					{GitTag: "0.1.0"},
+					{TagName: "0.1.0"},
 				},
 			},
+			sortedTags:        remote.Tags{tag2, tag1},
 			expectedFromTag:   remote.Tag{},
 			expectedToTag:     remote.Tag{},
 			expectedFutureTag: remote.Tag{},
@@ -255,12 +317,12 @@ func TestGenerator_resolveTags(t *testing.T) {
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
-			tags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
-					{GitTag: "v0.1.1"},
+					{TagName: "v0.1.1"},
 				},
 			},
+			sortedTags:        remote.Tags{tag2, tag1},
 			expectedFromTag:   tag1,
 			expectedToTag:     tag2,
 			expectedFutureTag: remote.Tag{},
@@ -276,12 +338,12 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			tags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
-					{GitTag: "v0.1.1"},
+					{TagName: "v0.1.1"},
 				},
 			},
+			sortedTags:        remote.Tags{tag2, tag1},
 			expectedFromTag:   remote.Tag{},
 			expectedToTag:     remote.Tag{},
 			expectedFutureTag: remote.Tag{},
@@ -297,12 +359,12 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			tags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
-					{GitTag: "v0.1.1"},
+					{TagName: "v0.1.1"},
 				},
 			},
+			sortedTags:        remote.Tags{tag2, tag1},
 			expectedFromTag:   remote.Tag{},
 			expectedToTag:     remote.Tag{},
 			expectedFutureTag: remote.Tag{},
@@ -318,13 +380,13 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			tags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
-					{GitTag: "v0.1.2"},
-					{GitTag: "v0.1.1"},
+					{TagName: "v0.1.2"},
+					{TagName: "v0.1.1"},
 				},
 			},
+			sortedTags:        remote.Tags{tag3, tag2, tag1},
 			expectedFromTag:   tag2,
 			expectedToTag:     tag3,
 			expectedFutureTag: remote.Tag{},
@@ -341,13 +403,13 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			tags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
-					{GitTag: "v0.1.2"},
-					{GitTag: "v0.1.1"},
+					{TagName: "v0.1.2"},
+					{TagName: "v0.1.1"},
 				},
 			},
+			sortedTags:        remote.Tags{tag3, tag2, tag1},
 			expectedFromTag:   remote.Tag{},
 			expectedToTag:     remote.Tag{},
 			expectedFutureTag: remote.Tag{},
@@ -364,13 +426,13 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			tags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
-					{GitTag: "v0.1.2"},
-					{GitTag: "v0.1.1"},
+					{TagName: "v0.1.2"},
+					{TagName: "v0.1.1"},
 				},
 			},
+			sortedTags:        remote.Tags{tag3, tag2, tag1},
 			expectedFromTag:   remote.Tag{},
 			expectedToTag:     remote.Tag{},
 			expectedFutureTag: remote.Tag{},
@@ -387,13 +449,13 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
-			tags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Releases: []changelog.Release{
-					{GitTag: "v0.1.2"},
-					{GitTag: "v0.1.1"},
+					{TagName: "v0.1.2"},
+					{TagName: "v0.1.1"},
 				},
 			},
+			sortedTags:        remote.Tags{tag3, tag2, tag1},
 			expectedFromTag:   tag2,
 			expectedToTag:     tag3,
 			expectedFutureTag: remote.Tag{},
@@ -403,131 +465,12 @@ func TestGenerator_resolveTags(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			fromTag, toTag, futureTag, err := tc.g.resolveTags(tc.tags, tc.chlog)
+			fromTag, toTag, futureTag, err := tc.g.resolveTags(tc.chlog, tc.sortedTags)
 
 			assert.Equal(t, tc.expectedFromTag, fromTag)
 			assert.Equal(t, tc.expectedToTag, toTag)
 			assert.Equal(t, tc.expectedFutureTag, futureTag)
 			assert.Equal(t, tc.expectedError, err)
-		})
-	}
-}
-
-func TestGenerator_filterByLabels(t *testing.T) {
-	tests := []struct {
-		name           string
-		g              *Generator
-		issues         remote.Issues
-		merges         remote.Merges
-		expectedIssues remote.Issues
-		expectedMerges remote.Merges
-	}{
-		{
-			name: "None",
-			g: &Generator{
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Selection: spec.SelectionNone,
-					},
-					Merges: spec.Merges{
-						Selection: spec.SelectionNone,
-					},
-				},
-				logger: log.New(log.None),
-			},
-			issues:         remote.Issues{issue1, issue2},
-			merges:         remote.Merges{merge1, merge2},
-			expectedIssues: remote.Issues{},
-			expectedMerges: remote.Merges{},
-		},
-		{
-			name: "AllWithIncludeLabels",
-			g: &Generator{
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Selection:     spec.SelectionAll,
-						IncludeLabels: []string{"bug"},
-					},
-					Merges: spec.Merges{
-						Selection:     spec.SelectionAll,
-						IncludeLabels: []string{"enhancement"},
-					},
-				},
-				logger: log.New(log.None),
-			},
-			issues:         remote.Issues{issue1, issue2},
-			merges:         remote.Merges{merge1, merge2},
-			expectedIssues: remote.Issues{issue1},
-			expectedMerges: remote.Merges{merge1, merge2},
-		},
-		{
-			name: "AllWithExcludeLabels",
-			g: &Generator{
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Selection:     spec.SelectionAll,
-						ExcludeLabels: []string{"invalid"},
-					},
-					Merges: spec.Merges{
-						Selection:     spec.SelectionAll,
-						ExcludeLabels: []string{"enhancement"},
-					},
-				},
-				logger: log.New(log.None),
-			},
-			issues:         remote.Issues{issue1, issue2},
-			merges:         remote.Merges{merge1, merge2},
-			expectedIssues: remote.Issues{issue1},
-			expectedMerges: remote.Merges{merge2},
-		},
-		{
-			name: "LabeledWithIncludeLabels",
-			g: &Generator{
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Selection:     spec.SelectionLabeled,
-						IncludeLabels: []string{"bug"},
-					},
-					Merges: spec.Merges{
-						Selection:     spec.SelectionLabeled,
-						IncludeLabels: []string{"enhancement"},
-					},
-				},
-				logger: log.New(log.None),
-			},
-			issues:         remote.Issues{issue1, issue2},
-			merges:         remote.Merges{merge1, merge2},
-			expectedIssues: remote.Issues{issue1},
-			expectedMerges: remote.Merges{merge1},
-		},
-		{
-			name: "LabeledWithExcludeLabels",
-			g: &Generator{
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Selection:     spec.SelectionLabeled,
-						ExcludeLabels: []string{"invalid"},
-					},
-					Merges: spec.Merges{
-						Selection:     spec.SelectionLabeled,
-						ExcludeLabels: []string{"enhancement"},
-					},
-				},
-				logger: log.New(log.None),
-			},
-			issues:         remote.Issues{issue1, issue2},
-			merges:         remote.Merges{merge1, merge2},
-			expectedIssues: remote.Issues{issue1},
-			expectedMerges: remote.Merges{},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			issues, merges := tc.g.filterByLabels(tc.issues, tc.merges)
-
-			assert.Equal(t, tc.expectedIssues, issues)
-			assert.Equal(t, tc.expectedMerges, merges)
 		})
 	}
 }
@@ -628,94 +571,6 @@ func TestGenerator_resolveCommitMap(t *testing.T) {
 				assert.Nil(t, commitMap)
 				assert.EqualError(t, err, tc.expectedError)
 			}
-		})
-	}
-}
-
-func TestGenerator_resolveIssueMap(t *testing.T) {
-	tests := []struct {
-		name             string
-		issues           remote.Issues
-		sortedTags       remote.Tags
-		futureTag        remote.Tag
-		expectedIssueMap issueMap
-	}{
-		{
-			name:       "OK",
-			issues:     remote.Issues{issue1, issue2},
-			sortedTags: remote.Tags{tag3, tag2, tag1},
-			futureTag: remote.Tag{
-				Name: "v0.1.4",
-			},
-			expectedIssueMap: issueMap{
-				"v0.1.4": remote.Issues{issue2},
-				"v0.1.3": remote.Issues{issue1},
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			g := &Generator{
-				logger: log.New(log.None),
-			}
-
-			issueMap := g.resolveIssueMap(tc.issues, tc.sortedTags, tc.futureTag)
-
-			assert.Equal(t, tc.expectedIssueMap, issueMap)
-		})
-	}
-}
-
-func TestGenerator_resolveMergeMap(t *testing.T) {
-	cm := commitMap{
-		"20c5414eccaa147f2d6644de4ca36f35293fa43e": &revisions{
-			Branch: "main",
-		},
-		"c414d1004154c6c324bd78c69d10ee101e676059": &revisions{
-			Branch: "main",
-			Tags:   []string{"v0.1.3"},
-		},
-		"0251a422d2038967eeaaaa5c8aa76c7067fdef05": &revisions{
-			Branch: "main",
-			Tags:   []string{"v0.1.3", "v0.1.2"},
-		},
-		"25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378": &revisions{
-			Branch: "main",
-			Tags:   []string{"v0.1.3", "v0.1.2", "v0.1.1"},
-		},
-	}
-
-	tests := []struct {
-		name             string
-		merges           remote.Merges
-		cm               commitMap
-		futureTag        remote.Tag
-		expectedMergeMap mergeMap
-	}{
-		{
-			name:   "OK",
-			merges: remote.Merges{merge1, merge2},
-			cm:     cm,
-			futureTag: remote.Tag{
-				Name: "v0.1.4",
-			},
-			expectedMergeMap: mergeMap{
-				"v0.1.4": remote.Merges{merge2},
-				"v0.1.3": remote.Merges{merge1},
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			g := &Generator{
-				logger: log.New(log.None),
-			}
-
-			mergeMap := g.resolveMergeMap(tc.merges, tc.cm, tc.futureTag)
-
-			assert.Equal(t, tc.expectedMergeMap, mergeMap)
 		})
 	}
 }
@@ -1001,7 +856,7 @@ func TestGenerator_Generate(t *testing.T) {
 						{
 							OutChangelog: &changelog.Changelog{
 								Releases: []changelog.Release{
-									{GitTag: "v0.1.1"},
+									{TagName: "v0.1.1"},
 								},
 							},
 						},

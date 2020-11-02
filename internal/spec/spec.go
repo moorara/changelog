@@ -271,7 +271,7 @@ func Default(domain, path string) Spec {
 			Grouping:          true,
 			SummaryLabels:     []string{"summary", "release-summary"},
 			RemovedLabels:     []string{"removed"},
-			BreakingLabels:    []string{"breaking"},
+			BreakingLabels:    []string{"breaking", "backward-incompatible"},
 			DeprecatedLabels:  []string{"deprecated"},
 			FeatureLabels:     []string{"feature"},
 			EnhancementLabels: []string{"enhancement"},
@@ -363,4 +363,144 @@ func (s Spec) String() string {
 		s.Merges.Grouping, s.Merges.SummaryLabels, s.Merges.RemovedLabels, s.Merges.BreakingLabels, s.Merges.DeprecatedLabels, s.Merges.FeatureLabels, s.Merges.EnhancementLabels, s.Merges.BugLabels, s.Merges.SecurityLabels,
 		s.Format.GroupBy, s.Format.ReleaseURL,
 	)
+}
+
+// Group represents a group issues and merges.
+type Group struct {
+	Title  string
+	Labels []string
+}
+
+// Groups returns the groups for issues.
+func (i Issues) Groups() []Group {
+	groups := []Group{}
+
+	if !i.Grouping {
+		return groups
+	}
+
+	if len(i.SummaryLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Release Summary",
+			Labels: i.SummaryLabels,
+		})
+	}
+
+	if len(i.RemovedLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Removed",
+			Labels: i.RemovedLabels,
+		})
+	}
+
+	if len(i.BreakingLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Breaking Changes",
+			Labels: i.BreakingLabels,
+		})
+	}
+
+	if len(i.DeprecatedLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Deprecated",
+			Labels: i.DeprecatedLabels,
+		})
+	}
+
+	if len(i.FeatureLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "New Features",
+			Labels: i.FeatureLabels,
+		})
+	}
+
+	if len(i.EnhancementLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Enhancements",
+			Labels: i.EnhancementLabels,
+		})
+	}
+
+	if len(i.BugLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Fixed Bugs",
+			Labels: i.BugLabels,
+		})
+	}
+
+	if len(i.SecurityLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Security Fixes",
+			Labels: i.SecurityLabels,
+		})
+	}
+
+	return groups
+}
+
+// Groups returns the groups for merges.
+func (m Merges) Groups() []Group {
+	groups := []Group{}
+
+	if !m.Grouping {
+		return groups
+	}
+
+	if len(m.SummaryLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Release Summary",
+			Labels: m.SummaryLabels,
+		})
+	}
+
+	if len(m.RemovedLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Removed",
+			Labels: m.RemovedLabels,
+		})
+	}
+
+	if len(m.BreakingLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Breaking Changes",
+			Labels: m.BreakingLabels,
+		})
+	}
+
+	if len(m.DeprecatedLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Deprecated",
+			Labels: m.DeprecatedLabels,
+		})
+	}
+
+	if len(m.FeatureLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "New Features",
+			Labels: m.FeatureLabels,
+		})
+	}
+
+	if len(m.EnhancementLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Enhancements",
+			Labels: m.EnhancementLabels,
+		})
+	}
+
+	if len(m.BugLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Fixed Bugs",
+			Labels: m.BugLabels,
+		})
+	}
+
+	if len(m.SecurityLabels) > 0 {
+		groups = append(groups, Group{
+			Title:  "Security Fixes",
+			Labels: m.SecurityLabels,
+		})
+	}
+
+	return groups
 }

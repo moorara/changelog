@@ -679,6 +679,42 @@ func TestIssues_Sort(t *testing.T) {
 	}
 }
 
+func TestIssues_Remove(t *testing.T) {
+	tests := []struct {
+		name            string
+		i               Issues
+		f               func(Issue) bool
+		expectedIssues  Issues
+		expextedRemoved Issues
+	}{
+		{
+			name:            "Nil",
+			i:               nil,
+			f:               nil,
+			expectedIssues:  nil,
+			expextedRemoved: nil,
+		},
+		{
+			name: "OK",
+			i:    Issues{issue1, issue2},
+			f: func(i Issue) bool {
+				return i.Number == 1001
+			},
+			expectedIssues:  Issues{issue2},
+			expextedRemoved: Issues{issue1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			removed := tc.i.Remove(tc.f)
+
+			assert.Equal(t, tc.expectedIssues, tc.i)
+			assert.Equal(t, tc.expextedRemoved, removed)
+		})
+	}
+}
+
 func TestMerges_Select(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -731,6 +767,42 @@ func TestMerges_Sort(t *testing.T) {
 			merges := tc.m.Sort()
 
 			assert.Equal(t, tc.expectedMerges, merges)
+		})
+	}
+}
+
+func TestMerges_Remove(t *testing.T) {
+	tests := []struct {
+		name            string
+		m               Merges
+		f               func(Merge) bool
+		expectedMerges  Merges
+		expextedRemoved Merges
+	}{
+		{
+			name:            "Nil",
+			m:               nil,
+			f:               nil,
+			expectedMerges:  nil,
+			expextedRemoved: nil,
+		},
+		{
+			name: "OK",
+			m:    Merges{merge1, merge2},
+			f: func(m Merge) bool {
+				return m.Number == 1003
+			},
+			expectedMerges:  Merges{merge2},
+			expextedRemoved: Merges{merge1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			removed := tc.m.Remove(tc.f)
+
+			assert.Equal(t, tc.expectedMerges, tc.m)
+			assert.Equal(t, tc.expextedRemoved, removed)
 		})
 	}
 }

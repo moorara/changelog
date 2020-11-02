@@ -12,6 +12,10 @@ import (
 	"github.com/moorara/changelog/pkg/log"
 )
 
+const (
+	timeLayout = "2006-01-02"
+)
+
 var (
 	h1Regex = regexp.MustCompile(`^# ([0-9A-Za-z-_]+)$`)
 	h2Regex = regexp.MustCompile(`^## \[([0-9A-Za-z-.]+)\]\(([0-9A-Za-z-.:/]+)\) \((\d{4}-\d{2}-\d{2})\)$`)
@@ -58,15 +62,14 @@ func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, er
 		if sm := h1Regex.FindStringSubmatch(line); len(sm) == 2 {
 			chlog.Title = sm[1]
 		} else if sm := h2Regex.FindStringSubmatch(line); len(sm) == 4 {
-			t, err := time.Parse("2006-01-02", sm[3])
+			t, err := time.Parse(timeLayout, sm[3])
 			if err != nil {
 				return nil, err
 			}
 
 			chlog.Releases = append(chlog.Releases, changelog.Release{
-				GitTag: sm[1],
-				URL:    sm[2],
-				Time:   t,
+				TagName: sm[1],
+				TagTime: t,
 			})
 		}
 	}

@@ -1,8 +1,6 @@
 package changelog
 
-import (
-	"time"
-)
+import "time"
 
 // Processor is an abstraction for reading and writing changelogs.
 type Processor interface {
@@ -22,9 +20,8 @@ type Changelog struct {
 
 // Release represents a single release of a repository in a changelog.
 type Release struct {
-	GitTag      string
-	URL         string
-	Time        time.Time
+	TagName     string
+	TagTime     time.Time
 	IssueGroups []IssueGroup
 	MergeGroups []MergeGroup
 }
@@ -37,9 +34,9 @@ type IssueGroup struct {
 
 // Issue represents a single issue.
 type Issue struct {
-	Number   uint
+	Number   int
 	Title    string
-	Author   User
+	OpenedBy User
 	ClosedBy User
 }
 
@@ -51,16 +48,17 @@ type MergeGroup struct {
 
 // Merge represents a single pull/merge request.
 type Merge struct {
-	Number   uint
+	Number   int
 	Title    string
-	Author   User
+	OpenedBy User
 	MergedBy User
 }
 
 // User represents a user.
 type User struct {
-	Username string
 	Name     string
+	Username string
+	URL      string
 }
 
 // NewChangelog creates a new empty default changelog.

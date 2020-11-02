@@ -17,14 +17,14 @@ tags:
 
 issues:
   selection: labeled
-  include-labels: [ breaking, bug, defect, deprecated, dropped, enhancement, feature, highlight, improvement, incompatible, new, not-supported, privacy, removed, security, summary ]
+  include-labels: [ breaking, bug, defect, deprecated, enhancement, feature, highlight, improvement, incompatible, privacy, removed, security, summary ]
   exclude-labels: [ documentation, duplicate, invalid, question, wontfix ]
   grouping: true
   summary-labels: [ summary, highlight ]
-  removed-labels: [ removed, dropped ]
+  removed-labels: [ removed ]
   breaking-labels: [ breaking, incompatible ]
-  deprecated-labels: [ deprecated, not-supported ]
-  feature-labels: [ feature, new ]
+  deprecated-labels: [ deprecated ]
+  feature-labels: [ feature ]
   enhancement-labels: [ enhancement, improvement ]
   bug-labels: [ bug, defect ]
   security-labels: [ security, privacy ]
@@ -32,14 +32,14 @@ issues:
 merges:
   selection: labeled
   branch: production
-  include-labels: [ breaking, bug, defect, deprecated, dropped, enhancement, feature, highlight, improvement, incompatible, new, not-supported, privacy, removed, security, summary ]
+  include-labels: [ breaking, bug, defect, deprecated, enhancement, feature, highlight, improvement, incompatible, privacy, removed, security, summary ]
   exclude-labels: [ documentation, duplicate, invalid, question, wontfix ]
   grouping: true
   summary-labels: [ summary, highlight ]
-  removed-labels: [ removed, dropped ]
+  removed-labels: [ removed ]
   breaking-labels: [ breaking, incompatible ]
-  deprecated-labels: [ deprecated, not-supported ]
-  feature-labels: [ feature, new ]
+  deprecated-labels: [ deprecated ]
+  feature-labels: [ feature ]
   enhancement-labels: [ enhancement, improvement ]
   bug-labels: [ bug, defect ]
   security-labels: [ security, privacy ]

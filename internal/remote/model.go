@@ -285,6 +285,20 @@ func (i Issues) Sort() Issues {
 	return sorted
 }
 
+// Remove removes any issue that satisfies the predicate f and returns the removed issues.
+func (i *Issues) Remove(f func(Issue) bool) Issues {
+	var removed Issues
+
+	for n, issue := range *i {
+		if f(issue) {
+			removed = append(removed, (*i)[n])
+			*i = append((*i)[:n], (*i)[n+1:]...)
+		}
+	}
+
+	return removed
+}
+
 // Merge represents a merge/pull request.
 type Merge struct {
 	Change
@@ -318,4 +332,18 @@ func (m Merges) Sort() Merges {
 	})
 
 	return sorted
+}
+
+// Remove removes any merge that satisfies the predicate f and returns the removed merges.
+func (m *Merges) Remove(f func(Merge) bool) Merges {
+	var removed Merges
+
+	for n, merge := range *m {
+		if f(merge) {
+			removed = append(removed, (*m)[n])
+			*m = append((*m)[:n], (*m)[n+1:]...)
+		}
+	}
+
+	return removed
 }
