@@ -42,6 +42,16 @@ func TestNewRepo(t *testing.T) {
 	}
 }
 
+func TestRepo_FutureTag(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	tag := r.FutureTag("v0.1.0")
+
+	assert.Empty(t, tag)
+}
+
 func TestRepo_FetchBranch(t *testing.T) {
 	r := &repo{
 		logger: log.New(log.None),

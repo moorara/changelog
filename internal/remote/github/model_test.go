@@ -8,6 +8,28 @@ import (
 	"github.com/moorara/changelog/internal/remote"
 )
 
+func TestToUser(t *testing.T) {
+	tests := []struct {
+		name         string
+		u            user
+		expectedUser remote.User
+	}{
+		{
+			name:         "OK",
+			u:            gitHubUser1,
+			expectedUser: remoteUser1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			user := toUser(tc.u)
+
+			assert.Equal(t, tc.expectedUser, user)
+		})
+	}
+}
+
 func TestToCommit(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -57,19 +79,21 @@ func TestToTag(t *testing.T) {
 		name        string
 		t           tag
 		c           commit
+		repoPath    string
 		expectedTag remote.Tag
 	}{
 		{
 			name:        "OK",
 			t:           gitHubTag1,
 			c:           gitHubCommit1,
+			repoPath:    "octocat/Hello-World",
 			expectedTag: remoteTag,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tag := toTag(tc.t, tc.c)
+			tag := toTag(tc.t, tc.c, tc.repoPath)
 
 			assert.Equal(t, tc.expectedTag, tag)
 		})
@@ -78,17 +102,17 @@ func TestToTag(t *testing.T) {
 
 func TestToIssue(t *testing.T) {
 	tests := []struct {
-		name            string
-		i               issue
-		e               event
-		creator, closer user
-		expectedIssue   remote.Issue
+		name           string
+		i              issue
+		e              event
+		author, closer user
+		expectedIssue  remote.Issue
 	}{
 		{
 			name:          "OK",
 			i:             gitHubIssue1,
 			e:             gitHubEvent1,
-			creator:       gitHubUser1,
+			author:        gitHubUser1,
 			closer:        gitHubUser1,
 			expectedIssue: remoteIssue,
 		},
@@ -96,7 +120,7 @@ func TestToIssue(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			issue := toIssue(tc.i, tc.e, tc.creator, tc.closer)
+			issue := toIssue(tc.i, tc.e, tc.author, tc.closer)
 
 			assert.Equal(t, tc.expectedIssue, issue)
 		})
@@ -105,19 +129,19 @@ func TestToIssue(t *testing.T) {
 
 func TestToMerge(t *testing.T) {
 	tests := []struct {
-		name            string
-		i               issue
-		e               event
-		c               commit
-		creator, merger user
-		expectedMerge   remote.Merge
+		name           string
+		i              issue
+		e              event
+		c              commit
+		author, merger user
+		expectedMerge  remote.Merge
 	}{
 		{
 			name:          "OK",
 			i:             gitHubIssue2,
 			e:             gitHubEvent2,
 			c:             gitHubCommit2,
-			creator:       gitHubUser2,
+			author:        gitHubUser2,
 			merger:        gitHubUser3,
 			expectedMerge: remoteMerge,
 		},
@@ -125,7 +149,7 @@ func TestToMerge(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			merge := toMerge(tc.i, tc.e, tc.c, tc.creator, tc.merger)
+			merge := toMerge(tc.i, tc.e, tc.c, tc.author, tc.merger)
 
 			assert.Equal(t, tc.expectedMerge, merge)
 		})
@@ -137,6 +161,7 @@ func TestResolveTags(t *testing.T) {
 		name          string
 		gitHubTags    *tagStore
 		gitHubCommits *commitStore
+		repoPath      string
 		expectedTags  remote.Tags
 	}{
 		{
@@ -151,13 +176,14 @@ func TestResolveTags(t *testing.T) {
 					"c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c": gitHubCommit1,
 				},
 			},
+			repoPath:     "octocat/Hello-World",
 			expectedTags: remote.Tags{remoteTag},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tags := resolveTags(tc.gitHubTags, tc.gitHubCommits)
+			tags := resolveTags(tc.gitHubTags, tc.gitHubCommits, tc.repoPath)
 
 			assert.Equal(t, tc.expectedTags, tags)
 		})

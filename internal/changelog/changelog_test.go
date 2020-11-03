@@ -12,5 +12,5 @@ func TestNewChangelog(t *testing.T) {
 	assert.NotNil(t, changelog)
 	assert.NotNil(t, changelog.Title)
 	assert.Len(t, changelog.New, 0)
-	assert.Len(t, changelog.Releases, 0)
+	assert.Len(t, changelog.Existing, 0)
 }

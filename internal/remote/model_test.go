@@ -15,24 +15,17 @@ var (
 	t4, _ = time.Parse(time.RFC3339, "2020-10-20T20:00:00-04:00")
 
 	user1 = User{
-		Name:     "monalisa octocat",
+		Name:     "The Octocat",
 		Email:    "octocat@github.com",
 		Username: "octocat",
-		URL:      "https://api.github.com/users/octocat",
+		WebURL:   "https://github.com/octocat",
 	}
 
 	user2 = User{
-		Name:     "monalisa octodog",
+		Name:     "The Octodog",
 		Email:    "octodog@github.com",
 		Username: "octodog",
-		URL:      "https://api.github.com/users/octodog",
-	}
-
-	user3 = User{
-		Name:     "monalisa octofox",
-		Email:    "octofox@github.com",
-		Username: "octofox",
-		URL:      "https://api.github.com/users/octofox",
+		WebURL:   "https://github.com/octodog",
 	}
 
 	commit1 = Commit{
@@ -54,12 +47,14 @@ var (
 		Name:   "v0.1.0",
 		Time:   t1,
 		Commit: commit1,
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.0",
 	}
 
 	tag2 = Tag{
 		Name:   "v0.2.0",
 		Time:   t2,
 		Commit: commit2,
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.2.0",
 	}
 
 	issue1 = Issue{
@@ -69,7 +64,8 @@ var (
 			Labels:    []string{"bug"},
 			Milestone: "v1.0",
 			Time:      t1,
-			Creator:   user1,
+			Author:    user1,
+			WebURL:    "https://github.com/octocat/Hello-World/issues/1001",
 		},
 		Closer: user1,
 	}
@@ -81,7 +77,8 @@ var (
 			Labels:    []string{"enhancement"},
 			Milestone: "v1.0",
 			Time:      t2,
-			Creator:   user2,
+			Author:    user1,
+			WebURL:    "https://github.com/octocat/Hello-World/issues/1002",
 		},
 		Closer: user2,
 	}
@@ -93,7 +90,8 @@ var (
 			Labels:    []string{"bug"},
 			Milestone: "v1.0",
 			Time:      t3,
-			Creator:   user1,
+			Author:    user1,
+			WebURL:    "https://github.com/octocat/Hello-World/pull/1003",
 		},
 		Merger: user1,
 		Commit: commit1,
@@ -106,9 +104,10 @@ var (
 			Labels:    []string{"enhancement"},
 			Milestone: "v1.0",
 			Time:      t4,
-			Creator:   user2,
+			Author:    user1,
+			WebURL:    "https://github.com/octocat/Hello-World/pull/1004",
 		},
-		Merger: user3,
+		Merger: user2,
 		Commit: commit2,
 	}
 )

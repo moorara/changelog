@@ -105,6 +105,11 @@ func (m *MockGitRepo) CommitsFromRevision(rev string) (git.Commits, error) {
 }
 
 type (
+	FutureTagMock struct {
+		InName string
+		OutTag remote.Tag
+	}
+
 	FetchBranchMock struct {
 		InContext context.Context
 		InName    string
@@ -140,6 +145,9 @@ type (
 	}
 
 	MockRemoteRepo struct {
+		FutureTagIndex int
+		FutureTagMocks []FutureTagMock
+
 		FetchBranchIndex int
 		FetchBranchMocks []FetchBranchMock
 
@@ -156,6 +164,13 @@ type (
 		FetchParentCommitsMocks []FetchParentCommitsMock
 	}
 )
+
+func (m *MockRemoteRepo) FutureTag(name string) remote.Tag {
+	i := m.FutureTagIndex
+	m.FutureTagIndex++
+	m.FutureTagMocks[i].InName = name
+	return m.FutureTagMocks[i].OutTag
+}
 
 func (m *MockRemoteRepo) FetchBranch(ctx context.Context, name string) (remote.Branch, error) {
 	i := m.FetchBranchIndex

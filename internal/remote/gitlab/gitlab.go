@@ -38,6 +38,11 @@ func NewRepo(logger log.Logger, path, accessToken string) remote.Repo {
 	}
 }
 
+// FutureTag returns a tag that does not exist yet for a GitLab repository.
+func (r *repo) FutureTag(name string) remote.Tag {
+	return remote.Tag{}
+}
+
 // FetchBranch retrieves a branch by name for a GitLab repository.
 func (r *repo) FetchBranch(ctx context.Context, name string) (remote.Branch, error) {
 	return remote.Branch{}, nil

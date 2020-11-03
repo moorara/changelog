@@ -14,7 +14,7 @@ type User struct {
 	Name     string
 	Email    string
 	Username string
-	URL      string
+	WebURL   string
 }
 
 // Commit represents a commit.
@@ -63,9 +63,11 @@ func (b Branch) String() string {
 
 // Tag represents a tag.
 type Tag struct {
-	Name   string
-	Time   time.Time
-	Commit Commit
+	Name       string
+	Time       time.Time
+	Commit     Commit
+	WebURL     string
+	CompareURL string
 }
 
 // IsZero determines if a tag is a zero tag instance.
@@ -248,7 +250,8 @@ type Change struct {
 	Labels    Labels
 	Milestone string
 	Time      time.Time
-	Creator   User
+	Author    User
+	WebURL    string
 }
 
 // Issue represents an issue.

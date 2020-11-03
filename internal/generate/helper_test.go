@@ -2,6 +2,7 @@ package generate
 
 import (
 	"testing"
+	"time"
 
 	"github.com/moorara/changelog/internal/changelog"
 	"github.com/moorara/changelog/internal/remote"
@@ -248,6 +249,8 @@ func TestToMergeGroup(t *testing.T) {
 }
 
 func TestResolveReleases(t *testing.T) {
+	now := time.Now()
+
 	tests := []struct {
 		name             string
 		sortedTags       remote.Tags
@@ -280,7 +283,9 @@ func TestResolveReleases(t *testing.T) {
 			expectedReleases: []changelog.Release{
 				{
 					TagName: "v0.1.3",
+					TagURL:  "https://github.com/octocat/Hello-World/tree/v0.1.3",
 					TagTime: t3,
+					// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
 					IssueGroups: []changelog.IssueGroup{
 						{
 							Title:  "Fixed Bugs",
@@ -300,7 +305,10 @@ func TestResolveReleases(t *testing.T) {
 			name:       "WithFutureTag",
 			sortedTags: remote.Tags{tag3},
 			futureTag: remote.Tag{
-				Name: "v0.1.4",
+				Name:   "v0.1.4",
+				Time:   now,
+				WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.4",
+				// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4",
 			},
 			issueMap: issueMap{
 				"v0.1.4": remote.Issues{issue2},
@@ -323,6 +331,9 @@ func TestResolveReleases(t *testing.T) {
 			expectedReleases: []changelog.Release{
 				{
 					TagName: "v0.1.4",
+					TagURL:  "https://github.com/octocat/Hello-World/tree/v0.1.4",
+					TagTime: now,
+					// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4",
 					IssueGroups: []changelog.IssueGroup{
 						{
 							Title:  "Closed Issues",
@@ -338,7 +349,9 @@ func TestResolveReleases(t *testing.T) {
 				},
 				{
 					TagName: "v0.1.3",
+					TagURL:  "https://github.com/octocat/Hello-World/tree/v0.1.3",
 					TagTime: t3,
+					// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
 					IssueGroups: []changelog.IssueGroup{
 						{
 							Title:  "Fixed Bugs",

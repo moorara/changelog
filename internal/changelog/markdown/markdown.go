@@ -2,19 +2,33 @@ package markdown
 
 import (
 	"bufio"
-	"fmt"
+	"bytes"
+	"html/template"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/moorara/changelog/internal/changelog"
 	"github.com/moorara/changelog/pkg/log"
 )
 
-const (
-	timeLayout = "2006-01-02"
-)
+const timeLayout = "2006-01-02"
+
+const markdownTemplate = `
+{{range .}}## [{{.TagName}}]({{.TagURL}}) ({{time .TagTime}})
+
+{{range .IssueGroups}}**{{title .Title}}:**
+
+{{range .Issues}}  - {{.Title}} [#{{.Number}}]({{.URL}}) ({{if ne .OpenedBy.Username .ClosedBy.Username}}[{{.OpenedBy.Username}}]({{.OpenedBy.URL}}), {{end}}[{{.ClosedBy.Username}}]({{.ClosedBy.URL}}))
+{{end}}
+{{end}}{{range .MergeGroups}}**{{title .Title}}:**
+
+{{range .Merges}}  - {{.Title}} [#{{.Number}}]({{.URL}}) ({{if ne .OpenedBy.Username .MergedBy.Username}}[{{.OpenedBy.Username}}]({{.OpenedBy.URL}}), {{end}}[{{.MergedBy.Username}}]({{.MergedBy.URL}}))
+{{end}}
+{{end}}
+{{end}}`
 
 var (
 	h1Regex = regexp.MustCompile(`^# ([0-9A-Za-z-_]+)$`)
@@ -25,7 +39,6 @@ var (
 type processor struct {
 	logger   log.Logger
 	filename string
-	doc      string
 }
 
 // NewProcessor creates a new changelog processor for Markdown format.
@@ -57,7 +70,6 @@ func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, er
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		p.doc += fmt.Sprintln(line)
 
 		if sm := h1Regex.FindStringSubmatch(line); len(sm) == 2 {
 			chlog.Title = sm[1]
@@ -67,8 +79,9 @@ func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, er
 				return nil, err
 			}
 
-			chlog.Releases = append(chlog.Releases, changelog.Release{
+			chlog.Existing = append(chlog.Existing, changelog.Release{
 				TagName: sm[1],
+				TagURL:  sm[2],
 				TagTime: t,
 			})
 		}
@@ -86,11 +99,34 @@ func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, er
 func (p *processor) Render(chlog *changelog.Changelog) (string, error) {
 	p.logger.Debugf("Rendering the changelog ...")
 
-	// UPDATE THE MARKDOWN DOCUMENT
+	// ==============================> RENDER THE CONTENT FOR NEW RELEASES <==============================
 
-	// RENDER THE MARKDOWN DOCUMENT
+	tmpl := template.New("help")
+	tmpl = tmpl.Funcs(template.FuncMap{
+		"title": strings.Title,
+		"time": func(t time.Time) string {
+			return t.Format(timeLayout)
+		},
+	})
+
+	tmpl, err := tmpl.Parse(markdownTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	buf := new(bytes.Buffer)
+	err = tmpl.Execute(buf, chlog.New)
+	if err != nil {
+		return "", err
+	}
+
+	content := buf.String()
+
+	// ==============================> UPDATE THE CHANGELOG FILE <==============================
+
+	// TODO:
 
 	p.logger.Infof("Successfully rendered the changelog.")
 
-	return fmt.Sprintf("%+v", chlog), nil
+	return content, nil
 }

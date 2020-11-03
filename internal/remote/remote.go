@@ -7,6 +7,8 @@ import (
 
 // Repo is the abstraction for a remote repository.
 type Repo interface {
+	// FutureTag returns a tag that does not exist yet.
+	FutureTag(string) Tag
 	// FetchBranch retrieves a branch by name.
 	FetchBranch(context.Context, string) (Branch, error)
 	// FetchDefaultBranch retrieves the default branch.

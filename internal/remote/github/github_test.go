@@ -20,9 +20,10 @@ const (
 		"login": "octocat",
 		"id": 1,
 		"url": "https://api.github.com/users/octocat",
+		"html_url": "https://github.com/octocat",
 		"type": "User",
 		"site_admin": false,
-		"name": "monalisa octocat",
+		"name": "The Octocat",
 		"email": "octocat@github.com"
 	}`
 
@@ -30,9 +31,10 @@ const (
 		"login": "octodog",
 		"id": 2,
 		"url": "https://api.github.com/users/octodog",
+		"html_url": "https://github.com/octodog",
 		"type": "User",
 		"site_admin": false,
-		"name": "monalisa octodog",
+		"name": "The Octodog",
 		"email": "octodog@github.com"
 	}`
 
@@ -40,9 +42,10 @@ const (
 		"login": "octofox",
 		"id": 3,
 		"url": "https://api.github.com/users/octofox",
+		"html_url": "https://github.com/octofox",
 		"type": "User",
 		"site_admin": false,
-		"name": "monalisa octofox",
+		"name": "The Octofox",
 		"email": "octofox@github.com"
 	}`
 
@@ -71,17 +74,78 @@ const (
 		"updated_at": "2020-10-31T14:00:00Z"
 	}`
 
+	mockGitHubCommitsBody = `[
+		{
+			"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+			"commit": {
+				"author": {
+					"name": "The Octocat",
+					"email": "octocat@github.com",
+					"date": "2020-10-20T19:59:59Z"
+				},
+				"committer": {
+					"name": "The Octocat",
+					"email": "octocat@github.com",
+					"date": "2020-10-20T19:59:59Z"
+				},
+				"message": "Fix all the bugs"
+			},
+			"author": {
+				"login": "octocat",
+				"id": 1,
+				"type": "User"
+			},
+			"committer": {
+				"login": "octocat",
+				"id": 1,
+				"type": "User"
+			},
+			"parents": [
+				{
+					"url": "https://api.github.com/repos/octocat/Hello-World/commits/c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c",
+					"sha": "c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c"
+				}
+			]
+		},
+		{
+			"sha": "c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c",
+			"commit": {
+				"author": {
+					"name": "The Octocat",
+					"email": "octocat@github.com",
+					"date": "2020-10-27T23:59:59Z"
+				},
+				"committer": {
+					"name": "The Octocat",
+					"email": "octocat@github.com",
+					"date": "2020-10-27T23:59:59Z"
+				},
+				"message": "Release v0.1.0"
+			},
+			"author": {
+				"login": "octocat",
+				"id": 1,
+				"type": "User"
+			},
+			"committer": {
+				"login": "octocat",
+				"id": 1,
+				"type": "User"
+			}
+		}
+	]`
+
 	mockGitHubCommitBody1 = `{
 		"sha": "c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c",
 		"commit": {
 			"author": {
-				"name": "Monalisa Octocat",
-				"email": "mona@github.com",
+				"name": "The Octocat",
+				"email": "octocat@github.com",
 				"date": "2020-10-27T23:59:59Z"
 			},
 			"committer": {
-				"name": "Monalisa Octocat",
-				"email": "mona@github.com",
+				"name": "The Octocat",
+				"email": "octocat@github.com",
 				"date": "2020-10-27T23:59:59Z"
 			},
 			"message": "Release v0.1.0"
@@ -102,13 +166,13 @@ const (
 		"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 		"commit": {
 			"author": {
-				"name": "Monalisa Octocat",
-				"email": "mona@github.com",
+				"name": "The Octocat",
+				"email": "octocat@github.com",
 				"date": "2020-10-20T19:59:59Z"
 			},
 			"committer": {
-				"name": "Monalisa Octocat",
-				"email": "mona@github.com",
+				"name": "The Octocat",
+				"email": "octocat@github.com",
 				"date": "2020-10-20T19:59:59Z"
 			},
 			"message": "Fix all the bugs"
@@ -137,13 +201,13 @@ const (
 			"sha": "c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c",
 			"commit": {
 				"author": {
-					"name": "Monalisa Octocat",
-					"email": "mona@github.com",
+					"name": "The Octocat",
+					"email": "octocat@github.com",
 					"date": "2020-10-27T23:59:59Z"
 				},
 				"committer": {
-					"name": "Monalisa Octocat",
-					"email": "mona@github.com",
+					"name": "The Octocat",
+					"email": "octocat@github.com",
 					"date": "2020-10-27T23:59:59Z"
 				},
 				"message": "Release v0.1.0"
@@ -175,6 +239,8 @@ const (
 	mockGitHubIssuesBody = `[
 		{
 			"id": 1,
+			"url": "https://api.github.com/repos/octocat/Hello-World/issues/1001",
+			"html_url": "https://github.com/octocat/Hello-World/issues/1001",
 			"number": 1001,
 			"state": "open",
 			"title": "Found a bug",
@@ -182,6 +248,8 @@ const (
 			"user": {
 				"login": "octocat",
 				"id": 1,
+				"url": "https://api.github.com/users/octocat",
+				"html_url": "https://github.com/octocat",
 				"type": "User"
 			},
 			"labels": [
@@ -205,6 +273,8 @@ const (
 		},
 		{
 			"id": 2,
+			"url": "https://api.github.com/repos/octocat/Hello-World/issues/1002",
+			"html_url": "https://github.com/octocat/Hello-World/issues/1002",
 			"number": 1002,
 			"state": "closed",
 			"title": "Fixed a bug",
@@ -212,6 +282,8 @@ const (
 			"user": {
 				"login": "octodog",
 				"id": 2,
+				"url": "https://api.github.com/users/octodog",
+				"html_url": "https://github.com/octodog",
 				"type": "User"
 			},
 			"labels": [
@@ -240,6 +312,8 @@ const (
 	mockGitHubPullsBody = `[
 		{
 			"id": 1,
+			"url": "https://api.github.com/repos/octocat/Hello-World/pulls/1002",
+			"html_url": "https://github.com/octocat/Hello-World/pull/1002",
 			"number": 1002,
 			"state": "closed",
 			"locked": false,
@@ -249,6 +323,8 @@ const (
 			"user": {
 				"login": "octodog",
 				"id": 2,
+				"url": "https://api.github.com/users/octodog",
+				"html_url": "https://github.com/octodog",
 				"type": "User"
 			},
 			"labels": [
@@ -285,6 +361,8 @@ const (
 			"merged_by": {
 				"login": "octofox",
 				"id": 3,
+				"url": "https://api.github.com/users/octofox",
+				"html_url": "https://github.com/octofox",
 				"type": "User"
 			}
 		}
@@ -292,6 +370,8 @@ const (
 
 	mockGitHubPullBody = `{
 		"id": 1,
+		"url": "https://api.github.com/repos/octocat/Hello-World/pulls/1002",
+		"html_url": "https://github.com/octocat/Hello-World/pull/1002",
 		"number": 1002,
 		"state": "closed",
 		"locked": false,
@@ -301,6 +381,8 @@ const (
 		"user": {
 			"login": "octodog",
 			"id": 2,
+			"url": "https://api.github.com/users/octodog",
+			"html_url": "https://github.com/octodog",
 			"type": "User"
 		},
 		"labels": [
@@ -337,6 +419,8 @@ const (
 		"merged_by": {
 			"login": "octofox",
 			"id": 3,
+			"url": "https://api.github.com/users/octofox",
+			"html_url": "https://github.com/octofox",
 			"type": "User"
 		}
 	}`
@@ -347,6 +431,8 @@ const (
 			"actor": {
 				"login": "octocat",
 				"id": 1,
+				"url": "https://api.github.com/users/octocat",
+				"html_url": "https://github.com/octocat",
 				"type": "User"
 			},
 			"event": "closed",
@@ -361,6 +447,8 @@ const (
 			"actor": {
 				"login": "octofox",
 				"id": 3,
+				"url": "https://api.github.com/users/octofox",
+				"html_url": "https://github.com/octofox",
 				"type": "User"
 			},
 			"event": "merged",
@@ -372,30 +460,33 @@ const (
 
 var (
 	gitHubUser1 = user{
-		ID:    1,
-		Login: "octocat",
-		Type:  "User",
-		Email: "octocat@github.com",
-		Name:  "monalisa octocat",
-		URL:   "https://api.github.com/users/octocat",
+		ID:      1,
+		Login:   "octocat",
+		Type:    "User",
+		Email:   "octocat@github.com",
+		Name:    "The Octocat",
+		URL:     "https://api.github.com/users/octocat",
+		HTMLURL: "https://github.com/octocat",
 	}
 
 	gitHubUser2 = user{
-		ID:    2,
-		Login: "octodog",
-		Type:  "User",
-		Email: "octodog@github.com",
-		Name:  "monalisa octodog",
-		URL:   "https://api.github.com/users/octodog",
+		ID:      2,
+		Login:   "octodog",
+		Type:    "User",
+		Email:   "octodog@github.com",
+		Name:    "The Octodog",
+		URL:     "https://api.github.com/users/octodog",
+		HTMLURL: "https://github.com/octodog",
 	}
 
 	gitHubUser3 = user{
-		ID:    3,
-		Login: "octofox",
-		Type:  "User",
-		Email: "octofox@github.com",
-		Name:  "monalisa octofox",
-		URL:   "https://api.github.com/users/octofox",
+		ID:      3,
+		Login:   "octofox",
+		Type:    "User",
+		Email:   "octofox@github.com",
+		Name:    "The Octofox",
+		URL:     "https://api.github.com/users/octofox",
+		HTMLURL: "https://github.com/octofox",
 	}
 
 	gitHubRepository = repository{
@@ -424,13 +515,13 @@ var (
 		Commit: rawCommit{
 			Message: "Release v0.1.0",
 			Author: signature{
-				Name:  "Monalisa Octocat",
-				Email: "mona@github.com",
+				Name:  "The Octocat",
+				Email: "octocat@github.com",
 				Time:  parseGitHubTime("2020-10-27T23:59:59Z"),
 			},
 			Committer: signature{
-				Name:  "Monalisa Octocat",
-				Email: "mona@github.com",
+				Name:  "The Octocat",
+				Email: "octocat@github.com",
 				Time:  parseGitHubTime("2020-10-27T23:59:59Z"),
 			},
 		},
@@ -451,13 +542,13 @@ var (
 		Commit: rawCommit{
 			Message: "Fix all the bugs",
 			Author: signature{
-				Name:  "Monalisa Octocat",
-				Email: "mona@github.com",
+				Name:  "The Octocat",
+				Email: "octocat@github.com",
 				Time:  parseGitHubTime("2020-10-20T19:59:59Z"),
 			},
 			Committer: signature{
-				Name:  "Monalisa Octocat",
-				Email: "mona@github.com",
+				Name:  "The Octocat",
+				Email: "octocat@github.com",
 				Time:  parseGitHubTime("2020-10-20T19:59:59Z"),
 			},
 		},
@@ -501,9 +592,11 @@ var (
 		Title:  "Found a bug",
 		Body:   "This is not working as expected!",
 		User: user{
-			ID:    1,
-			Login: "octocat",
-			Type:  "User",
+			ID:      1,
+			Login:   "octocat",
+			Type:    "User",
+			URL:     "https://api.github.com/users/octocat",
+			HTMLURL: "https://github.com/octocat",
 		},
 		Labels: []label{
 			{
@@ -518,6 +611,8 @@ var (
 			State:  "open",
 			Title:  "v1.0",
 		},
+		URL:       "https://api.github.com/repos/octocat/Hello-World/issues/1001",
+		HTMLURL:   "https://github.com/octocat/Hello-World/issues/1001",
 		CreatedAt: parseGitHubTime("2020-10-10T10:00:00Z"),
 		UpdatedAt: parseGitHubTime("2020-10-20T20:00:00Z"),
 		ClosedAt:  nil,
@@ -531,9 +626,11 @@ var (
 		Title:  "Fixed a bug",
 		Body:   "I made this to work as expected!",
 		User: user{
-			ID:    2,
-			Login: "octodog",
-			Type:  "User",
+			ID:      2,
+			Login:   "octodog",
+			Type:    "User",
+			URL:     "https://api.github.com/users/octodog",
+			HTMLURL: "https://github.com/octodog",
 		},
 		Labels: []label{
 			{
@@ -548,6 +645,8 @@ var (
 			State:  "open",
 			Title:  "v1.0",
 		},
+		URL:     "https://api.github.com/repos/octocat/Hello-World/issues/1002",
+		HTMLURL: "https://github.com/octocat/Hello-World/issues/1002",
 		PullRequest: &pullURLs{
 			URL: "https://api.github.com/repos/octocat/Hello-World/pulls/1002",
 		},
@@ -565,9 +664,11 @@ var (
 		Title:  "Fixed a bug",
 		Body:   "I made this to work as expected!",
 		User: user{
-			ID:    2,
-			Login: "octodog",
-			Type:  "User",
+			ID:      2,
+			Login:   "octodog",
+			Type:    "User",
+			URL:     "https://api.github.com/users/octodog",
+			HTMLURL: "https://github.com/octodog",
 		},
 		Labels: []label{
 			{
@@ -596,11 +697,15 @@ var (
 		Mergeable:  nil,
 		Rebaseable: nil,
 		MergedBy: &user{
-			ID:    3,
-			Login: "octofox",
-			Type:  "User",
+			ID:      3,
+			Login:   "octofox",
+			Type:    "User",
+			URL:     "https://api.github.com/users/octofox",
+			HTMLURL: "https://github.com/octofox",
 		},
 		MergeCommitSHA: "e5bd3914e2e596debea16f433f57875b5b90bcd6",
+		URL:            "https://api.github.com/repos/octocat/Hello-World/pulls/1002",
+		HTMLURL:        "https://github.com/octocat/Hello-World/pull/1002",
 		CreatedAt:      parseGitHubTime("2020-10-15T15:00:00Z"),
 		UpdatedAt:      parseGitHubTime("2020-10-22T22:00:00Z"),
 		ClosedAt:       parseGitHubTimePtr("2020-10-20T20:00:00Z"),
@@ -612,9 +717,11 @@ var (
 		Event:    "closed",
 		CommitID: "",
 		Actor: user{
-			ID:    1,
-			Login: "octocat",
-			Type:  "User",
+			ID:      1,
+			Login:   "octocat",
+			Type:    "User",
+			URL:     "https://api.github.com/users/octocat",
+			HTMLURL: "https://github.com/octocat",
 		},
 		CreatedAt: parseGitHubTime("2020-10-20T20:00:00Z"),
 	}
@@ -624,11 +731,34 @@ var (
 		Event:    "merged",
 		CommitID: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
 		Actor: user{
-			ID:    3,
-			Login: "octofox",
-			Type:  "User",
+			ID:      3,
+			Login:   "octofox",
+			Type:    "User",
+			URL:     "https://api.github.com/users/octofox",
+			HTMLURL: "https://github.com/octofox",
 		},
 		CreatedAt: parseGitHubTime("2020-10-20T20:00:00Z"),
+	}
+
+	remoteUser1 = remote.User{
+		Name:     "The Octocat",
+		Email:    "octocat@github.com",
+		Username: "octocat",
+		WebURL:   "https://github.com/octocat",
+	}
+
+	remoteUser2 = remote.User{
+		Name:     "The Octodog",
+		Email:    "octodog@github.com",
+		Username: "octodog",
+		WebURL:   "https://github.com/octodog",
+	}
+
+	remoteUser3 = remote.User{
+		Name:     "The Octofox",
+		Email:    "octofox@github.com",
+		Username: "octofox",
+		WebURL:   "https://github.com/octofox",
 	}
 
 	remoteCommit1 = remote.Commit{
@@ -650,6 +780,7 @@ var (
 		Name:   "v0.1.0",
 		Time:   parseGitHubTime("2020-10-27T23:59:59Z"),
 		Commit: remoteCommit1,
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.0",
 	}
 
 	remoteIssue = remote.Issue{
@@ -659,19 +790,10 @@ var (
 			Labels:    []string{"bug"},
 			Milestone: "v1.0",
 			Time:      time.Time{},
-			Creator: remote.User{
-				Name:     "monalisa octocat",
-				Email:    "octocat@github.com",
-				Username: "octocat",
-				URL:      "https://api.github.com/users/octocat",
-			},
+			Author:    remoteUser1,
+			WebURL:    "https://github.com/octocat/Hello-World/issues/1001",
 		},
-		Closer: remote.User{
-			Name:     "monalisa octocat",
-			Email:    "octocat@github.com",
-			Username: "octocat",
-			URL:      "https://api.github.com/users/octocat",
-		},
+		Closer: remoteUser1,
 	}
 
 	remoteMerge = remote.Merge{
@@ -681,19 +803,10 @@ var (
 			Labels:    []string{"bug"},
 			Milestone: "v1.0",
 			Time:      parseGitHubTime("2020-10-20T19:59:59Z"),
-			Creator: remote.User{
-				Name:     "monalisa octodog",
-				Email:    "octodog@github.com",
-				Username: "octodog",
-				URL:      "https://api.github.com/users/octodog",
-			},
+			Author:    remoteUser2,
+			WebURL:    "https://github.com/octocat/Hello-World/pull/1002",
 		},
-		Merger: remote.User{
-			Name:     "monalisa octofox",
-			Email:    "octofox@github.com",
-			Username: "octofox",
-			URL:      "https://api.github.com/users/octofox",
-		},
+		Merger: remoteUser3,
 		Commit: remoteCommit2,
 	}
 )
@@ -890,7 +1003,7 @@ func TestRepo_makeRequest(t *testing.T) {
 						"type": "User",
 						"login": "octocat",
 						"email": "octocat@github.com",
-						"name": "monalisa octocat"
+						"name": "The Octocat"
 					}`,
 				},
 			},
@@ -1600,7 +1713,7 @@ func TestRepo_fetchTagsPageCount(t *testing.T) {
 			mockResponses: []MockResponse{
 				{
 					"HEAD", "/repos/octocat/Hello-World/tags", 200, http.Header{
-						"Link": []string{`<https://api.github.com/repositories/1/tags?state=closed&page=2>; rel="next", <https://api.github.com/repositories/1/tags?state=closed&page=3>; rel="last"`},
+						"Link": []string{`<https://api.github.com/repositories/1/tags?page=2>; rel="next", <https://api.github.com/repositories/1/tags?page=3>; rel="last"`},
 					}, ``,
 				},
 			},
@@ -1698,6 +1811,157 @@ func TestRepo_fetchTags(t *testing.T) {
 				assert.Equal(t, tc.expectedTags, tags)
 			} else {
 				assert.Nil(t, tags)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
+func TestRepo_fetchCommitsPageCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockResponses []MockResponse
+		ctx           context.Context
+		expectedCount int
+		expectedError string
+	}{
+		{
+			name:          "NilContext",
+			mockResponses: []MockResponse{},
+			ctx:           nil,
+			expectedError: "net/http: nil Context",
+		},
+		{
+			name: "InvalidStatusCode",
+			mockResponses: []MockResponse{
+				{"HEAD", "/repos/octocat/Hello-World/commits", 401, nil, `bad credentials`},
+			},
+			ctx:           context.Background(),
+			expectedError: "HEAD /repos/octocat/Hello-World/commits 401: ",
+		},
+		{
+			name: "Success_NoLinkHeader",
+			mockResponses: []MockResponse{
+				{"HEAD", "/repos/octocat/Hello-World/commits", 200, http.Header{}, ``},
+			},
+			ctx:           context.Background(),
+			expectedCount: 1,
+		},
+		{
+			name: "InvalidLinkHeader",
+			mockResponses: []MockResponse{
+				{
+					"HEAD", "/repos/octocat/Hello-World/commits", 200, http.Header{
+						"Link": []string{`<>; rel="next", <>; rel="last"`},
+					}, ``,
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: `invalid Link header received from GitHub: <>; rel="next", <>; rel="last"`,
+		},
+		{
+			name: "Success_LinkHeader",
+			mockResponses: []MockResponse{
+				{
+					"HEAD", "/repos/octocat/Hello-World/commits", 200, http.Header{
+						"Link": []string{`<https://api.github.com/repositories/1/commits?page=2>; rel="next", <https://api.github.com/repositories/1/commits?page=7>; rel="last"`},
+					}, ``,
+				},
+			},
+			ctx:           context.Background(),
+			expectedCount: 7,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				client: new(http.Client),
+				path:   "octocat/Hello-World",
+			}
+
+			ts := createMockHTTPServer(tc.mockResponses...)
+			defer ts.Close()
+			r.apiURL = ts.URL
+
+			count, err := r.fetchCommitsPageCount(tc.ctx)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedCount, count)
+			} else {
+				assert.Equal(t, -1, count)
+				assert.EqualError(t, err, tc.expectedError)
+			}
+		})
+	}
+}
+
+func TestRepo_fetchCommits(t *testing.T) {
+	tests := []struct {
+		name            string
+		mockResponses   []MockResponse
+		ctx             context.Context
+		pageNo          int
+		expectedError   string
+		expectedCommits []commit
+	}{
+		{
+			name:          "NilContext",
+			mockResponses: []MockResponse{},
+			ctx:           nil,
+			pageNo:        1,
+			expectedError: "net/http: nil Context",
+		},
+		{
+			name: "InvalidStatusCode",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/commits", 401, nil, `bad credentials`},
+			},
+			ctx:           context.Background(),
+			pageNo:        1,
+			expectedError: "GET /repos/octocat/Hello-World/commits 401: bad credentials",
+		},
+		{
+			name: "ّInvalidResponse",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/commits", 200, nil, `[`},
+			},
+			ctx:           context.Background(),
+			pageNo:        1,
+			expectedError: "unexpected EOF",
+		},
+		{
+			name: "Success",
+			mockResponses: []MockResponse{
+				{"GET", "/repos/octocat/Hello-World/commits", 200, nil, mockGitHubCommitsBody},
+			},
+			ctx:             context.Background(),
+			pageNo:          1,
+			expectedCommits: []commit{gitHubCommit2, gitHubCommit1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				client: new(http.Client),
+				path:   "octocat/Hello-World",
+			}
+
+			ts := createMockHTTPServer(tc.mockResponses...)
+			defer ts.Close()
+			r.apiURL = ts.URL
+
+			commits, err := r.fetchCommits(tc.ctx, tc.pageNo)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedCommits, commits)
+			} else {
+				assert.Nil(t, commits)
 				assert.EqualError(t, err, tc.expectedError)
 			}
 		})
@@ -2017,6 +2281,38 @@ func TestRepo_fetchPulls(t *testing.T) {
 				assert.Nil(t, pulls)
 				assert.EqualError(t, err, tc.expectedError)
 			}
+		})
+	}
+}
+
+func TestRepo_FutureTag(t *testing.T) {
+	tests := []struct {
+		name            string
+		tagName         string
+		expectedTagName string
+		expectedTagURL  string
+	}{
+		{
+			name:            "OK",
+			tagName:         "v0.1.1",
+			expectedTagName: "v0.1.1",
+			expectedTagURL:  "https://github.com/octocat/Hello-World/tree/v0.1.1",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				path:   "octocat/Hello-World",
+			}
+
+			tag := r.FutureTag(tc.tagName)
+
+			assert.NotEmpty(t, tag)
+			assert.NotZero(t, tag.Time)
+			assert.Equal(t, tc.expectedTagName, tag.Name)
+			assert.Equal(t, tc.expectedTagURL, tag.WebURL)
 		})
 	}
 }

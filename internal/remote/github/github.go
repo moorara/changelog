@@ -416,6 +416,74 @@ func (r *repo) fetchTags(ctx context.Context, pageNo int) ([]tag, error) {
 	return tags, nil
 }
 
+func (r *repo) fetchCommitsPageCount(ctx context.Context) (int, error) {
+	// See https://docs.github.com/en/rest/reference/repos#list-commits
+
+	r.logger.Debug("Fetching the total number of pages for GitHub commits ...")
+
+	url := fmt.Sprintf("%s/repos/%s/commits", r.apiURL, r.path)
+	req, err := r.createRequest(ctx, "HEAD", url, nil)
+	if err != nil {
+		return -1, err
+	}
+
+	q := req.URL.Query()
+	q.Add("per_page", strconv.Itoa(pageSize))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := r.makeRequest(req, 200)
+	if err != nil {
+		return -1, err
+	}
+
+	count := 1
+
+	if link := resp.Header.Get("Link"); link != "" {
+		sm := relLastRE.FindStringSubmatch(link)
+		if len(sm) != 2 {
+			return -1, fmt.Errorf("invalid Link header received from GitHub: %s", link)
+		}
+
+		// sm[1] is guaranteed to be a number at this point
+		count, _ = strconv.Atoi(sm[1])
+	}
+
+	r.logger.Debugf("Fetched the total number of pages for GitHub commits: %d", count)
+
+	return count, nil
+}
+
+func (r *repo) fetchCommits(ctx context.Context, pageNo int) ([]commit, error) {
+	// See https://docs.github.com/en/rest/reference/repos#list-commits
+
+	r.logger.Debugf("Fetching GitHub commits page %d ...", pageNo)
+
+	url := fmt.Sprintf("%s/repos/%s/commits", r.apiURL, r.path)
+	req, err := r.createRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Add("per_page", strconv.Itoa(pageSize))
+	q.Add("page", strconv.Itoa(pageNo))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := r.makeRequest(req, 200)
+	if err != nil {
+		return nil, err
+	}
+
+	commits := []commit{}
+	if err = json.NewDecoder(resp.Body).Decode(&commits); err != nil {
+		return nil, err
+	}
+
+	r.logger.Debugf("Fetched GitHub commits page %d: %d", pageNo, len(commits))
+
+	return commits, nil
+}
+
 func (r *repo) fetchIssuesPageCount(ctx context.Context, since time.Time) (int, error) {
 	// See https://docs.github.com/en/rest/reference/issues#list-repository-issues
 
@@ -562,6 +630,15 @@ func (r *repo) fetchPulls(ctx context.Context, pageNo int) ([]pull, error) {
 	return pulls, nil
 }
 
+// FutureTag returns a tag that does not exist yet for a GitHub repository.
+func (r *repo) FutureTag(name string) remote.Tag {
+	return remote.Tag{
+		Name:   name,
+		Time:   time.Now(),
+		WebURL: fmt.Sprintf("https://github.com/%s/tree/%s", r.path, name),
+	}
+}
+
 // FetchBranch retrieves a branch by name for a GitHub repository.
 func (r *repo) FetchBranch(ctx context.Context, name string) (remote.Branch, error) {
 	if err := r.checkScopes(ctx, scopeRepo); err != nil {
@@ -640,7 +717,7 @@ func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 		return nil, err
 	}
 
-	// ==============================> FETCH COMMITS <==============================
+	// ==============================> FETCH TAG COMMITS <==============================
 
 	r.logger.Debug("Fetching GitHub commits for tags ...")
 
@@ -661,7 +738,7 @@ func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 
 	// ==============================> JOINING TAGS & COMMITS <==============================
 
-	tags := resolveTags(gitHubTags, r.commits)
+	tags := resolveTags(gitHubTags, r.commits, r.path)
 
 	r.logger.Debugf("Resolved and sorted GitHub tags: %d", len(tags))
 	r.logger.Info("GitHub tags are fetched")

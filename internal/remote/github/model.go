@@ -1,6 +1,8 @@
 package github
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/moorara/changelog/internal/remote"
@@ -193,6 +195,15 @@ type (
 	}
 )
 
+func toUser(u user) remote.User {
+	return remote.User{
+		Name:     u.Name,
+		Email:    u.Email,
+		Username: u.Login,
+		WebURL:   u.HTMLURL,
+	}
+}
+
 func toCommit(c commit) remote.Commit {
 	return remote.Commit{
 		Hash: c.SHA,
@@ -207,15 +218,16 @@ func toBranch(b branch) remote.Branch {
 	}
 }
 
-func toTag(t tag, c commit) remote.Tag {
+func toTag(t tag, c commit, repoPath string) remote.Tag {
 	return remote.Tag{
 		Name:   t.Name,
 		Time:   c.Commit.Committer.Time,
 		Commit: toCommit(c),
+		WebURL: fmt.Sprintf("https://github.com/%s/tree/%s", repoPath, t.Name),
 	}
 }
 
-func toIssue(i issue, e event, creator, closer user) remote.Issue {
+func toIssue(i issue, e event, author, closer user) remote.Issue {
 	// e is the closed event of the issue
 
 	labels := make([]string, len(i.Labels))
@@ -241,23 +253,14 @@ func toIssue(i issue, e event, creator, closer user) remote.Issue {
 			Labels:    labels,
 			Milestone: milestone,
 			Time:      time,
-			Creator: remote.User{
-				Name:     creator.Name,
-				Email:    creator.Email,
-				Username: creator.Login,
-				URL:      creator.URL,
-			},
+			Author:    toUser(author),
+			WebURL:    i.HTMLURL,
 		},
-		Closer: remote.User{
-			Name:     closer.Name,
-			Email:    closer.Email,
-			Username: closer.Login,
-			URL:      closer.URL,
-		},
+		Closer: toUser(closer),
 	}
 }
 
-func toMerge(i issue, e event, c commit, creator, merger user) remote.Merge {
+func toMerge(i issue, e event, c commit, author, merger user) remote.Merge {
 	// e is the merged event of the pull request
 
 	labels := make([]string, len(i.Labels))
@@ -274,6 +277,10 @@ func toMerge(i issue, e event, c commit, creator, merger user) remote.Merge {
 	// c.Commit.Committer.Time is the actual time of merge
 	time := c.Commit.Committer.Time
 
+	// Since we convert an issue to a pull request, we need to re-write the URL
+	// TODO: replace the last occurrence of "/issues" in case the name of the repo is also issues!
+	url := strings.Replace(i.HTMLURL, "/issues", "/pull", 1)
+
 	return remote.Merge{
 		Change: remote.Change{
 			Number:    i.Number,
@@ -281,29 +288,20 @@ func toMerge(i issue, e event, c commit, creator, merger user) remote.Merge {
 			Labels:    labels,
 			Milestone: milestone,
 			Time:      time,
-			Creator: remote.User{
-				Name:     creator.Name,
-				Email:    creator.Email,
-				Username: creator.Login,
-				URL:      creator.URL,
-			},
+			Author:    toUser(author),
+			WebURL:    url,
 		},
-		Merger: remote.User{
-			Name:     merger.Name,
-			Email:    merger.Email,
-			Username: merger.Login,
-			URL:      merger.URL,
-		},
+		Merger: toUser(merger),
 		Commit: toCommit(c),
 	}
 }
 
-func resolveTags(gitHubTags *tagStore, gitHubCommits *commitStore) remote.Tags {
+func resolveTags(gitHubTags *tagStore, gitHubCommits *commitStore, repoPath string) remote.Tags {
 	tags := remote.Tags{}
 
 	_ = gitHubTags.ForEach(func(name string, t tag) error {
 		if c, ok := gitHubCommits.Load(t.Commit.SHA); ok {
-			tags = append(tags, toTag(t, c))
+			tags = append(tags, toTag(t, c, repoPath))
 		}
 		return nil
 	})
@@ -320,16 +318,16 @@ func resolveIssuesAndMerges(gitHubIssues *issueStore, gitHubEvents *eventStore, 
 	_ = gitHubIssues.ForEach(func(num int, i issue) error {
 		if i.PullRequest == nil { // Issue
 			e, _ := gitHubEvents.Load(num)
-			creator, _ := gitHubUsers.Load(i.User.Login)
+			author, _ := gitHubUsers.Load(i.User.Login)
 			closer, _ := gitHubUsers.Load(e.Actor.Login)
-			issues = append(issues, toIssue(i, e, creator, closer))
+			issues = append(issues, toIssue(i, e, author, closer))
 		} else { // Pull request
 			// If no event found, the pull request is closed without being merged
 			if e, ok := gitHubEvents.Load(num); ok {
 				c, _ := gitHubCommits.Load(e.CommitID)
-				creator, _ := gitHubUsers.Load(i.User.Login)
+				author, _ := gitHubUsers.Load(i.User.Login)
 				merger, _ := gitHubUsers.Load(e.Actor.Login)
-				merges = append(merges, toMerge(i, e, c, creator, merger))
+				merges = append(merges, toMerge(i, e, c, author, merger))
 			}
 		}
 

@@ -18,7 +18,6 @@ const helpTemplate = `
   Supported Remote Repositories:
 
     • GitHub (github.com)
-    • GitLab (gitlab.com)
 
   Usage: changelog [flags]
 

@@ -22,17 +22,17 @@ var (
 	t4 = parseGitHubTime("2020-10-31T23:00:00-04:00")
 
 	user1 = remote.User{
-		Name:     "monalisa octocat",
+		Name:     "The Octocat",
 		Email:    "octocat@github.com",
 		Username: "octocat",
-		URL:      "https://github.com/octocat",
+		WebURL:   "https://github.com/octocat",
 	}
 
 	user2 = remote.User{
-		Name:     "monalisa octodog",
+		Name:     "The Octodog",
 		Email:    "octodog@github.com",
 		Username: "octodog",
-		URL:      "https://github.com/octodog",
+		WebURL:   "https://github.com/octodog",
 	}
 
 	commit1 = remote.Commit{
@@ -64,18 +64,24 @@ var (
 		Name:   "v0.1.1",
 		Time:   t1,
 		Commit: commit1,
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.1",
+		// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.0...v0.1.1",
 	}
 
 	tag2 = remote.Tag{
 		Name:   "v0.1.2",
 		Time:   t2,
 		Commit: commit2,
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.2",
+		// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.1...v0.1.2",
 	}
 
 	tag3 = remote.Tag{
 		Name:   "v0.1.3",
 		Time:   t3,
 		Commit: commit3,
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.3",
+		// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
 	}
 
 	issue1 = remote.Issue{
@@ -85,7 +91,8 @@ var (
 			Labels:    []string{"bug"},
 			Milestone: "v1.0",
 			Time:      t3,
-			Creator:   user1,
+			Author:    user1,
+			WebURL:    "https://github.com/octocat/Hello-World/issues/1001",
 		},
 		Closer: user1,
 	}
@@ -97,7 +104,8 @@ var (
 			Labels:    []string{"invalid"},
 			Milestone: "",
 			Time:      t4, // Unrleased change for future tag
-			Creator:   user1,
+			Author:    user1,
+			WebURL:    "https://github.com/octocat/Hello-World/issues/1002",
 		},
 		Closer: user2,
 	}
@@ -109,7 +117,8 @@ var (
 			Labels:    []string{"enhancement"},
 			Milestone: "v1.0",
 			Time:      t3,
-			Creator:   user1,
+			Author:    user1,
+			WebURL:    "https://github.com/octocat/Hello-World/pull/1003",
 		},
 		Merger: user1,
 		Commit: commit3,
@@ -122,7 +131,8 @@ var (
 			Labels:    nil,
 			Milestone: "v1.0",
 			Time:      t4, // Unrleased change for future tag
-			Creator:   user1,
+			Author:    user1,
+			WebURL:    "https://github.com/octocat/Hello-World/pull/1004",
 		},
 		Merger: user2,
 		Commit: commit4,
@@ -131,13 +141,14 @@ var (
 	changelogIssue1 = changelog.Issue{
 		Number: 1001,
 		Title:  "Found a bug",
+		URL:    "https://github.com/octocat/Hello-World/issues/1001",
 		OpenedBy: changelog.User{
-			Name:     "monalisa octocat",
+			Name:     "The Octocat",
 			Username: "octocat",
 			URL:      "https://github.com/octocat",
 		},
 		ClosedBy: changelog.User{
-			Name:     "monalisa octocat",
+			Name:     "The Octocat",
 			Username: "octocat",
 			URL:      "https://github.com/octocat",
 		},
@@ -146,13 +157,14 @@ var (
 	changelogIssue2 = changelog.Issue{
 		Number: 1002,
 		Title:  "Discovered a vulnerability",
+		URL:    "https://github.com/octocat/Hello-World/issues/1002",
 		OpenedBy: changelog.User{
-			Name:     "monalisa octocat",
+			Name:     "The Octocat",
 			Username: "octocat",
 			URL:      "https://github.com/octocat",
 		},
 		ClosedBy: changelog.User{
-			Name:     "monalisa octodog",
+			Name:     "The Octodog",
 			Username: "octodog",
 			URL:      "https://github.com/octodog",
 		},
@@ -161,13 +173,14 @@ var (
 	changelogMerge1 = changelog.Merge{
 		Number: 1003,
 		Title:  "Added a feature",
+		URL:    "https://github.com/octocat/Hello-World/pull/1003",
 		OpenedBy: changelog.User{
-			Name:     "monalisa octocat",
+			Name:     "The Octocat",
 			Username: "octocat",
 			URL:      "https://github.com/octocat",
 		},
 		MergedBy: changelog.User{
-			Name:     "monalisa octocat",
+			Name:     "The Octocat",
 			Username: "octocat",
 			URL:      "https://github.com/octocat",
 		},
@@ -176,13 +189,14 @@ var (
 	changelogMerge2 = changelog.Merge{
 		Number: 1004,
 		Title:  "Refactored code",
+		URL:    "https://github.com/octocat/Hello-World/pull/1004",
 		OpenedBy: changelog.User{
-			Name:     "monalisa octocat",
+			Name:     "The Octocat",
 			Username: "octocat",
 			URL:      "https://github.com/octocat",
 		},
 		MergedBy: changelog.User{
-			Name:     "monalisa octodog",
+			Name:     "The Octodog",
 			Username: "octodog",
 			URL:      "https://github.com/octodog",
 		},
@@ -239,6 +253,12 @@ func TestNew(t *testing.T) {
 }
 
 func TestGenerator_resolveTags(t *testing.T) {
+	futureTag := remote.Tag{
+		Name:   "v0.1.0",
+		Time:   parseGitHubTime("2020-11-02T14:00:00-04:00"),
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.0",
+	}
+
 	tests := []struct {
 		name              string
 		g                 *Generator
@@ -271,15 +291,18 @@ func TestGenerator_resolveTags(t *testing.T) {
 					},
 				},
 				logger: log.New(log.None),
+				remoteRepo: &MockRemoteRepo{
+					FutureTagMocks: []FutureTagMock{
+						{OutTag: futureTag},
+					},
+				},
 			},
-			chlog:           &changelog.Changelog{},
-			sortedTags:      remote.Tags{},
-			expectedFromTag: remote.Tag{},
-			expectedToTag:   remote.Tag{},
-			expectedFutureTag: remote.Tag{
-				Name: "v0.1.0",
-			},
-			expectedError: nil,
+			chlog:             &changelog.Changelog{},
+			sortedTags:        remote.Tags{},
+			expectedFromTag:   remote.Tag{},
+			expectedToTag:     remote.Tag{},
+			expectedFutureTag: futureTag,
+			expectedError:     nil,
 		},
 		{
 			name: "FirstRelease",
@@ -301,7 +324,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 			},
 			chlog: &changelog.Changelog{
-				Releases: []changelog.Release{
+				Existing: []changelog.Release{
 					{TagName: "0.1.0"},
 				},
 			},
@@ -318,7 +341,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 			},
 			chlog: &changelog.Changelog{
-				Releases: []changelog.Release{
+				Existing: []changelog.Release{
 					{TagName: "v0.1.1"},
 				},
 			},
@@ -339,7 +362,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 			},
 			chlog: &changelog.Changelog{
-				Releases: []changelog.Release{
+				Existing: []changelog.Release{
 					{TagName: "v0.1.1"},
 				},
 			},
@@ -360,7 +383,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 			},
 			chlog: &changelog.Changelog{
-				Releases: []changelog.Release{
+				Existing: []changelog.Release{
 					{TagName: "v0.1.1"},
 				},
 			},
@@ -381,7 +404,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 			},
 			chlog: &changelog.Changelog{
-				Releases: []changelog.Release{
+				Existing: []changelog.Release{
 					{TagName: "v0.1.2"},
 					{TagName: "v0.1.1"},
 				},
@@ -404,7 +427,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 			},
 			chlog: &changelog.Changelog{
-				Releases: []changelog.Release{
+				Existing: []changelog.Release{
 					{TagName: "v0.1.2"},
 					{TagName: "v0.1.1"},
 				},
@@ -427,7 +450,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 			},
 			chlog: &changelog.Changelog{
-				Releases: []changelog.Release{
+				Existing: []changelog.Release{
 					{TagName: "v0.1.2"},
 					{TagName: "v0.1.1"},
 				},
@@ -450,7 +473,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 			},
 			chlog: &changelog.Changelog{
-				Releases: []changelog.Release{
+				Existing: []changelog.Release{
 					{TagName: "v0.1.2"},
 					{TagName: "v0.1.1"},
 				},
@@ -855,7 +878,7 @@ func TestGenerator_Generate(t *testing.T) {
 					ParseMocks: []ParseMock{
 						{
 							OutChangelog: &changelog.Changelog{
-								Releases: []changelog.Release{
+								Existing: []changelog.Release{
 									{TagName: "v0.1.1"},
 								},
 							},
@@ -906,6 +929,15 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					FutureTagMocks: []FutureTagMock{
+						{
+							OutTag: remote.Tag{
+								Name:   "v0.1.0",
+								Time:   time.Now(),
+								WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.0",
+							},
+						},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},

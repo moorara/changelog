@@ -60,11 +60,11 @@ func (g *Generator) resolveTags(chlog *changelog.Changelog, sortedTags remote.Ta
 	}
 
 	// Resolve the last tag on changelog
-	if len(chlog.Releases) == 0 {
+	if len(chlog.Existing) == 0 {
 		lastChangelogTag = remote.Tag{} // Denotes the case where the changelog is empty
 	} else {
-		if lastChangelogTag, ok = sortedTags.Find(chlog.Releases[0].TagName); !ok {
-			return zero, zero, zero, fmt.Errorf("changelog tag not found: %s", chlog.Releases[0].TagName)
+		if lastChangelogTag, ok = sortedTags.Find(chlog.Existing[0].TagName); !ok {
+			return zero, zero, zero, fmt.Errorf("changelog tag not found: %s", chlog.Existing[0].TagName)
 		}
 	}
 
@@ -97,9 +97,7 @@ func (g *Generator) resolveTags(chlog *changelog.Changelog, sortedTags remote.Ta
 
 	// Resolve the future tag
 	if g.spec.Tags.Future != "" {
-		futureTag = remote.Tag{
-			Name: g.spec.Tags.Future,
-		}
+		futureTag = g.remoteRepo.FutureTag(g.spec.Tags.Future)
 	}
 
 	g.logger.Infof("From tag resolved: %s", fromTag.Name)
@@ -271,10 +269,12 @@ func (g *Generator) Generate(ctx context.Context) error {
 
 	// ==============================> UPDATE THE CHANGELOG <==============================
 
-	_, err = g.processor.Render(chlog)
+	content, err := g.processor.Render(chlog)
 	if err != nil {
 		return err
 	}
+
+	fmt.Print(content)
 
 	return nil
 }

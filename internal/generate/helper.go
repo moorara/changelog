@@ -147,15 +147,16 @@ func toIssueGroup(title string, issues remote.Issues) changelog.IssueGroup {
 		issueGroup.Issues = append(issueGroup.Issues, changelog.Issue{
 			Number: i.Number,
 			Title:  i.Title,
+			URL:    i.WebURL,
 			OpenedBy: changelog.User{
-				Name:     i.Creator.Name,
-				Username: i.Creator.Username,
-				URL:      i.Creator.URL,
+				Name:     i.Author.Name,
+				Username: i.Author.Username,
+				URL:      i.Author.WebURL,
 			},
 			ClosedBy: changelog.User{
 				Name:     i.Closer.Name,
 				Username: i.Closer.Username,
-				URL:      i.Closer.URL,
+				URL:      i.Closer.WebURL,
 			},
 		})
 	}
@@ -172,15 +173,16 @@ func toMergeGroup(title string, merges remote.Merges) changelog.MergeGroup {
 		mergeGroup.Merges = append(mergeGroup.Merges, changelog.Merge{
 			Number: m.Number,
 			Title:  m.Title,
+			URL:    m.WebURL,
 			OpenedBy: changelog.User{
-				Name:     m.Creator.Name,
-				Username: m.Creator.Username,
-				URL:      m.Creator.URL,
+				Name:     m.Author.Name,
+				Username: m.Author.Username,
+				URL:      m.Author.WebURL,
 			},
 			MergedBy: changelog.User{
 				Name:     m.Merger.Name,
 				Username: m.Merger.Username,
-				URL:      m.Merger.URL,
+				URL:      m.Merger.WebURL,
 			},
 		})
 	}
@@ -202,10 +204,12 @@ func resolveReleases(sortedTags remote.Tags, futureTag remote.Tag, im issueMap, 
 	mergeGroups := s.Merges.Groups()
 
 	for _, tag := range tags {
-		// evert tag represents a new release
+		// Every tag represents a new release
 		release := changelog.Release{
 			TagName: tag.Name,
+			TagURL:  tag.WebURL,
 			TagTime: tag.Time,
+			// TODO: CompareURL: tag.CompareURL,
 		}
 
 		// Group issues for the current tag

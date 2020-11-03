@@ -15,13 +15,15 @@ type ParseOptions struct{}
 type Changelog struct {
 	Title    string
 	New      []Release
-	Releases []Release
+	Existing []Release
 }
 
 // Release represents a single release of a repository in a changelog.
 type Release struct {
 	TagName     string
+	TagURL      string
 	TagTime     time.Time
+	CompareURL  string
 	IssueGroups []IssueGroup
 	MergeGroups []MergeGroup
 }
@@ -36,6 +38,7 @@ type IssueGroup struct {
 type Issue struct {
 	Number   int
 	Title    string
+	URL      string
 	OpenedBy User
 	ClosedBy User
 }
@@ -50,6 +53,7 @@ type MergeGroup struct {
 type Merge struct {
 	Number   int
 	Title    string
+	URL      string
 	OpenedBy User
 	MergedBy User
 }
