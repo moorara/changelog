@@ -1946,9 +1946,10 @@ func TestRepo_fetchCommits(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &repo{
-				logger: log.New(log.None),
-				client: new(http.Client),
-				path:   "octocat/Hello-World",
+				logger:  log.New(log.None),
+				client:  new(http.Client),
+				path:    "octocat/Hello-World",
+				commits: newCommitStore(),
 			}
 
 			ts := createMockHTTPServer(tc.mockResponses...)
@@ -2313,6 +2314,77 @@ func TestRepo_FutureTag(t *testing.T) {
 			assert.NotZero(t, tag.Time)
 			assert.Equal(t, tc.expectedTagName, tag.Name)
 			assert.Equal(t, tc.expectedTagURL, tag.WebURL)
+		})
+	}
+}
+
+func TestRepo_FetchFirstCommit(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockResponses  []MockResponse
+		ctx            context.Context
+		expectedError  string
+		expectedCommit remote.Commit
+	}{
+		{
+			name: "CheckScopesFails",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{}, ``},
+			},
+			ctx:           context.Background(),
+			expectedError: "access token does not have the scope: repo",
+		},
+		{
+			name: "FetchCommitsPageCountFails",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+			},
+			ctx:           context.Background(),
+			expectedError: "HEAD /repos/octocat/Hello-World/commits 404: ",
+		},
+		{
+			name: "FetchCommitsFails",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/commits", 200, http.Header{}, ``},
+			},
+			ctx:           context.Background(),
+			expectedError: "GET /repos/octocat/Hello-World/commits 405: ",
+		},
+		{
+			name: "Success",
+			mockResponses: []MockResponse{
+				{"HEAD", "/user", 200, http.Header{"X-OAuth-Scopes": []string{"repo"}}, ``},
+				{"HEAD", "/repos/octocat/Hello-World/commits", 200, http.Header{}, ``},
+				{"GET", "/repos/octocat/Hello-World/commits", 200, http.Header{}, mockGitHubCommitsBody},
+			},
+			ctx:            context.Background(),
+			expectedCommit: remoteCommit1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger:  log.New(log.None),
+				client:  new(http.Client),
+				path:    "octocat/Hello-World",
+				commits: newCommitStore(),
+			}
+
+			ts := createMockHTTPServer(tc.mockResponses...)
+			defer ts.Close()
+			r.apiURL = ts.URL
+
+			commit, err := r.FetchFirstCommit(tc.ctx)
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedCommit, commit)
+			} else {
+				assert.Empty(t, commit)
+				assert.EqualError(t, err, tc.expectedError)
+			}
 		})
 	}
 }

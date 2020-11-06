@@ -116,27 +116,32 @@ func TestCommit(t *testing.T) {
 	tests := []struct {
 		name           string
 		c              Commit
+		expectedIsZero bool
 		expectedString string
 	}{
 		{
 			name:           "Zero",
 			c:              Commit{},
+			expectedIsZero: true,
 			expectedString: "",
 		},
 		{
 			name:           "Commit1",
 			c:              commit1,
+			expectedIsZero: false,
 			expectedString: "25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378",
 		},
 		{
 			name:           "Commit2",
 			c:              commit2,
+			expectedIsZero: false,
 			expectedString: "0251a422d2038967eeaaaa5c8aa76c7067fdef05",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedIsZero, tc.c.IsZero())
 			assert.Equal(t, tc.expectedString, tc.c.String())
 		})
 	}
@@ -385,6 +390,20 @@ func TestTags_First(t *testing.T) {
 		expectedOK  bool
 	}{
 		{
+			name:        "NoTagNoPredicate",
+			t:           nil,
+			f:           nil,
+			expectedTag: Tag{},
+			expectedOK:  false,
+		},
+		{
+			name:        "NoPredicate",
+			t:           Tags{t1, t2},
+			f:           nil,
+			expectedTag: t1,
+			expectedOK:  true,
+		},
+		{
 			name: "Found",
 			t:    Tags{t1, t2},
 			f: func(t Tag) bool {
@@ -425,6 +444,20 @@ func TestTags_Last(t *testing.T) {
 		expectedTag Tag
 		expectedOK  bool
 	}{
+		{
+			name:        "NoTagNoPredicate",
+			t:           nil,
+			f:           nil,
+			expectedTag: Tag{},
+			expectedOK:  false,
+		},
+		{
+			name:        "NoPredicate",
+			t:           Tags{t1, t2},
+			f:           nil,
+			expectedTag: t2,
+			expectedOK:  true,
+		},
 		{
 			name: "Found",
 			t:    Tags{t1, t2},
@@ -477,6 +510,98 @@ func TestTags_Sort(t *testing.T) {
 	}
 }
 
+func TestTags_Reverse(t *testing.T) {
+	tests := []struct {
+		name         string
+		t            Tags
+		expectedTags Tags
+	}{
+		{
+			name:         "OK",
+			t:            Tags{tag1, tag2},
+			expectedTags: Tags{tag2, tag1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tags := tc.t.Reverse()
+
+			assert.Equal(t, tc.expectedTags, tags)
+		})
+	}
+}
+
+func TestTags_Select(t *testing.T) {
+	tests := []struct {
+		name             string
+		t                Tags
+		f                func(Tag) bool
+		expectedSelected Tags
+	}{
+		{
+			name: "Named",
+			t:    Tags{tag1, tag2},
+			f: func(t Tag) bool {
+				return len(t.Name) > 0
+			},
+			expectedSelected: Tags{tag1, tag2},
+		},
+		{
+			name: "Unnamed",
+			t:    Tags{tag1, tag2},
+			f: func(t Tag) bool {
+				return len(t.Name) == 0
+			},
+			expectedSelected: Tags{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			selected := tc.t.Select(tc.f)
+
+			assert.Equal(t, tc.expectedSelected, selected)
+		})
+	}
+}
+
+func TestTags_Remove(t *testing.T) {
+	tests := []struct {
+		name            string
+		t               Tags
+		f               func(Tag) bool
+		expectedTags    Tags
+		expextedRemoved Tags
+	}{
+		{
+			name:            "Nil",
+			t:               nil,
+			f:               nil,
+			expectedTags:    nil,
+			expextedRemoved: nil,
+		},
+		{
+			name: "OK",
+			t:    Tags{tag1, tag2},
+			f: func(t Tag) bool {
+				return t.Name == "v0.1.0"
+			},
+			expectedTags:    Tags{tag2},
+			expextedRemoved: Tags{tag1},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			removed := tc.t.Remove(tc.f)
+
+			assert.Equal(t, tc.expectedTags, tc.t)
+			assert.Equal(t, tc.expextedRemoved, removed)
+		})
+	}
+}
+
 func TestTags_Exclude(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -519,28 +644,6 @@ func TestTags_ExcludeRegex(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tags := tc.t.ExcludeRegex(tc.regex)
-
-			assert.Equal(t, tc.expectedTags, tags)
-		})
-	}
-}
-
-func TestTags_Reverse(t *testing.T) {
-	tests := []struct {
-		name         string
-		t            Tags
-		expectedTags Tags
-	}{
-		{
-			name:         "OK",
-			t:            Tags{tag1, tag2},
-			expectedTags: Tags{tag2, tag1},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			tags := tc.t.Reverse()
 
 			assert.Equal(t, tc.expectedTags, tags)
 		})
@@ -622,40 +725,6 @@ func TestLabels_Any(t *testing.T) {
 	}
 }
 
-func TestIssues_Select(t *testing.T) {
-	tests := []struct {
-		name           string
-		i              Issues
-		f              func(Issue) bool
-		expectedIssues Issues
-	}{
-		{
-			name: "Labeled",
-			i:    Issues{issue1, issue2, Issue{}},
-			f: func(i Issue) bool {
-				return len(i.Labels) > 0
-			},
-			expectedIssues: Issues{issue1, issue2},
-		},
-		{
-			name: "Unlabeled",
-			i:    Issues{issue1, issue2, Issue{}},
-			f: func(i Issue) bool {
-				return len(i.Labels) == 0
-			},
-			expectedIssues: Issues{Issue{}},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			issues := tc.i.Select(tc.f)
-
-			assert.Equal(t, tc.expectedIssues, issues)
-		})
-	}
-}
-
 func TestIssues_Sort(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -674,6 +743,40 @@ func TestIssues_Sort(t *testing.T) {
 			issues := tc.i.Sort()
 
 			assert.Equal(t, tc.expectedIssues, issues)
+		})
+	}
+}
+
+func TestIssues_Select(t *testing.T) {
+	tests := []struct {
+		name             string
+		i                Issues
+		f                func(Issue) bool
+		expectedSelected Issues
+	}{
+		{
+			name: "Labeled",
+			i:    Issues{issue1, issue2, Issue{}},
+			f: func(i Issue) bool {
+				return len(i.Labels) > 0
+			},
+			expectedSelected: Issues{issue1, issue2},
+		},
+		{
+			name: "Unlabeled",
+			i:    Issues{issue1, issue2, Issue{}},
+			f: func(i Issue) bool {
+				return len(i.Labels) == 0
+			},
+			expectedSelected: Issues{Issue{}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			selected := tc.i.Select(tc.f)
+
+			assert.Equal(t, tc.expectedSelected, selected)
 		})
 	}
 }
@@ -714,40 +817,6 @@ func TestIssues_Remove(t *testing.T) {
 	}
 }
 
-func TestMerges_Select(t *testing.T) {
-	tests := []struct {
-		name           string
-		m              Merges
-		f              func(Merge) bool
-		expectedMerges Merges
-	}{
-		{
-			name: "Labeled",
-			m:    Merges{merge1, merge2, Merge{}},
-			f: func(m Merge) bool {
-				return len(m.Labels) > 0
-			},
-			expectedMerges: Merges{merge1, merge2},
-		},
-		{
-			name: "Unlabeled",
-			m:    Merges{merge1, merge2, Merge{}},
-			f: func(m Merge) bool {
-				return len(m.Labels) == 0
-			},
-			expectedMerges: Merges{Merge{}},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			merges := tc.m.Select(tc.f)
-
-			assert.Equal(t, tc.expectedMerges, merges)
-		})
-	}
-}
-
 func TestMerges_Sort(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -766,6 +835,40 @@ func TestMerges_Sort(t *testing.T) {
 			merges := tc.m.Sort()
 
 			assert.Equal(t, tc.expectedMerges, merges)
+		})
+	}
+}
+
+func TestMerges_Select(t *testing.T) {
+	tests := []struct {
+		name             string
+		m                Merges
+		f                func(Merge) bool
+		expectedSelected Merges
+	}{
+		{
+			name: "Labeled",
+			m:    Merges{merge1, merge2, Merge{}},
+			f: func(m Merge) bool {
+				return len(m.Labels) > 0
+			},
+			expectedSelected: Merges{merge1, merge2},
+		},
+		{
+			name: "Unlabeled",
+			m:    Merges{merge1, merge2, Merge{}},
+			f: func(m Merge) bool {
+				return len(m.Labels) == 0
+			},
+			expectedSelected: Merges{Merge{}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			selected := tc.m.Select(tc.f)
+
+			assert.Equal(t, tc.expectedSelected, selected)
 		})
 	}
 }

@@ -2,9 +2,9 @@ package generate
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/moorara/changelog/internal/changelog"
 	"github.com/moorara/changelog/internal/changelog/markdown"
@@ -44,67 +44,60 @@ func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
 	}
 }
 
-func (g *Generator) resolveTags(chlog *changelog.Changelog, sortedTags remote.Tags) (remote.Tag, remote.Tag, remote.Tag, error) {
-	g.logger.Debug("Resolving from and to tags ...")
+// resolveTags determines the new tags that should be added to the changelog.
+// sortedTags are expected to be sorted from the most recent to the least recent.
+// Similarly, chlog.Existing are expected to be sorted from the most recent to the least recent.
+func (g *Generator) resolveTags(sortedTags remote.Tags, chlog *changelog.Changelog) (remote.Tags, error) {
+	g.logger.Debug("Resolving new tags for changelog ...")
 
-	var ok bool
-	var zero remote.Tag
-	var lastGitTag, lastChangelogTag remote.Tag
-	var fromTag, toTag, futureTag remote.Tag
-
-	// Resolve the last git tag
-	if len(sortedTags) == 0 {
-		lastGitTag = remote.Tag{} // Denotes the case where there is no git
-	} else {
-		lastGitTag = sortedTags[0] // The most recent tag
+	mapFunc := func(t remote.Tag) string {
+		return t.Name
 	}
 
-	// Resolve the last tag on changelog
-	if len(chlog.Existing) == 0 {
-		lastChangelogTag = remote.Tag{} // Denotes the case where the changelog is empty
-	} else {
-		if lastChangelogTag, ok = sortedTags.Find(chlog.Existing[0].TagName); !ok {
-			return zero, zero, zero, fmt.Errorf("changelog tag not found: %s", chlog.Existing[0].TagName)
+	// Select those tags that are not in changelog
+	newTags := sortedTags.Select(func(t remote.Tag) bool {
+		for _, release := range chlog.Existing {
+			if t.Name == release.TagName {
+				return false
+			}
 		}
-	}
+		return true
+	})
 
 	// Resolve the from tag
-	if g.spec.Tags.From == "" {
-		fromTag = lastChangelogTag
-	} else {
-		if fromTag, ok = sortedTags.Find(g.spec.Tags.From); !ok {
-			return zero, zero, zero, fmt.Errorf("from-tag not found: %s", g.spec.Tags.From)
+	if from := g.spec.Tags.From; from != "" {
+		i := newTags.Index(from)
+		if i == -1 {
+			return nil, fmt.Errorf("from-tag can be one of %s", newTags.Map(mapFunc))
 		}
-
-		if fromTag.Before(lastChangelogTag) {
-			g.logger.Debugf("From tag updated to the last tag on changelog: %s", lastChangelogTag.Name)
-			fromTag = lastChangelogTag
-		}
+		// new tags are also sorted from the most recent to the least recent
+		newTags = newTags[:i+1]
 	}
 
 	// Resolve the to tag
-	if g.spec.Tags.To == "" {
-		toTag = lastGitTag
-	} else {
-		if toTag, ok = sortedTags.Find(g.spec.Tags.To); !ok {
-			return zero, zero, zero, fmt.Errorf("to-tag not found: %s", g.spec.Tags.To)
+	if to := g.spec.Tags.To; to != "" {
+		i := newTags.Index(to)
+		if i == -1 {
+			return nil, fmt.Errorf("to-tag can be one of %s", newTags.Map(mapFunc))
 		}
-
-		if toTag.Before(fromTag) || toTag.Equal(fromTag) {
-			return zero, zero, zero, errors.New("to-tag should be after the from-tag")
-		}
+		// new tags are also sorted from the most recent to the least recent
+		newTags = newTags[i:]
 	}
 
 	// Resolve the future tag
-	if g.spec.Tags.Future != "" {
-		futureTag = g.remoteRepo.FutureTag(g.spec.Tags.Future)
+	// The future tag should be the most recent tag (at index zero) if any
+	if future := g.spec.Tags.Future; future != "" {
+		if _, ok := sortedTags.Find(future); ok {
+			return nil, fmt.Errorf("future tag cannot be same as an existing tag: %s", future)
+		}
+
+		futureTag := g.remoteRepo.FutureTag(future)
+		newTags = append(remote.Tags{futureTag}, newTags...)
 	}
 
-	g.logger.Infof("From tag resolved: %s", fromTag.Name)
-	g.logger.Infof("To tag resolved: %s", toTag.Name)
-	g.logger.Infof("Future tag resolved: %s", futureTag.Name)
+	g.logger.Infof("Resolved new tags for changelog: %s", newTags.Map(mapFunc))
 
-	return fromTag, toTag, futureTag, nil
+	return newTags, nil
 }
 
 func (g *Generator) resolveCommitMap(ctx context.Context, branch remote.Branch, sortedTags remote.Tags) (commitMap, error) {
@@ -129,17 +122,20 @@ func (g *Generator) resolveCommitMap(ctx context.Context, branch remote.Branch, 
 	// Resolve which commits are in the each tag
 	// sortedTags are sorted from the most recent to the least recent
 	for _, tag := range sortedTags {
-		tagCommits, err := g.remoteRepo.FetchParentCommits(ctx, tag.Commit.Hash)
-		if err != nil {
-			return nil, err
-		}
+		// The first tag can be a future tag without a commit
+		if !tag.Commit.IsZero() {
+			tagCommits, err := g.remoteRepo.FetchParentCommits(ctx, tag.Commit.Hash)
+			if err != nil {
+				return nil, err
+			}
 
-		for _, c := range tagCommits {
-			if rev, ok := commitMap[c.Hash]; ok {
-				rev.Tags = append(rev.Tags, tag.Name)
-			} else {
-				commitMap[c.Hash] = &revisions{
-					Tags: []string{tag.Name},
+			for _, c := range tagCommits {
+				if rev, ok := commitMap[c.Hash]; ok {
+					rev.Tags = append(rev.Tags, tag.Name)
+				} else {
+					commitMap[c.Hash] = &revisions{
+						Tags: []string{tag.Name},
+					}
 				}
 			}
 		}
@@ -156,18 +152,18 @@ func (g *Generator) Generate(ctx context.Context) error {
 		return err
 	}
 
-	// ==============================> FETCH BRANCH <==============================
+	// ==============================> FETCH RELEASE BRANCH <==============================
 
 	var branch remote.Branch
 
 	if g.spec.Merges.Branch == "" {
-		if branch, err = g.remoteRepo.FetchDefaultBranch(ctx); err != nil {
-			return err
-		}
+		branch, err = g.remoteRepo.FetchDefaultBranch(ctx)
 	} else {
-		if branch, err = g.remoteRepo.FetchBranch(ctx, g.spec.Merges.Branch); err != nil {
-			return err
-		}
+		branch, err = g.remoteRepo.FetchBranch(ctx, g.spec.Merges.Branch)
+	}
+
+	if err != nil {
+		return err
 	}
 
 	// ==============================> FETCH AND FILTER TAGS <==============================
@@ -190,62 +186,24 @@ func (g *Generator) Generate(ctx context.Context) error {
 		sortedTags = sortedTags.ExcludeRegex(re)
 	}
 
-	fromTag, toTag, futureTag, err := g.resolveTags(chlog, sortedTags)
+	newTags, err := g.resolveTags(sortedTags, chlog)
 	if err != nil {
 		return err
 	}
 
-	/*
-		Here is the logic for when to fetch changes for released and unreleased sections:
-
-			| Since |  To | Future || Changes | Released | Unreleased |
-			|-------|-----|--------||---------|----------|------------|
-			|   0   |  0  |   0    ||    0    |     0    |      0     |
-			|   0   |  0  |   1    ||    1    |     0    |      1     |
-			|   0   |  1  |   0    ||    1    |     1    |      0     |
-			|   0   |  1  |   1    ||    1    |     1    |      1     |
-			|   1   |  0  |   0    ||    0    |     0    |      0     |
-			|   1   |  0  |   1    ||    1    |     0    |      1     |
-			|   1   |  1  |   0    ||    1    |     1    |      0     |
-			|   1   |  1  |   1    ||    1    |     1    |      1     |
-	*/
-
-	if (fromTag.Equal(toTag) || toTag.IsZero()) && futureTag.IsZero() {
-		g.logger.Debug("No new tag or a future tag is detected.")
-		g.logger.Info("Changelog is up-to-date")
+	if len(newTags) == 0 {
+		g.logger.Info("Changelog is up-to-date (no new tag or a future tag)")
 		return nil
-	}
-
-	// Resolving all tags eligible for changelog
-	// Tags are sorted from the most recent to the least recent
-
-	var candidateTags remote.Tags
-
-	if fromTag.IsZero() && toTag.IsZero() {
-		candidateTags = remote.Tags{}
-	} else if fromTag.IsZero() {
-		i := sortedTags.Index(toTag.Name)
-		candidateTags = sortedTags[i:]
-	} else if toTag.IsZero() {
-		j := sortedTags.Index(fromTag.Name)
-		candidateTags = sortedTags[:j+1]
-	} else {
-		i := sortedTags.Index(toTag.Name)
-		j := sortedTags.Index(fromTag.Name)
-		candidateTags = sortedTags[i : j+1]
-	}
-
-	g.logger.Debugf("New tags for generating changelog: %v", candidateTags.Map(func(t remote.Tag) string {
-		return t.Name
-	}))
-
-	if !futureTag.IsZero() {
-		g.logger.Debugf("Future tag for unreleased changes: %s", futureTag.Name)
 	}
 
 	// ==============================> FETCH & ORGANIZE ISSUES AND MERGES <==============================
 
-	since := fromTag.Time
+	// Fetch issues and merges since the last tag on changelog
+	var since time.Time
+	if len(chlog.Existing) > 0 {
+		since = chlog.Existing[0].TagTime
+	}
+
 	issues, merges, err := g.remoteRepo.FetchIssuesAndMerges(ctx, since)
 	if err != nil {
 		return err
@@ -255,16 +213,16 @@ func (g *Generator) Generate(ctx context.Context) error {
 	g.logger.Infof("Filtered issues (%d) and pull/merge requests (%d) by labels", len(sortedIssues), len(sortedMerges))
 
 	// Construct a map of commit hashes to branch and tags names
-	commitMap, err := g.resolveCommitMap(ctx, branch, candidateTags)
+	commitMap, err := g.resolveCommitMap(ctx, branch, newTags)
 	if err != nil {
 		return err
 	}
 
-	issueMap := resolveIssueMap(sortedIssues, candidateTags, futureTag)
-	mergeMap := resolveMergeMap(sortedMerges, commitMap, futureTag)
+	issueMap := resolveIssueMap(sortedIssues, newTags)
+	mergeMap := resolveMergeMap(sortedMerges, newTags, commitMap)
 	g.logger.Info("Partitioned issues and pull/merge requests by tag")
 
-	chlog.New = resolveReleases(candidateTags, futureTag, issueMap, mergeMap, g.spec)
+	chlog.New = resolveReleases(newTags, issueMap, mergeMap, g.spec)
 	g.logger.Info("Grouped issues and pull/merge requests by labels")
 
 	// ==============================> UPDATE THE CHANGELOG <==============================

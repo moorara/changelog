@@ -479,6 +479,13 @@ func (r *repo) fetchCommits(ctx context.Context, pageNo int) ([]commit, error) {
 		return nil, err
 	}
 
+	// Add fetch commits to the cache
+	for _, c := range commits {
+		if _, ok := r.commits.Load(c.SHA); !ok {
+			r.commits.Save(c.SHA, c)
+		}
+	}
+
 	r.logger.Debugf("Fetched GitHub commits page %d: %d", pageNo, len(commits))
 
 	return commits, nil
@@ -639,6 +646,32 @@ func (r *repo) FutureTag(name string) remote.Tag {
 	}
 }
 
+// FetchFirstCommit retrieves the firist/initial commit for a GitHub repository.
+func (r *repo) FetchFirstCommit(ctx context.Context) (remote.Commit, error) {
+	if err := r.checkScopes(ctx, scopeRepo); err != nil {
+		return remote.Commit{}, err
+	}
+
+	r.logger.Debug("Fetching the first GitHub commit ...")
+
+	commitPages, err := r.fetchCommitsPageCount(ctx)
+	if err != nil {
+		return remote.Commit{}, err
+	}
+
+	// Fetch the last page of commits
+	commits, err := r.fetchCommits(ctx, commitPages)
+	if err != nil {
+		return remote.Commit{}, err
+	}
+
+	firstCommit := toCommit(commits[len(commits)-1])
+
+	r.logger.Debugf("Fetched the first GitHub commit: %s", firstCommit)
+
+	return firstCommit, nil
+}
+
 // FetchBranch retrieves a branch by name for a GitHub repository.
 func (r *repo) FetchBranch(ctx context.Context, name string) (remote.Branch, error) {
 	if err := r.checkScopes(ctx, scopeRepo); err != nil {
@@ -741,7 +774,9 @@ func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 	tags := resolveTags(gitHubTags, r.commits, r.path)
 
 	r.logger.Debugf("Resolved and sorted GitHub tags: %d", len(tags))
-	r.logger.Info("GitHub tags are fetched")
+	r.logger.Infof("GitHub tags are fetched: %s", tags.Map(func(t remote.Tag) string {
+		return t.Name
+	}))
 
 	return tags, nil
 }

@@ -52,6 +52,17 @@ func TestRepo_FutureTag(t *testing.T) {
 	assert.Empty(t, tag)
 }
 
+func TestRepo_FetchFirstCommit(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	commit, err := r.FetchFirstCommit(context.Background())
+
+	assert.NoError(t, err)
+	assert.Empty(t, commit)
+}
+
 func TestRepo_FetchBranch(t *testing.T) {
 	r := &repo{
 		logger: log.New(log.None),

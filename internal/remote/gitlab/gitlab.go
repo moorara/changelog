@@ -43,6 +43,11 @@ func (r *repo) FutureTag(name string) remote.Tag {
 	return remote.Tag{}
 }
 
+// FetchFirstCommit retrieves the firist/initial commit for a GitLab repository.
+func (r *repo) FetchFirstCommit(ctx context.Context) (remote.Commit, error) {
+	return remote.Commit{}, nil
+}
+
 // FetchBranch retrieves a branch by name for a GitLab repository.
 func (r *repo) FetchBranch(ctx context.Context, name string) (remote.Branch, error) {
 	return remote.Branch{}, nil

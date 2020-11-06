@@ -23,6 +23,11 @@ type Commit struct {
 	Time time.Time
 }
 
+// IsZero determines if a commit is a zero commit instance.
+func (c Commit) IsZero() bool {
+	return c == Commit{}
+}
+
 func (c Commit) String() string {
 	return fmt.Sprintf("%s", c.Hash)
 }
@@ -127,7 +132,15 @@ func (t Tags) Find(name string) (Tag, bool) {
 }
 
 // First returns the first tag that satisifies the given predicate.
+// If you pass a nil function, the first tag will be returned.
 func (t Tags) First(f func(Tag) bool) (Tag, bool) {
+	if f == nil {
+		if l := len(t); l > 0 {
+			return t[0], true
+		}
+		return Tag{}, false
+	}
+
 	for _, tag := range t {
 		if f(tag) {
 			return tag, true
@@ -138,7 +151,15 @@ func (t Tags) First(f func(Tag) bool) (Tag, bool) {
 }
 
 // Last returns the last tag that satisifies the given predicate.
+// If you pass a nil function, the last tag will be returned.
 func (t Tags) Last(f func(Tag) bool) (Tag, bool) {
+	if f == nil {
+		if l := len(t); l > 0 {
+			return t[l-1], true
+		}
+		return Tag{}, false
+	}
+
 	for i := len(t) - 1; i >= 0; i-- {
 		if f(t[i]) {
 			return t[i], true
@@ -154,11 +175,52 @@ func (t Tags) Sort() Tags {
 	copy(sorted, t)
 
 	sort.Slice(sorted, func(i, j int) bool {
-		// The order of the tags should be from the most recent to the least recent
+		// The order of the tags should be from the most recent to the least recent.
+		// For sorting the tags properly, we should sort them by the committer time of the commit that each tags points to.
+		// Annotated tags can have a different time from the commiter time of the commits they point to.
 		return sorted[i].Time.After(sorted[j].Time)
 	})
 
 	return sorted
+}
+
+// Reverse returns a new list of tags with the reverse order.
+func (t Tags) Reverse() Tags {
+	l := len(t)
+	reversed := make(Tags, l)
+
+	for i := 0; i < l; i++ {
+		reversed[l-1-i] = t[i]
+	}
+
+	return reversed
+}
+
+// Select returns a new list of tags that satisfies the predicate f.
+func (t Tags) Select(f func(Tag) bool) Tags {
+	selected := Tags{}
+
+	for _, tag := range t {
+		if f(tag) {
+			selected = append(selected, tag)
+		}
+	}
+
+	return selected
+}
+
+// Remove removes any tag that satisfies the predicate f and returns the removed tags.
+func (t *Tags) Remove(f func(Tag) bool) Tags {
+	var removed Tags
+
+	for n, tag := range *t {
+		if f(tag) {
+			removed = append(removed, (*t)[n])
+			*t = append((*t)[:n], (*t)[n+1:]...)
+		}
+	}
+
+	return removed
 }
 
 // Exclude excludes the given tag names and returns a new list of tags.
@@ -192,18 +254,6 @@ func (t Tags) ExcludeRegex(regex *regexp.Regexp) Tags {
 	}
 
 	return new
-}
-
-// Reverse returns a new list of tags with the reverse order.
-func (t Tags) Reverse() Tags {
-	l := len(t)
-	reversed := make(Tags, l)
-
-	for i := 0; i < l; i++ {
-		reversed[l-1-i] = t[i]
-	}
-
-	return reversed
 }
 
 // Map converts a list of tags to a list of strings.
@@ -263,18 +313,6 @@ type Issue struct {
 // Issues is a collection of issues.
 type Issues []Issue
 
-// Select returns a new collection of issues that satisfies the predicate f.
-func (i Issues) Select(f func(Issue) bool) Issues {
-	new := Issues{}
-	for _, issue := range i {
-		if f(issue) {
-			new = append(new, issue)
-		}
-	}
-
-	return new
-}
-
 // Sort sorts the collection of issues from the most recent to the least recent.
 func (i Issues) Sort() Issues {
 	sorted := make(Issues, len(i))
@@ -286,6 +324,19 @@ func (i Issues) Sort() Issues {
 	})
 
 	return sorted
+}
+
+// Select returns a new collection of issues that satisfies the predicate f.
+func (i Issues) Select(f func(Issue) bool) Issues {
+	selected := Issues{}
+
+	for _, issue := range i {
+		if f(issue) {
+			selected = append(selected, issue)
+		}
+	}
+
+	return selected
 }
 
 // Remove removes any issue that satisfies the predicate f and returns the removed issues.
@@ -312,18 +363,6 @@ type Merge struct {
 // Merges is a collection of merges.
 type Merges []Merge
 
-// Select returns a new collection of merges that satisfies the predicate f.
-func (m Merges) Select(f func(Merge) bool) Merges {
-	new := Merges{}
-	for _, merge := range m {
-		if f(merge) {
-			new = append(new, merge)
-		}
-	}
-
-	return new
-}
-
 // Sort sorts the collection of merges from the most recent to the least recent.
 func (m Merges) Sort() Merges {
 	sorted := make(Merges, len(m))
@@ -335,6 +374,19 @@ func (m Merges) Sort() Merges {
 	})
 
 	return sorted
+}
+
+// Select returns a new collection of merges that satisfies the predicate f.
+func (m Merges) Select(f func(Merge) bool) Merges {
+	selected := Merges{}
+
+	for _, merge := range m {
+		if f(merge) {
+			selected = append(selected, merge)
+		}
+	}
+
+	return selected
 }
 
 // Remove removes any merge that satisfies the predicate f and returns the removed merges.

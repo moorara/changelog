@@ -253,37 +253,51 @@ func TestNew(t *testing.T) {
 }
 
 func TestGenerator_resolveTags(t *testing.T) {
-	futureTag := remote.Tag{
+	futureTag1 := remote.Tag{
 		Name:   "v0.1.0",
-		Time:   parseGitHubTime("2020-11-02T14:00:00-04:00"),
+		Time:   parseGitHubTime("2020-11-02T16:00:00-04:00"),
 		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.0",
 	}
 
+	futureTag2 := remote.Tag{
+		Name:   "v0.2.0",
+		Time:   parseGitHubTime("2020-11-03T18:00:00-04:00"),
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.2.0",
+	}
+
+	futureTag3 := remote.Tag{
+		Name:   "v0.3.0",
+		Time:   parseGitHubTime("2020-11-04T20:00:00-04:00"),
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.3.0",
+	}
+
+	futureTag4 := remote.Tag{
+		Name:   "v0.4.0",
+		Time:   parseGitHubTime("2020-11-05T22:00:00-04:00"),
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.4.0",
+	}
+
 	tests := []struct {
-		name              string
-		g                 *Generator
-		chlog             *changelog.Changelog
-		sortedTags        remote.Tags
-		expectedFromTag   remote.Tag
-		expectedToTag     remote.Tag
-		expectedFutureTag remote.Tag
-		expectedError     error
+		name          string
+		g             *Generator
+		sortedTags    remote.Tags
+		chlog         *changelog.Changelog
+		expectedTags  remote.Tags
+		expectedError error
 	}{
 		{
-			name: "NoTagAndNoChangelog",
+			name: "NoGitTag_NoChangelogTag_NoFutureTag",
 			g: &Generator{
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
-			chlog:             &changelog.Changelog{},
-			sortedTags:        remote.Tags{},
-			expectedFromTag:   remote.Tag{},
-			expectedToTag:     remote.Tag{},
-			expectedFutureTag: remote.Tag{},
-			expectedError:     nil,
+			sortedTags:    remote.Tags{},
+			chlog:         &changelog.Changelog{},
+			expectedTags:  remote.Tags{},
+			expectedError: nil,
 		},
 		{
-			name: "FutureRelease",
+			name: "NoGitTag_NoChangelogTag_FutureTag",
 			g: &Generator{
 				spec: spec.Spec{
 					Tags: spec.Tags{
@@ -293,63 +307,123 @@ func TestGenerator_resolveTags(t *testing.T) {
 				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FutureTagMocks: []FutureTagMock{
-						{OutTag: futureTag},
+						{OutTag: futureTag1},
 					},
 				},
 			},
-			chlog:             &changelog.Changelog{},
-			sortedTags:        remote.Tags{},
-			expectedFromTag:   remote.Tag{},
-			expectedToTag:     remote.Tag{},
-			expectedFutureTag: futureTag,
-			expectedError:     nil,
+			sortedTags:    remote.Tags{},
+			chlog:         &changelog.Changelog{},
+			expectedTags:  remote.Tags{futureTag1},
+			expectedError: nil,
 		},
 		{
-			name: "FirstRelease",
+			name: "GitTag_NoChangelogTag_NoFutureTag",
 			g: &Generator{
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
-			chlog:             &changelog.Changelog{},
-			sortedTags:        remote.Tags{tag1},
-			expectedFromTag:   remote.Tag{},
-			expectedToTag:     tag1,
-			expectedFutureTag: remote.Tag{},
-			expectedError:     nil,
+			sortedTags:    remote.Tags{tag1},
+			chlog:         &changelog.Changelog{},
+			expectedTags:  remote.Tags{tag1},
+			expectedError: nil,
 		},
 		{
-			name: "TagNotInChangelog",
+			name: "GitTag_NoChangelogTag_FutureTag",
 			g: &Generator{
-				spec:   spec.Spec{},
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						Future: "v0.2.0",
+					},
+				},
 				logger: log.New(log.None),
-			},
-			chlog: &changelog.Changelog{
-				Existing: []changelog.Release{
-					{TagName: "0.1.0"},
+				remoteRepo: &MockRemoteRepo{
+					FutureTagMocks: []FutureTagMock{
+						{OutTag: futureTag2},
+					},
 				},
 			},
-			sortedTags:        remote.Tags{tag2, tag1},
-			expectedFromTag:   remote.Tag{},
-			expectedToTag:     remote.Tag{},
-			expectedFutureTag: remote.Tag{},
-			expectedError:     errors.New("changelog tag not found: 0.1.0"),
+			sortedTags:    remote.Tags{tag1},
+			chlog:         &changelog.Changelog{},
+			expectedTags:  remote.Tags{futureTag2, tag1},
+			expectedError: nil,
 		},
 		{
-			name: "SecondRelease",
+			name: "SameGitTag_SameChangelogTag_NoFutureTag",
 			g: &Generator{
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
+			sortedTags: remote.Tags{tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
 					{TagName: "v0.1.1"},
 				},
 			},
-			sortedTags:        remote.Tags{tag2, tag1},
-			expectedFromTag:   tag1,
-			expectedToTag:     tag2,
-			expectedFutureTag: remote.Tag{},
-			expectedError:     nil,
+			expectedTags:  remote.Tags{},
+			expectedError: nil,
+		},
+		{
+			name: "SameGitTag_SameChangelogTag_FutureTag",
+			g: &Generator{
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						Future: "v0.2.0",
+					},
+				},
+				logger: log.New(log.None),
+				remoteRepo: &MockRemoteRepo{
+					FutureTagMocks: []FutureTagMock{
+						{OutTag: futureTag2},
+					},
+				},
+			},
+			sortedTags: remote.Tags{tag1},
+			chlog: &changelog.Changelog{
+				Existing: []changelog.Release{
+					{TagName: "v0.1.1"},
+				},
+			},
+			expectedTags:  remote.Tags{futureTag2},
+			expectedError: nil,
+		},
+		{
+			name: "NewGitTag_ChangelogTag_NoFutureTag",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+			},
+			sortedTags: remote.Tags{tag2, tag1},
+			chlog: &changelog.Changelog{
+				Existing: []changelog.Release{
+					{TagName: "v0.1.1"},
+				},
+			},
+			expectedTags:  remote.Tags{tag2},
+			expectedError: nil,
+		},
+		{
+			name: "NewGitTag_ChangelogTag_FutureTag",
+			g: &Generator{
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						Future: "v0.3.0",
+					},
+				},
+				logger: log.New(log.None),
+				remoteRepo: &MockRemoteRepo{
+					FutureTagMocks: []FutureTagMock{
+						{OutTag: futureTag3},
+					},
+				},
+			},
+			sortedTags: remote.Tags{tag2, tag1},
+			chlog: &changelog.Changelog{
+				Existing: []changelog.Release{
+					{TagName: "v0.1.1"},
+				},
+			},
+			expectedTags:  remote.Tags{futureTag3, tag2},
+			expectedError: nil,
 		},
 		{
 			name: "InvalidFromTag",
@@ -361,16 +435,14 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
+			sortedTags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
 					{TagName: "v0.1.1"},
 				},
 			},
-			sortedTags:        remote.Tags{tag2, tag1},
-			expectedFromTag:   remote.Tag{},
-			expectedToTag:     remote.Tag{},
-			expectedFutureTag: remote.Tag{},
-			expectedError:     errors.New("from-tag not found: invalid"),
+			expectedTags:  nil,
+			expectedError: errors.New("from-tag can be one of [v0.1.2]"),
 		},
 		{
 			name: "InvalidToTag",
@@ -382,19 +454,17 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
+			sortedTags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
 					{TagName: "v0.1.1"},
 				},
 			},
-			sortedTags:        remote.Tags{tag2, tag1},
-			expectedFromTag:   remote.Tag{},
-			expectedToTag:     remote.Tag{},
-			expectedFutureTag: remote.Tag{},
-			expectedError:     errors.New("to-tag not found: invalid"),
+			expectedTags:  nil,
+			expectedError: errors.New("to-tag can be one of [v0.1.2]"),
 		},
 		{
-			name: "FromTagBeforeLastChangelogTag",
+			name: "FromTag_Before_NewTags",
 			g: &Generator{
 				spec: spec.Spec{
 					Tags: spec.Tags{
@@ -403,43 +473,37 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
+			sortedTags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
-					{TagName: "v0.1.2"},
 					{TagName: "v0.1.1"},
 				},
 			},
-			sortedTags:        remote.Tags{tag3, tag2, tag1},
-			expectedFromTag:   tag2,
-			expectedToTag:     tag3,
-			expectedFutureTag: remote.Tag{},
-			expectedError:     nil,
+			expectedTags:  nil,
+			expectedError: errors.New("from-tag can be one of [v0.1.2]"),
 		},
 		{
-			name: "ToTagBeforeFromTag",
+			name: "FromTag_After_ToTag",
 			g: &Generator{
 				spec: spec.Spec{
 					Tags: spec.Tags{
-						From: "v0.1.2",
-						To:   "v0.1.1",
+						From: "v0.1.3",
+						To:   "v0.1.2",
 					},
 				},
 				logger: log.New(log.None),
 			},
+			sortedTags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
-					{TagName: "v0.1.2"},
 					{TagName: "v0.1.1"},
 				},
 			},
-			sortedTags:        remote.Tags{tag3, tag2, tag1},
-			expectedFromTag:   remote.Tag{},
-			expectedToTag:     remote.Tag{},
-			expectedFutureTag: remote.Tag{},
-			expectedError:     errors.New("to-tag should be after the from-tag"),
+			expectedTags:  nil,
+			expectedError: errors.New("to-tag can be one of [v0.1.3]"),
 		},
 		{
-			name: "SameFromAndToTags",
+			name: "FromTag_Equal_ToTag",
 			g: &Generator{
 				spec: spec.Spec{
 					Tags: spec.Tags{
@@ -449,20 +513,17 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
+			sortedTags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
-					{TagName: "v0.1.2"},
 					{TagName: "v0.1.1"},
 				},
 			},
-			sortedTags:        remote.Tags{tag3, tag2, tag1},
-			expectedFromTag:   remote.Tag{},
-			expectedToTag:     remote.Tag{},
-			expectedFutureTag: remote.Tag{},
-			expectedError:     errors.New("to-tag should be after the from-tag"),
+			expectedTags:  remote.Tags{tag2},
+			expectedError: nil,
 		},
 		{
-			name: "ValidFromAndToTags",
+			name: "FromTag_Before_ToTag",
 			g: &Generator{
 				spec: spec.Spec{
 					Tags: spec.Tags{
@@ -472,27 +533,74 @@ func TestGenerator_resolveTags(t *testing.T) {
 				},
 				logger: log.New(log.None),
 			},
+			sortedTags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
-					{TagName: "v0.1.2"},
 					{TagName: "v0.1.1"},
 				},
 			},
-			sortedTags:        remote.Tags{tag3, tag2, tag1},
-			expectedFromTag:   tag2,
-			expectedToTag:     tag3,
-			expectedFutureTag: remote.Tag{},
-			expectedError:     nil,
+			expectedTags:  remote.Tags{tag3, tag2},
+			expectedError: nil,
+		},
+		{
+			name: "InvalidFutureTag",
+			g: &Generator{
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						From:   "v0.1.2",
+						To:     "v0.1.3",
+						Future: "v0.1.1",
+					},
+				},
+				logger: log.New(log.None),
+				remoteRepo: &MockRemoteRepo{
+					FutureTagMocks: []FutureTagMock{
+						{OutTag: futureTag4},
+					},
+				},
+			},
+			sortedTags: remote.Tags{tag3, tag2, tag1},
+			chlog: &changelog.Changelog{
+				Existing: []changelog.Release{
+					{TagName: "v0.1.1"},
+				},
+			},
+			expectedTags:  nil,
+			expectedError: errors.New("future tag cannot be same as an existing tag: v0.1.1"),
+		},
+		{
+			name: "FromTag_ToTag_FutureTag",
+			g: &Generator{
+				spec: spec.Spec{
+					Tags: spec.Tags{
+						From:   "v0.1.2",
+						To:     "v0.1.3",
+						Future: "v0.1.4",
+					},
+				},
+				logger: log.New(log.None),
+				remoteRepo: &MockRemoteRepo{
+					FutureTagMocks: []FutureTagMock{
+						{OutTag: futureTag4},
+					},
+				},
+			},
+			sortedTags: remote.Tags{tag3, tag2, tag1},
+			chlog: &changelog.Changelog{
+				Existing: []changelog.Release{
+					{TagName: "v0.1.1"},
+				},
+			},
+			expectedTags:  remote.Tags{futureTag4, tag3, tag2},
+			expectedError: nil,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			fromTag, toTag, futureTag, err := tc.g.resolveTags(tc.chlog, tc.sortedTags)
+			tags, err := tc.g.resolveTags(tc.sortedTags, tc.chlog)
 
-			assert.Equal(t, tc.expectedFromTag, fromTag)
-			assert.Equal(t, tc.expectedToTag, toTag)
-			assert.Equal(t, tc.expectedFutureTag, futureTag)
+			assert.Equal(t, tc.expectedTags, tags)
 			assert.Equal(t, tc.expectedError, err)
 		})
 	}

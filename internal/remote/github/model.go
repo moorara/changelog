@@ -306,8 +306,6 @@ func resolveTags(gitHubTags *tagStore, gitHubCommits *commitStore, repoPath stri
 		return nil
 	})
 
-	tags = tags.Sort()
-
 	return tags
 }
 

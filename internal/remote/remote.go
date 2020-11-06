@@ -9,6 +9,8 @@ import (
 type Repo interface {
 	// FutureTag returns a tag that does not exist yet.
 	FutureTag(string) Tag
+	// FetchFirstCommit retrieves the firist/initial commit.
+	FetchFirstCommit(context.Context) (Commit, error)
 	// FetchBranch retrieves a branch by name.
 	FetchBranch(context.Context, string) (Branch, error)
 	// FetchDefaultBranch retrieves the default branch.

@@ -96,7 +96,7 @@ func filterByLabels(issues remote.Issues, merges remote.Merges, s spec.Spec) (re
 	return issues, merges
 }
 
-func resolveIssueMap(issues remote.Issues, sortedTags remote.Tags, futureTag remote.Tag) issueMap {
+func resolveIssueMap(issues remote.Issues, sortedTags remote.Tags) issueMap {
 	im := issueMap{}
 
 	for _, i := range issues {
@@ -106,32 +106,31 @@ func resolveIssueMap(issues remote.Issues, sortedTags remote.Tags, futureTag rem
 			return i.Time.Before(tag.Time) || i.Time.Equal(tag.Time)
 		})
 
-		var tagName string
 		if ok {
-			tagName = tag.Name
-		} else {
-			tagName = futureTag.Name
+			im[tag.Name] = append(im[tag.Name], i)
 		}
-
-		im[tagName] = append(im[tagName], i)
 	}
 
 	return im
 }
 
-func resolveMergeMap(merges remote.Merges, cm commitMap, futureTag remote.Tag) mergeMap {
+func resolveMergeMap(merges remote.Merges, sortedTags remote.Tags, cm commitMap) mergeMap {
 	mm := mergeMap{}
 
 	for _, m := range merges {
 		if rev, ok := cm[m.Commit.Hash]; ok {
-			var tagName string
-			if len(rev.Tags) == 0 {
-				tagName = futureTag.Name
+			if len(rev.Tags) > 0 {
+				tagName := rev.Tags[len(rev.Tags)-1]
+				mm[tagName] = append(mm[tagName], m)
 			} else {
-				tagName = rev.Tags[len(rev.Tags)-1]
+				// The commit does not belong to any tag
+				// The first tag can be a future tag without a commit
+				if futureTag := sortedTags[0]; futureTag.Commit.IsZero() {
+					tagName := futureTag.Name
+					mm[tagName] = append(mm[tagName], m)
+				}
 			}
 
-			mm[tagName] = append(mm[tagName], m)
 		}
 	}
 
@@ -190,20 +189,13 @@ func toMergeGroup(title string, merges remote.Merges) changelog.MergeGroup {
 	return mergeGroup
 }
 
-func resolveReleases(sortedTags remote.Tags, futureTag remote.Tag, im issueMap, cm mergeMap, s spec.Spec) []changelog.Release {
+func resolveReleases(sortedTags remote.Tags, im issueMap, cm mergeMap, s spec.Spec) []changelog.Release {
 	releases := []changelog.Release{}
-
-	var tags remote.Tags
-	if futureTag.IsZero() {
-		tags = sortedTags
-	} else {
-		tags = append(remote.Tags{futureTag}, sortedTags...)
-	}
 
 	issueGroups := s.Issues.Groups()
 	mergeGroups := s.Merges.Groups()
 
-	for _, tag := range tags {
+	for _, tag := range sortedTags {
 		// Every tag represents a new release
 		release := changelog.Release{
 			TagName: tag.Name,
