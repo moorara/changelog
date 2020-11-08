@@ -110,6 +110,12 @@ type (
 		OutTag remote.Tag
 	}
 
+	CompareURLMock struct {
+		InBase    string
+		InHead    string
+		OutString string
+	}
+
 	FetchFirstCommitMock struct {
 		InContext context.Context
 		OutCommit remote.Commit
@@ -154,6 +160,9 @@ type (
 		FutureTagIndex int
 		FutureTagMocks []FutureTagMock
 
+		CompareURLIndex int
+		CompareURLMocks []CompareURLMock
+
 		FetchFirstCommitIndex int
 		FetchFirstCommitMocks []FetchFirstCommitMock
 
@@ -179,6 +188,14 @@ func (m *MockRemoteRepo) FutureTag(name string) remote.Tag {
 	m.FutureTagIndex++
 	m.FutureTagMocks[i].InName = name
 	return m.FutureTagMocks[i].OutTag
+}
+
+func (m *MockRemoteRepo) CompareURL(base, head string) string {
+	i := m.CompareURLIndex
+	m.CompareURLIndex++
+	m.CompareURLMocks[i].InBase = base
+	m.CompareURLMocks[i].InHead = head
+	return m.CompareURLMocks[i].OutString
 }
 
 func (m *MockRemoteRepo) FetchFirstCommit(ctx context.Context) (remote.Commit, error) {

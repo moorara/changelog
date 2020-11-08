@@ -274,7 +274,7 @@ const (
 		{
 			"id": 2,
 			"url": "https://api.github.com/repos/octocat/Hello-World/issues/1002",
-			"html_url": "https://github.com/octocat/Hello-World/issues/1002",
+			"html_url": "https://github.com/octocat/Hello-World/pull/1002",
 			"number": 1002,
 			"state": "closed",
 			"title": "Fixed a bug",
@@ -646,7 +646,7 @@ var (
 			Title:  "v1.0",
 		},
 		URL:     "https://api.github.com/repos/octocat/Hello-World/issues/1002",
-		HTMLURL: "https://github.com/octocat/Hello-World/issues/1002",
+		HTMLURL: "https://github.com/octocat/Hello-World/pull/1002",
 		PullRequest: &pullURLs{
 			URL: "https://api.github.com/repos/octocat/Hello-World/pulls/1002",
 		},
@@ -2314,6 +2314,35 @@ func TestRepo_FutureTag(t *testing.T) {
 			assert.NotZero(t, tag.Time)
 			assert.Equal(t, tc.expectedTagName, tag.Name)
 			assert.Equal(t, tc.expectedTagURL, tag.WebURL)
+		})
+	}
+}
+
+func TestRepo_CompareURL(t *testing.T) {
+	tests := []struct {
+		name        string
+		base        string
+		head        string
+		expectedURL string
+	}{
+		{
+			name:        "OK",
+			base:        "v0.1.1",
+			head:        "v0.1.2",
+			expectedURL: "https://github.com/octocat/Hello-World/compare/v0.1.1...v0.1.2",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &repo{
+				logger: log.New(log.None),
+				path:   "octocat/Hello-World",
+			}
+
+			url := r.CompareURL(tc.base, tc.head)
+
+			assert.Equal(t, tc.expectedURL, url)
 		})
 	}
 }

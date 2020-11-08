@@ -68,11 +68,10 @@ func (b Branch) String() string {
 
 // Tag represents a tag.
 type Tag struct {
-	Name       string
-	Time       time.Time
-	Commit     Commit
-	WebURL     string
-	CompareURL string
+	Name   string
+	Time   time.Time
+	Commit Commit
+	WebURL string
 }
 
 // IsZero determines if a tag is a zero tag instance.

@@ -47,6 +47,7 @@ func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
 // resolveTags determines the new tags that should be added to the changelog.
 // sortedTags are expected to be sorted from the most recent to the least recent.
 // Similarly, chlog.Existing are expected to be sorted from the most recent to the least recent.
+// The return value is the list of new tags for generating changelog for them.
 func (g *Generator) resolveTags(sortedTags remote.Tags, chlog *changelog.Changelog) (remote.Tags, error) {
 	g.logger.Debug("Resolving new tags for changelog ...")
 
@@ -144,6 +145,82 @@ func (g *Generator) resolveCommitMap(ctx context.Context, branch remote.Branch, 
 	return commitMap, nil
 }
 
+func (g *Generator) resolveReleases(ctx context.Context, sortedTags remote.Tags, baseRev string, im issueMap, cm mergeMap) []changelog.Release {
+	releases := []changelog.Release{}
+
+	issueGroups := g.spec.Issues.Groups()
+	mergeGroups := g.spec.Merges.Groups()
+
+	for i, tag := range sortedTags {
+		var compareURL string
+		if j := i + 1; j < len(sortedTags) {
+			compareURL = g.remoteRepo.CompareURL(sortedTags[j].Name, tag.Name)
+		} else {
+			compareURL = g.remoteRepo.CompareURL(baseRev, tag.Name)
+		}
+
+		// Every tag represents a new release
+		release := changelog.Release{
+			TagName:    tag.Name,
+			TagURL:     tag.WebURL,
+			TagTime:    tag.Time,
+			CompareURL: compareURL,
+		}
+
+		// Group issues for the current tag
+		if issues, ok := im[tag.Name]; ok {
+			leftIssues := issues
+
+			for _, group := range issueGroups {
+				f := func(i remote.Issue) bool {
+					return i.Labels.Any(group.Labels...)
+				}
+
+				selected := issues.Select(f)
+				leftIssues.Remove(f)
+
+				if len(selected) > 0 {
+					issueGroup := toIssueGroup(group.Title, selected)
+					release.IssueGroups = append(release.IssueGroups, issueGroup)
+				}
+			}
+
+			if len(leftIssues) > 0 {
+				issueGroup := toIssueGroup("Closed Issues", leftIssues)
+				release.IssueGroups = append(release.IssueGroups, issueGroup)
+			}
+		}
+
+		// Group merges for the current tag
+		if merges, ok := cm[tag.Name]; ok {
+			leftMerges := merges
+
+			for _, group := range mergeGroups {
+				f := func(m remote.Merge) bool {
+					return m.Labels.Any(group.Labels...)
+				}
+
+				selected := merges.Select(f)
+				leftMerges.Remove(f)
+
+				if len(selected) > 0 {
+					mergeGroup := toMergeGroup(group.Title, selected)
+					release.MergeGroups = append(release.MergeGroups, mergeGroup)
+				}
+			}
+
+			if len(leftMerges) > 0 {
+				mergeGroup := toMergeGroup("Merged Changes", leftMerges)
+				release.MergeGroups = append(release.MergeGroups, mergeGroup)
+			}
+		}
+
+		releases = append(releases, release)
+	}
+
+	return releases
+}
+
 // Generate generates changelogs for a Git repository.
 func (g *Generator) Generate(ctx context.Context) error {
 	// Parse the existing changelog if any
@@ -196,6 +273,20 @@ func (g *Generator) Generate(ctx context.Context) error {
 		return nil
 	}
 
+	// ==============================> FETCH COMMITS FOR BRANCH AND TAGS <==============================
+
+	// Fetch the first commit in case it is needed for comparing the first tag against it
+	firstCommit, err := g.remoteRepo.FetchFirstCommit(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Construct a map of commit hashes to branch and tags names
+	commitMap, err := g.resolveCommitMap(ctx, branch, newTags)
+	if err != nil {
+		return err
+	}
+
 	// ==============================> FETCH & ORGANIZE ISSUES AND MERGES <==============================
 
 	// Fetch issues and merges since the last tag on changelog
@@ -212,17 +303,11 @@ func (g *Generator) Generate(ctx context.Context) error {
 	sortedIssues, sortedMerges := filterByLabels(issues, merges, g.spec)
 	g.logger.Infof("Filtered issues (%d) and pull/merge requests (%d) by labels", len(sortedIssues), len(sortedMerges))
 
-	// Construct a map of commit hashes to branch and tags names
-	commitMap, err := g.resolveCommitMap(ctx, branch, newTags)
-	if err != nil {
-		return err
-	}
-
 	issueMap := resolveIssueMap(sortedIssues, newTags)
 	mergeMap := resolveMergeMap(sortedMerges, newTags, commitMap)
 	g.logger.Info("Partitioned issues and pull/merge requests by tag")
 
-	chlog.New = resolveReleases(newTags, issueMap, mergeMap, g.spec)
+	chlog.New = g.resolveReleases(ctx, newTags, firstCommit.Hash, issueMap, mergeMap)
 	g.logger.Info("Grouped issues and pull/merge requests by labels")
 
 	// ==============================> UPDATE THE CHANGELOG <==============================

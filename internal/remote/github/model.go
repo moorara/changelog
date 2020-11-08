@@ -2,7 +2,6 @@ package github
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/moorara/changelog/internal/remote"
@@ -277,10 +276,6 @@ func toMerge(i issue, e event, c commit, author, merger user) remote.Merge {
 	// c.Commit.Committer.Time is the actual time of merge
 	time := c.Commit.Committer.Time
 
-	// Since we convert an issue to a pull request, we need to re-write the URL
-	// TODO: replace the last occurrence of "/issues" in case the name of the repo is also issues!
-	url := strings.Replace(i.HTMLURL, "/issues", "/pull", 1)
-
 	return remote.Merge{
 		Change: remote.Change{
 			Number:    i.Number,
@@ -289,7 +284,7 @@ func toMerge(i issue, e event, c commit, author, merger user) remote.Merge {
 			Milestone: milestone,
 			Time:      time,
 			Author:    toUser(author),
-			WebURL:    url,
+			WebURL:    i.HTMLURL,
 		},
 		Merger: toUser(merger),
 		Commit: toCommit(c),

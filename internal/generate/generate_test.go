@@ -65,7 +65,6 @@ var (
 		Time:   t1,
 		Commit: commit1,
 		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.1",
-		// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.0...v0.1.1",
 	}
 
 	tag2 = remote.Tag{
@@ -73,7 +72,6 @@ var (
 		Time:   t2,
 		Commit: commit2,
 		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.2",
-		// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.1...v0.1.2",
 	}
 
 	tag3 = remote.Tag{
@@ -81,7 +79,6 @@ var (
 		Time:   t3,
 		Commit: commit3,
 		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.3",
-		// TODO: CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
 	}
 
 	issue1 = remote.Issue{
@@ -619,6 +616,7 @@ func TestGenerator_resolveCommitMap(t *testing.T) {
 		{
 			name: "FetchParentCommitsFails_Branch",
 			g: &Generator{
+				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FetchParentCommitsMocks: []FetchParentCommitsMock{
 						{OutError: errors.New("error on fetching parent commits for branch")},
@@ -633,6 +631,7 @@ func TestGenerator_resolveCommitMap(t *testing.T) {
 		{
 			name: "FetchParentCommitsFails_FirstTag",
 			g: &Generator{
+				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FetchParentCommitsMocks: []FetchParentCommitsMock{
 						{OutCommits: remote.Commits{commit3, commit2, commit1}},
@@ -648,6 +647,7 @@ func TestGenerator_resolveCommitMap(t *testing.T) {
 		{
 			name: "FetchParentCommitsFails_SecondTag",
 			g: &Generator{
+				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FetchParentCommitsMocks: []FetchParentCommitsMock{
 						{OutCommits: remote.Commits{commit3, commit2, commit1}},
@@ -664,6 +664,7 @@ func TestGenerator_resolveCommitMap(t *testing.T) {
 		{
 			name: "Success",
 			g: &Generator{
+				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FetchParentCommitsMocks: []FetchParentCommitsMock{
 						{OutCommits: remote.Commits{commit3, commit2, commit1}},
@@ -702,6 +703,157 @@ func TestGenerator_resolveCommitMap(t *testing.T) {
 				assert.Nil(t, commitMap)
 				assert.EqualError(t, err, tc.expectedError)
 			}
+		})
+	}
+}
+
+func TestGenerator_resolveReleases(t *testing.T) {
+	now := time.Now()
+
+	futureTag := remote.Tag{
+		Name:   "v0.1.4",
+		Time:   now,
+		WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.4",
+	}
+
+	tests := []struct {
+		name             string
+		g                *Generator
+		ctx              context.Context
+		sortedTags       remote.Tags
+		baseRev          string
+		issueMap         issueMap
+		mergeMap         mergeMap
+		expectedReleases []changelog.Release
+	}{
+		{
+			name: "WithoutFutureTag",
+			g: &Generator{
+				logger: log.New(log.None),
+				spec: spec.Spec{
+					Issues: spec.Issues{
+						Grouping:  true,
+						BugLabels: []string{"bug"},
+					},
+					Merges: spec.Merges{
+						Grouping:          true,
+						EnhancementLabels: []string{"enhancement"},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					CompareURLMocks: []CompareURLMock{
+						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3"},
+					},
+				},
+			},
+			ctx:        context.Background(),
+			sortedTags: remote.Tags{tag3},
+			baseRev:    "v0.1.2",
+			issueMap: issueMap{
+				"v0.1.3": remote.Issues{issue1},
+			},
+			mergeMap: mergeMap{
+				"v0.1.3": remote.Merges{merge1},
+			},
+			expectedReleases: []changelog.Release{
+				{
+					TagName:    "v0.1.3",
+					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.3",
+					TagTime:    t3,
+					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
+					IssueGroups: []changelog.IssueGroup{
+						{
+							Title:  "Fixed Bugs",
+							Issues: []changelog.Issue{changelogIssue1},
+						},
+					},
+					MergeGroups: []changelog.MergeGroup{
+						{
+							Title:  "Enhancements",
+							Merges: []changelog.Merge{changelogMerge1},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "WithFutureTag",
+			g: &Generator{
+				logger: log.New(log.None),
+				spec: spec.Spec{
+					Issues: spec.Issues{
+						Grouping:  true,
+						BugLabels: []string{"bug"},
+					},
+					Merges: spec.Merges{
+						Grouping:          true,
+						EnhancementLabels: []string{"enhancement"},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					CompareURLMocks: []CompareURLMock{
+						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4"},
+						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3"},
+					},
+				},
+			},
+			ctx:        context.Background(),
+			sortedTags: remote.Tags{futureTag, tag3},
+			baseRev:    "v0.1.2",
+			issueMap: issueMap{
+				"v0.1.4": remote.Issues{issue2},
+				"v0.1.3": remote.Issues{issue1},
+			},
+			mergeMap: mergeMap{
+				"v0.1.4": remote.Merges{merge2},
+				"v0.1.3": remote.Merges{merge1},
+			},
+			expectedReleases: []changelog.Release{
+				{
+					TagName:    "v0.1.4",
+					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.4",
+					TagTime:    now,
+					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4",
+					IssueGroups: []changelog.IssueGroup{
+						{
+							Title:  "Closed Issues",
+							Issues: []changelog.Issue{changelogIssue2},
+						},
+					},
+					MergeGroups: []changelog.MergeGroup{
+						{
+							Title:  "Merged Changes",
+							Merges: []changelog.Merge{changelogMerge2},
+						},
+					},
+				},
+				{
+					TagName:    "v0.1.3",
+					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.3",
+					TagTime:    t3,
+					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
+					IssueGroups: []changelog.IssueGroup{
+						{
+							Title:  "Fixed Bugs",
+							Issues: []changelog.Issue{changelogIssue1},
+						},
+					},
+					MergeGroups: []changelog.MergeGroup{
+						{
+							Title:  "Enhancements",
+							Merges: []changelog.Merge{changelogMerge1},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			releases := tc.g.resolveReleases(tc.ctx, tc.sortedTags, tc.baseRev, tc.issueMap, tc.mergeMap)
+
+			assert.Equal(t, tc.expectedReleases, releases)
 		})
 	}
 }
@@ -814,7 +966,7 @@ func TestGenerator_Generate(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			name: "FetchIssuesAndMergesFails",
+			name: "FetchFirstCommitFails",
 			g: &Generator{
 				spec:   spec.Spec{},
 				logger: log.New(log.None),
@@ -830,13 +982,13 @@ func TestGenerator_Generate(t *testing.T) {
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag1}},
 					},
-					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
-						{OutError: errors.New("error on fetching issues and merges")},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{
+						{OutError: errors.New("error on fetching first commit")},
 					},
 				},
 			},
 			ctx:           context.Background(),
-			expectedError: "error on fetching issues and merges",
+			expectedError: "error on fetching first commit",
 		},
 		{
 			name: "FetchParentCommitsFails_Branch",
@@ -847,9 +999,6 @@ func TestGenerator_Generate(t *testing.T) {
 					ParseMocks: []ParseMock{
 						{OutChangelog: &changelog.Changelog{}},
 					},
-					RenderMocks: []RenderMock{
-						{OutError: errors.New("error on rendering changelog")},
-					},
 				},
 				remoteRepo: &MockRemoteRepo{
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
@@ -858,11 +1007,8 @@ func TestGenerator_Generate(t *testing.T) {
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag1}},
 					},
-					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
-						{
-							OutIssues: remote.Issues{},
-							OutMerges: remote.Merges{},
-						},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{
+						{OutCommit: commit1},
 					},
 					FetchParentCommitsMocks: []FetchParentCommitsMock{
 						{OutError: errors.New("error on fetching parent commits for branch")},
@@ -881,9 +1027,6 @@ func TestGenerator_Generate(t *testing.T) {
 					ParseMocks: []ParseMock{
 						{OutChangelog: &changelog.Changelog{}},
 					},
-					RenderMocks: []RenderMock{
-						{OutError: errors.New("error on rendering changelog")},
-					},
 				},
 				remoteRepo: &MockRemoteRepo{
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
@@ -892,11 +1035,8 @@ func TestGenerator_Generate(t *testing.T) {
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag1}},
 					},
-					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
-						{
-							OutIssues: remote.Issues{},
-							OutMerges: remote.Merges{},
-						},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{
+						{OutCommit: commit1},
 					},
 					FetchParentCommitsMocks: []FetchParentCommitsMock{
 						{OutCommits: remote.Commits{commit3, commit2, commit1}},
@@ -906,6 +1046,38 @@ func TestGenerator_Generate(t *testing.T) {
 			},
 			ctx:           context.Background(),
 			expectedError: "error on fetching parent commits for tag",
+		},
+		{
+			name: "FetchIssuesAndMergesFails",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: &changelog.Changelog{}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
+					FetchTagsMocks: []FetchTagsMock{
+						{OutTags: remote.Tags{tag1}},
+					},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{
+						{OutCommit: commit1},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+					},
+					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
+						{OutError: errors.New("error on fetching issues and merges")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on fetching issues and merges",
 		},
 		{
 			name: "RenderFails",
@@ -927,15 +1099,21 @@ func TestGenerator_Generate(t *testing.T) {
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag1}},
 					},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{
+						{OutCommit: commit1},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{
 							OutIssues: remote.Issues{},
 							OutMerges: remote.Merges{},
 						},
 					},
-					FetchParentCommitsMocks: []FetchParentCommitsMock{
-						{OutCommits: remote.Commits{commit3, commit2, commit1}},
-						{OutCommits: remote.Commits{commit2, commit1}},
+					CompareURLMocks: []CompareURLMock{
+						{OutString: "https://github.com/octocat/Hello-World/compare/25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378...v0.1.1"},
 					},
 				},
 			},
@@ -962,15 +1140,21 @@ func TestGenerator_Generate(t *testing.T) {
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag1}},
 					},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{
+						{OutCommit: commit1},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{
 							OutIssues: remote.Issues{},
 							OutMerges: remote.Merges{},
 						},
 					},
-					FetchParentCommitsMocks: []FetchParentCommitsMock{
-						{OutCommits: remote.Commits{commit3, commit2, commit1}},
-						{OutCommits: remote.Commits{commit2, commit1}},
+					CompareURLMocks: []CompareURLMock{
+						{OutString: "https://github.com/octocat/Hello-World/compare/25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378...v0.1.1"},
 					},
 				},
 			},
@@ -1003,16 +1187,23 @@ func TestGenerator_Generate(t *testing.T) {
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag2, tag1}},
 					},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{
+						{OutCommit: commit1},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+						{OutCommits: remote.Commits{commit1}},
+					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{
 							OutIssues: remote.Issues{},
 							OutMerges: remote.Merges{},
 						},
 					},
-					FetchParentCommitsMocks: []FetchParentCommitsMock{
-						{OutCommits: remote.Commits{commit3, commit2, commit1}},
-						{OutCommits: remote.Commits{commit2, commit1}},
-						{OutCommits: remote.Commits{commit1}},
+					CompareURLMocks: []CompareURLMock{
+						{OutString: "https://github.com/octocat/Hello-World/compare/25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378...v0.1.1"},
+						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.1...v0.1.2"},
 					},
 				},
 			},
@@ -1052,15 +1243,21 @@ func TestGenerator_Generate(t *testing.T) {
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{}},
 					},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{
+						{OutCommit: commit1},
+					},
+					FetchParentCommitsMocks: []FetchParentCommitsMock{
+						{OutCommits: remote.Commits{commit3, commit2, commit1}},
+						{OutCommits: remote.Commits{commit2, commit1}},
+					},
 					FetchIssuesAndMergesMocks: []FetchIssuesAndMergesMock{
 						{
 							OutIssues: remote.Issues{},
 							OutMerges: remote.Merges{},
 						},
 					},
-					FetchParentCommitsMocks: []FetchParentCommitsMock{
-						{OutCommits: remote.Commits{commit3, commit2, commit1}},
-						{OutCommits: remote.Commits{commit2, commit1}},
+					CompareURLMocks: []CompareURLMock{
+						{OutString: "https://github.com/octocat/Hello-World/compare/25aa2bdbaf10fa30b6db40c2c0a15d280ad9f378...v0.1.0"},
 					},
 				},
 			},

@@ -43,6 +43,11 @@ func (r *repo) FutureTag(name string) remote.Tag {
 	return remote.Tag{}
 }
 
+// CompareURL returns a URL for comparing two revisions for a GitLab repository.
+func (r *repo) CompareURL(base, head string) string {
+	return ""
+}
+
 // FetchFirstCommit retrieves the firist/initial commit for a GitLab repository.
 func (r *repo) FetchFirstCommit(ctx context.Context) (remote.Commit, error) {
 	return remote.Commit{}, nil

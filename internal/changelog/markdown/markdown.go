@@ -19,6 +19,8 @@ const timeLayout = "2006-01-02"
 const markdownTemplate = `
 {{range .}}## [{{.TagName}}]({{.TagURL}}) ({{time .TagTime}})
 
+[Compare Changes]({{.CompareURL}})
+
 {{range .IssueGroups}}**{{title .Title}}:**
 
 {{range .Issues}}  - {{.Title}} [#{{.Number}}]({{.URL}}) ({{if ne .OpenedBy.Username .ClosedBy.Username}}[{{.OpenedBy.Username}}]({{.OpenedBy.URL}}), {{end}}[{{.ClosedBy.Username}}]({{.ClosedBy.URL}}))

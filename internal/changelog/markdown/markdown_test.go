@@ -71,6 +71,8 @@ var (
 const expectedContent = `
 ## [v0.2.0](https://github.com/octocat/Hello-World/tree/v0.2.0) (2020-11-02)
 
+[Compare Changes](https://github.com/octocat/Hello-World/compare/v0.1.0...v0.2.0)
+
 **Fixed Bugs:**
 
   - Fixed a bug [#1001](https://github.com/octocat/Hello-World/issues/1001) ([octocat](https://github.com/octocat))

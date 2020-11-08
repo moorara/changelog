@@ -52,6 +52,16 @@ func TestRepo_FutureTag(t *testing.T) {
 	assert.Empty(t, tag)
 }
 
+func TestRepo_CompareURL(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	url := r.CompareURL("v0.1.0", "v0.2.0")
+
+	assert.Empty(t, url)
+}
+
 func TestRepo_FetchFirstCommit(t *testing.T) {
 	r := &repo{
 		logger: log.New(log.None),

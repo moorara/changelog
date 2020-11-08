@@ -646,6 +646,11 @@ func (r *repo) FutureTag(name string) remote.Tag {
 	}
 }
 
+// CompareURL returns a URL for comparing two revisions for a GitHub repository.
+func (r *repo) CompareURL(base, head string) string {
+	return fmt.Sprintf("https://github.com/%s/compare/%s...%s", r.path, base, head)
+}
+
 // FetchFirstCommit retrieves the firist/initial commit for a GitHub repository.
 func (r *repo) FetchFirstCommit(ctx context.Context) (remote.Commit, error) {
 	if err := r.checkScopes(ctx, scopeRepo); err != nil {
