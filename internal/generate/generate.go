@@ -273,13 +273,20 @@ func (g *Generator) Generate(ctx context.Context) error {
 		return nil
 	}
 
-	// ==============================> FETCH COMMITS FOR BRANCH AND TAGS <==============================
+	// ==============================> RESOLVE GIT REVISION FOR COMPARISON <==============================
 
-	// Fetch the first commit in case it is needed for comparing the first tag against it
-	firstCommit, err := g.remoteRepo.FetchFirstCommit(ctx)
-	if err != nil {
-		return err
+	var baseRev string
+	if len(chlog.Existing) > 0 {
+		baseRev = chlog.Existing[0].TagName
+	} else {
+		firstCommit, err := g.remoteRepo.FetchFirstCommit(ctx)
+		if err != nil {
+			return err
+		}
+		baseRev = firstCommit.Hash
 	}
+
+	// ==============================> FETCH COMMITS FOR BRANCH AND TAGS <==============================
 
 	// Construct a map of commit hashes to branch and tags names
 	commitMap, err := g.resolveCommitMap(ctx, branch, newTags)
@@ -307,7 +314,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 	mergeMap := resolveMergeMap(sortedMerges, newTags, commitMap)
 	g.logger.Info("Partitioned issues and pull/merge requests by tag")
 
-	chlog.New = g.resolveReleases(ctx, newTags, firstCommit.Hash, issueMap, mergeMap)
+	chlog.New = g.resolveReleases(ctx, newTags, baseRev, issueMap, mergeMap)
 	g.logger.Info("Grouped issues and pull/merge requests by labels")
 
 	// ==============================> UPDATE THE CHANGELOG <==============================

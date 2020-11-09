@@ -1187,9 +1187,7 @@ func TestGenerator_Generate(t *testing.T) {
 					FetchTagsMocks: []FetchTagsMock{
 						{OutTags: remote.Tags{tag2, tag1}},
 					},
-					FetchFirstCommitMocks: []FetchFirstCommitMock{
-						{OutCommit: commit1},
-					},
+					FetchFirstCommitMocks: []FetchFirstCommitMock{},
 					FetchParentCommitsMocks: []FetchParentCommitsMock{
 						{OutCommits: remote.Commits{commit3, commit2, commit1}},
 						{OutCommits: remote.Commits{commit2, commit1}},
