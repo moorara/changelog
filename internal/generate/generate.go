@@ -317,7 +317,9 @@ func (g *Generator) Generate(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Print(content)
+	if g.spec.General.Print {
+		fmt.Print(content)
+	}
 
 	return nil
 }

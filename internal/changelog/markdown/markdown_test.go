@@ -1,6 +1,8 @@
 package markdown
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -68,8 +70,7 @@ var (
 	}
 )
 
-const expectedContent = `
-## [v0.2.0](https://github.com/octocat/Hello-World/tree/v0.2.0) (2020-11-02)
+const expectedContent = `## [v0.2.0](https://github.com/octocat/Hello-World/tree/v0.2.0) (2020-11-02)
 
 [Compare Changes](https://github.com/octocat/Hello-World/compare/v0.1.0...v0.2.0)
 
@@ -107,6 +108,43 @@ func TestNewProcessor(t *testing.T) {
 
 			assert.Equal(t, tc.logger, mp.logger)
 			assert.Equal(t, tc.filename, mp.filename)
+			assert.Empty(t, mp.content)
+		})
+	}
+}
+
+func TestProcessor_createChangelog(t *testing.T) {
+	tests := []struct {
+		name              string
+		p                 *processor
+		expectedChangelog *changelog.Changelog
+		expectedError     string
+	}{
+		{
+			name: "OK",
+			p: &processor{
+				logger: log.New(log.None),
+			},
+			expectedChangelog: &changelog.Changelog{
+				Title: "Changelog",
+			},
+			expectedError: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			chlog, err := tc.p.createChangelog()
+
+			if tc.expectedError == "" {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, tc.p.content)
+				assert.Equal(t, tc.expectedChangelog, chlog)
+			} else {
+				assert.Nil(t, chlog)
+				assert.Empty(t, tc.p.content)
+				assert.EqualError(t, err, tc.expectedError)
+			}
 		})
 	}
 }
@@ -162,9 +200,11 @@ func TestProcessor_Parse(t *testing.T) {
 
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
+				assert.NotEmpty(t, tc.p.content)
 				assert.Equal(t, tc.expectedChangelog, chlog)
 			} else {
 				assert.Nil(t, chlog)
+				assert.Empty(t, tc.p.content)
 				assert.EqualError(t, err, tc.expectedError)
 			}
 		})
@@ -174,16 +214,12 @@ func TestProcessor_Parse(t *testing.T) {
 func TestProcessor_Render(t *testing.T) {
 	tests := []struct {
 		name            string
-		p               *processor
 		chlog           *changelog.Changelog
 		expectedContent string
 		expectedError   error
 	}{
 		{
-			name: "OK",
-			p: &processor{
-				logger: log.New(log.None),
-			},
+			name:            "OK",
 			chlog:           chlog,
 			expectedContent: expectedContent,
 			expectedError:   nil,
@@ -192,7 +228,19 @@ func TestProcessor_Render(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			str, err := tc.p.Render(tc.chlog)
+			f, err := ioutil.TempFile("", "changelog_test_")
+			assert.NoError(t, err)
+			defer os.Remove(f.Name())
+
+			p := &processor{
+				logger:   log.New(log.None),
+				filename: f.Name(),
+			}
+
+			_, err = p.createChangelog()
+			assert.NoError(t, err)
+
+			str, err := p.Render(tc.chlog)
 
 			assert.Equal(t, tc.expectedContent, str)
 			assert.Equal(t, tc.expectedError, err)
