@@ -326,30 +326,21 @@ func (i Issues) Sort() Issues {
 }
 
 // Select returns a new collection of issues that satisfies the predicate f.
-func (i Issues) Select(f func(Issue) bool) Issues {
+// The first return value is the collection of selected issues.
+// The second return value is the collection of unselected issues.
+func (i Issues) Select(f func(Issue) bool) (Issues, Issues) {
 	selected := Issues{}
+	unselected := Issues{}
 
 	for _, issue := range i {
 		if f(issue) {
 			selected = append(selected, issue)
+		} else {
+			unselected = append(unselected, issue)
 		}
 	}
 
-	return selected
-}
-
-// Remove removes any issue that satisfies the predicate f and returns the removed issues.
-func (i *Issues) Remove(f func(Issue) bool) Issues {
-	var removed Issues
-
-	for n, issue := range *i {
-		if f(issue) {
-			removed = append(removed, (*i)[n])
-			*i = append((*i)[:n], (*i)[n+1:]...)
-		}
-	}
-
-	return removed
+	return selected, unselected
 }
 
 // Merge represents a merge/pull request.
@@ -376,28 +367,19 @@ func (m Merges) Sort() Merges {
 }
 
 // Select returns a new collection of merges that satisfies the predicate f.
-func (m Merges) Select(f func(Merge) bool) Merges {
+// The first return value is the collection of selected merges.
+// The second return value is the collection of unselected merges.
+func (m Merges) Select(f func(Merge) bool) (Merges, Merges) {
 	selected := Merges{}
+	unselected := Merges{}
 
 	for _, merge := range m {
 		if f(merge) {
 			selected = append(selected, merge)
+		} else {
+			unselected = append(unselected, merge)
 		}
 	}
 
-	return selected
-}
-
-// Remove removes any merge that satisfies the predicate f and returns the removed merges.
-func (m *Merges) Remove(f func(Merge) bool) Merges {
-	var removed Merges
-
-	for n, merge := range *m {
-		if f(merge) {
-			removed = append(removed, (*m)[n])
-			*m = append((*m)[:n], (*m)[n+1:]...)
-		}
-	}
-
-	return removed
+	return selected, unselected
 }

@@ -32,28 +32,28 @@ func filterByLabels(issues remote.Issues, merges remote.Merges, s spec.Spec) (re
 	case spec.SelectionAll:
 		// All issues without labels or if any labels, they should include one of the given labels
 		if len(s.Issues.IncludeLabels) > 0 {
-			issues = issues.Select(func(c remote.Issue) bool {
+			issues, _ = issues.Select(func(c remote.Issue) bool {
 				return len(c.Labels) == 0 || c.Labels.Any(s.Issues.IncludeLabels...)
 			})
 		}
 		if len(s.Issues.ExcludeLabels) > 0 {
-			issues = issues.Select(func(c remote.Issue) bool {
+			issues, _ = issues.Select(func(c remote.Issue) bool {
 				return len(c.Labels) == 0 || !c.Labels.Any(s.Issues.ExcludeLabels...)
 			})
 		}
 
 	case spec.SelectionLabeled:
 		// Select only labeled issues
-		issues = issues.Select(func(c remote.Issue) bool {
+		issues, _ = issues.Select(func(c remote.Issue) bool {
 			return len(c.Labels) > 0
 		})
 		if len(s.Issues.IncludeLabels) > 0 {
-			issues = issues.Select(func(c remote.Issue) bool {
+			issues, _ = issues.Select(func(c remote.Issue) bool {
 				return c.Labels.Any(s.Issues.IncludeLabels...)
 			})
 		}
 		if len(s.Issues.ExcludeLabels) > 0 {
-			issues = issues.Select(func(c remote.Issue) bool {
+			issues, _ = issues.Select(func(c remote.Issue) bool {
 				return !c.Labels.Any(s.Issues.ExcludeLabels...)
 			})
 		}
@@ -66,28 +66,28 @@ func filterByLabels(issues remote.Issues, merges remote.Merges, s spec.Spec) (re
 	case spec.SelectionAll:
 		// All merges without labels or if any labels, they should include one of the given labels
 		if len(s.Merges.IncludeLabels) > 0 {
-			merges = merges.Select(func(c remote.Merge) bool {
+			merges, _ = merges.Select(func(c remote.Merge) bool {
 				return len(c.Labels) == 0 || c.Labels.Any(s.Merges.IncludeLabels...)
 			})
 		}
 		if len(s.Merges.ExcludeLabels) > 0 {
-			merges = merges.Select(func(c remote.Merge) bool {
+			merges, _ = merges.Select(func(c remote.Merge) bool {
 				return len(c.Labels) == 0 || !c.Labels.Any(s.Merges.ExcludeLabels...)
 			})
 		}
 
 	case spec.SelectionLabeled:
 		// Select only labeled merges
-		merges = merges.Select(func(c remote.Merge) bool {
+		merges, _ = merges.Select(func(c remote.Merge) bool {
 			return len(c.Labels) > 0
 		})
 		if len(s.Merges.IncludeLabels) > 0 {
-			merges = merges.Select(func(c remote.Merge) bool {
+			merges, _ = merges.Select(func(c remote.Merge) bool {
 				return c.Labels.Any(s.Merges.IncludeLabels...)
 			})
 		}
 		if len(s.Merges.ExcludeLabels) > 0 {
-			merges = merges.Select(func(c remote.Merge) bool {
+			merges, _ = merges.Select(func(c remote.Merge) bool {
 				return !c.Labels.Any(s.Merges.ExcludeLabels...)
 			})
 		}

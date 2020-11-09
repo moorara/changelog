@@ -748,71 +748,42 @@ func TestIssues_Sort(t *testing.T) {
 }
 
 func TestIssues_Select(t *testing.T) {
+	issue3 := Issue{}
+	issue4 := Issue{}
+
 	tests := []struct {
-		name             string
-		i                Issues
-		f                func(Issue) bool
-		expectedSelected Issues
+		name               string
+		i                  Issues
+		f                  func(Issue) bool
+		expectedSelected   Issues
+		expectedUnselected Issues
 	}{
 		{
 			name: "Labeled",
-			i:    Issues{issue1, issue2, Issue{}},
+			i:    Issues{issue1, issue2, issue3, issue4},
 			f: func(i Issue) bool {
 				return len(i.Labels) > 0
 			},
-			expectedSelected: Issues{issue1, issue2},
+			expectedSelected:   Issues{issue1, issue2},
+			expectedUnselected: Issues{issue3, issue4},
 		},
 		{
 			name: "Unlabeled",
-			i:    Issues{issue1, issue2, Issue{}},
+			i:    Issues{issue1, issue2, issue3, issue4},
 			f: func(i Issue) bool {
 				return len(i.Labels) == 0
 			},
-			expectedSelected: Issues{Issue{}},
+			expectedSelected:   Issues{issue3, issue4},
+			expectedUnselected: Issues{issue1, issue2},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			selected := tc.i.Select(tc.f)
+			selected, unselected := tc.i.Select(tc.f)
 
 			assert.Equal(t, tc.expectedSelected, selected)
-		})
-	}
-}
-
-func TestIssues_Remove(t *testing.T) {
-	tests := []struct {
-		name            string
-		i               Issues
-		f               func(Issue) bool
-		expectedIssues  Issues
-		expextedRemoved Issues
-	}{
-		{
-			name:            "Nil",
-			i:               nil,
-			f:               nil,
-			expectedIssues:  nil,
-			expextedRemoved: nil,
-		},
-		{
-			name: "OK",
-			i:    Issues{issue1, issue2},
-			f: func(i Issue) bool {
-				return i.Number == 1001
-			},
-			expectedIssues:  Issues{issue2},
-			expextedRemoved: Issues{issue1},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			removed := tc.i.Remove(tc.f)
-
-			assert.Equal(t, tc.expectedIssues, tc.i)
-			assert.Equal(t, tc.expextedRemoved, removed)
+			assert.Equal(t, tc.expectedUnselected, unselected)
 		})
 	}
 }
@@ -840,71 +811,42 @@ func TestMerges_Sort(t *testing.T) {
 }
 
 func TestMerges_Select(t *testing.T) {
+	merge3 := Merge{}
+	merge4 := Merge{}
+
 	tests := []struct {
-		name             string
-		m                Merges
-		f                func(Merge) bool
-		expectedSelected Merges
+		name               string
+		m                  Merges
+		f                  func(Merge) bool
+		expectedSelected   Merges
+		expectedUnselected Merges
 	}{
 		{
 			name: "Labeled",
-			m:    Merges{merge1, merge2, Merge{}},
+			m:    Merges{merge1, merge2, merge3, merge4},
 			f: func(m Merge) bool {
 				return len(m.Labels) > 0
 			},
-			expectedSelected: Merges{merge1, merge2},
+			expectedSelected:   Merges{merge1, merge2},
+			expectedUnselected: Merges{merge3, merge4},
 		},
 		{
 			name: "Unlabeled",
-			m:    Merges{merge1, merge2, Merge{}},
+			m:    Merges{merge1, merge2, merge3, merge4},
 			f: func(m Merge) bool {
 				return len(m.Labels) == 0
 			},
-			expectedSelected: Merges{Merge{}},
+			expectedSelected:   Merges{merge3, merge4},
+			expectedUnselected: Merges{merge1, merge2},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			selected := tc.m.Select(tc.f)
+			selected, unselected := tc.m.Select(tc.f)
 
 			assert.Equal(t, tc.expectedSelected, selected)
-		})
-	}
-}
-
-func TestMerges_Remove(t *testing.T) {
-	tests := []struct {
-		name            string
-		m               Merges
-		f               func(Merge) bool
-		expectedMerges  Merges
-		expextedRemoved Merges
-	}{
-		{
-			name:            "Nil",
-			m:               nil,
-			f:               nil,
-			expectedMerges:  nil,
-			expextedRemoved: nil,
-		},
-		{
-			name: "OK",
-			m:    Merges{merge1, merge2},
-			f: func(m Merge) bool {
-				return m.Number == 1003
-			},
-			expectedMerges:  Merges{merge2},
-			expextedRemoved: Merges{merge1},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			removed := tc.m.Remove(tc.f)
-
-			assert.Equal(t, tc.expectedMerges, tc.m)
-			assert.Equal(t, tc.expextedRemoved, removed)
+			assert.Equal(t, tc.expectedUnselected, unselected)
 		})
 	}
 }

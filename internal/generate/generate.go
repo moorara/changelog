@@ -169,15 +169,15 @@ func (g *Generator) resolveReleases(ctx context.Context, sortedTags remote.Tags,
 
 		// Group issues for the current tag
 		if issues, ok := im[tag.Name]; ok {
-			leftIssues := issues
+			unselected := issues
 
 			for _, group := range issueGroups {
 				f := func(i remote.Issue) bool {
 					return i.Labels.Any(group.Labels...)
 				}
 
-				selected := issues.Select(f)
-				leftIssues.Remove(f)
+				selected, _ := issues.Select(f)
+				_, unselected = unselected.Select(f)
 
 				if len(selected) > 0 {
 					issueGroup := toIssueGroup(group.Title, selected)
@@ -185,23 +185,23 @@ func (g *Generator) resolveReleases(ctx context.Context, sortedTags remote.Tags,
 				}
 			}
 
-			if len(leftIssues) > 0 {
-				issueGroup := toIssueGroup("Closed Issues", leftIssues)
+			if len(unselected) > 0 {
+				issueGroup := toIssueGroup("Closed Issues", unselected)
 				release.IssueGroups = append(release.IssueGroups, issueGroup)
 			}
 		}
 
 		// Group merges for the current tag
 		if merges, ok := cm[tag.Name]; ok {
-			leftMerges := merges
+			unselected := merges
 
 			for _, group := range mergeGroups {
 				f := func(m remote.Merge) bool {
 					return m.Labels.Any(group.Labels...)
 				}
 
-				selected := merges.Select(f)
-				leftMerges.Remove(f)
+				selected, _ := merges.Select(f)
+				_, unselected = unselected.Select(f)
 
 				if len(selected) > 0 {
 					mergeGroup := toMergeGroup(group.Title, selected)
@@ -209,8 +209,8 @@ func (g *Generator) resolveReleases(ctx context.Context, sortedTags remote.Tags,
 				}
 			}
 
-			if len(leftMerges) > 0 {
-				mergeGroup := toMergeGroup("Merged Changes", leftMerges)
+			if len(unselected) > 0 {
+				mergeGroup := toMergeGroup("Merged Changes", unselected)
 				release.MergeGroups = append(release.MergeGroups, mergeGroup)
 			}
 		}
