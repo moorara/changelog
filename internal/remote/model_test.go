@@ -788,6 +788,28 @@ func TestIssues_Select(t *testing.T) {
 	}
 }
 
+func TestIssues_Milestones(t *testing.T) {
+	tests := []struct {
+		name               string
+		i                  Issues
+		expectedMilestones []string
+	}{
+		{
+			name:               "OK",
+			i:                  Issues{issue1, issue2},
+			expectedMilestones: []string{"v1.0"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			milestones := tc.i.Milestones()
+
+			assert.Equal(t, tc.expectedMilestones, milestones)
+		})
+	}
+}
+
 func TestMerges_Sort(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -847,6 +869,28 @@ func TestMerges_Select(t *testing.T) {
 
 			assert.Equal(t, tc.expectedSelected, selected)
 			assert.Equal(t, tc.expectedUnselected, unselected)
+		})
+	}
+}
+
+func TestMerges_Milestones(t *testing.T) {
+	tests := []struct {
+		name               string
+		m                  Merges
+		expectedMilestones []string
+	}{
+		{
+			name:               "OK",
+			m:                  Merges{merge1, merge2},
+			expectedMilestones: []string{"v1.0"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			milestones := tc.m.Milestones()
+
+			assert.Equal(t, tc.expectedMilestones, milestones)
 		})
 	}
 }

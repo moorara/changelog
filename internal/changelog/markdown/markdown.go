@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,7 +27,9 @@ const emptyTemplate = `# {{title .Title}}
 `
 
 const changelogTemplate = `{{range .}}## [{{.TagName}}]({{.TagURL}}) ({{time .TagTime}})
-
+{{if .ReleaseURL}}
+{{.ReleaseURL}}
+{{end}}
 [Compare Changes]({{.CompareURL}})
 
 {{range .IssueGroups}}**{{title .Title}}:**
@@ -54,17 +57,18 @@ var (
 
 // processor implements the changelog.Processor interface for Markdown format.
 type processor struct {
-	logger   log.Logger
-	filename string
-	content  string
+	logger        log.Logger
+	baseFile      string
+	changelogFile string
+	content       string
 }
 
 // NewProcessor creates a new changelog processor for Markdown format.
-func NewProcessor(logger log.Logger, filename string) changelog.Processor {
+func NewProcessor(logger log.Logger, baseFile, changelogFile string) changelog.Processor {
 	return &processor{
-		logger:   logger,
-		filename: filepath.Clean(filename),
-		content:  "",
+		logger:        logger,
+		baseFile:      filepath.Clean(baseFile),
+		changelogFile: filepath.Clean(changelogFile),
 	}
 }
 
@@ -76,16 +80,16 @@ func (p *processor) createChangelog() (*changelog.Changelog, error) {
 	_ = tmpl.Execute(buf, chlog)
 	p.content = buf.String()
 
-	p.logger.Warnf("%s not found", p.filename)
+	p.logger.Warnf("%s not found", p.changelogFile)
 	p.logger.Info("A new changelog is created.")
 
 	return chlog, nil
 }
 
 func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, error) {
-	p.logger.Debugf("Opening %s ...", p.filename)
+	p.logger.Debugf("Opening %s ...", p.changelogFile)
 
-	f, err := os.Open(p.filename)
+	f, err := os.Open(p.changelogFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return p.createChangelog()
@@ -94,7 +98,7 @@ func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, er
 	}
 	defer f.Close()
 
-	p.logger.Debugf("Parsing %s ...", p.filename)
+	p.logger.Debugf("Parsing %s ...", p.changelogFile)
 
 	content := ""
 	chlog := new(changelog.Changelog)
@@ -126,7 +130,7 @@ func (p *processor) Parse(opts changelog.ParseOptions) (*changelog.Changelog, er
 
 	p.content = content
 
-	p.logger.Infof("Successfully parsed %s", p.filename)
+	p.logger.Infof("Successfully parsed %s", p.changelogFile)
 
 	return chlog, nil
 }
@@ -150,23 +154,36 @@ func (p *processor) Render(chlog *changelog.Changelog) (string, error) {
 
 	// ==============================> UPDATE THE CHANGELOG FILE <==============================
 
-	f, err := os.OpenFile(p.filename, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(p.changelogFile, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
 
-	if i := strings.Index(p.content, "##"); i == -1 {
-		p.content += newContent
-	} else {
+	if i := strings.Index(p.content, "##"); i >= 0 {
 		p.content = p.content[:i] + newContent + p.content[i:]
+	} else {
+		// Add the content of an optional base file if generating the changelog for the first time
+		var baseContent string
+		if p.baseFile != "" {
+			p.logger.Infof("Adding the base file content to the changelog: %s", p.baseFile)
+
+			b, err := ioutil.ReadFile(p.baseFile)
+			if err != nil {
+				return "", err
+			}
+
+			baseContent = string(b)
+		}
+
+		p.content += newContent + baseContent
 	}
 
 	if _, err = f.WriteString(p.content); err != nil {
 		return "", err
 	}
 
-	p.logger.Infof("Successfully updated the changelog: %s", p.filename)
+	p.logger.Infof("Successfully updated the changelog: %s", p.changelogFile)
 
 	return newContent, nil
 }

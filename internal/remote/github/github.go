@@ -114,6 +114,7 @@ func (r *repo) checkScopes(ctx context.Context, scopes ...scope) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	// Ensure the access token has all the required OAuth scopes
 	oauthScopes := resp.Header.Get("X-OAuth-Scopes")
@@ -148,6 +149,7 @@ func (r *repo) fetchUser(ctx context.Context, username string) (user, error) {
 	if err != nil {
 		return user{}, err
 	}
+	defer resp.Body.Close()
 
 	u := user{}
 	if err = json.NewDecoder(resp.Body).Decode(&u); err != nil {
@@ -176,6 +178,7 @@ func (r *repo) fetchRepository(ctx context.Context) (repository, error) {
 	if err != nil {
 		return repository{}, err
 	}
+	defer resp.Body.Close()
 
 	rp := repository{}
 	if err = json.NewDecoder(resp.Body).Decode(&rp); err != nil {
@@ -207,6 +210,7 @@ func (r *repo) fetchCommit(ctx context.Context, ref string) (commit, error) {
 	if err != nil {
 		return commit{}, err
 	}
+	defer resp.Body.Close()
 
 	c := commit{}
 	if err = json.NewDecoder(resp.Body).Decode(&c); err != nil {
@@ -255,6 +259,7 @@ func (r *repo) fetchBranch(ctx context.Context, name string) (branch, error) {
 	if err != nil {
 		return branch{}, err
 	}
+	defer resp.Body.Close()
 
 	b := branch{}
 	if err = json.NewDecoder(resp.Body).Decode(&b); err != nil {
@@ -281,6 +286,7 @@ func (r *repo) fetchPull(ctx context.Context, number int) (pull, error) {
 	if err != nil {
 		return pull{}, err
 	}
+	defer resp.Body.Close()
 
 	p := pull{}
 	if err = json.NewDecoder(resp.Body).Decode(&p); err != nil {
@@ -312,6 +318,7 @@ func (r *repo) findEvent(ctx context.Context, number int, name string) (event, e
 		if err != nil {
 			return event{}, err
 		}
+		defer resp.Body.Close()
 
 		events := []event{}
 		if err = json.NewDecoder(resp.Body).Decode(&events); err != nil {
@@ -366,6 +373,7 @@ func (r *repo) fetchTagsPageCount(ctx context.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	defer resp.Body.Close()
 
 	count := 1
 
@@ -405,6 +413,7 @@ func (r *repo) fetchTags(ctx context.Context, pageNo int) ([]tag, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	tags := []tag{}
 	if err = json.NewDecoder(resp.Body).Decode(&tags); err != nil {
@@ -435,6 +444,7 @@ func (r *repo) fetchCommitsPageCount(ctx context.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	defer resp.Body.Close()
 
 	count := 1
 
@@ -473,6 +483,7 @@ func (r *repo) fetchCommits(ctx context.Context, pageNo int) ([]commit, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	commits := []commit{}
 	if err = json.NewDecoder(resp.Body).Decode(&commits); err != nil {
@@ -514,6 +525,7 @@ func (r *repo) fetchIssuesPageCount(ctx context.Context, since time.Time) (int, 
 	if err != nil {
 		return -1, err
 	}
+	defer resp.Body.Close()
 
 	count := 1
 
@@ -556,6 +568,7 @@ func (r *repo) fetchIssues(ctx context.Context, since time.Time, pageNo int) ([]
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	issues := []issue{}
 	if err = json.NewDecoder(resp.Body).Decode(&issues); err != nil {
@@ -587,6 +600,7 @@ func (r *repo) fetchPullsPageCount(ctx context.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	defer resp.Body.Close()
 
 	count := 1
 
@@ -626,6 +640,7 @@ func (r *repo) fetchPulls(ctx context.Context, pageNo int) ([]pull, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	pulls := []pull{}
 	if err = json.NewDecoder(resp.Body).Decode(&pulls); err != nil {
@@ -778,8 +793,7 @@ func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 
 	tags := resolveTags(gitHubTags, r.commits, r.path)
 
-	r.logger.Debugf("Resolved and sorted GitHub tags: %d", len(tags))
-	r.logger.Infof("GitHub tags are fetched: %s", tags.Map(func(t remote.Tag) string {
+	r.logger.Debugf("GitHub tags are fetched: %s", tags.Map(func(t remote.Tag) string {
 		return t.Name
 	}))
 
@@ -829,7 +843,7 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	// ==============================> FETCH EVENTS & COMMITS <==============================
 
-	r.logger.Info("Fetching GitHub events and commits for issues and pull requests ...")
+	r.logger.Debug("Fetching GitHub events and commits for issues and pull requests ...")
 
 	g3, ctx3 := errgroup.WithContext(ctx)
 	gitHubEvents := newEventStore()
@@ -870,7 +884,7 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	// ==============================> FETCH USERS <==============================
 
-	r.logger.Info("Fetching GitHub users for issues and pull requests ...")
+	r.logger.Debug("Fetching GitHub users for issues and pull requests ...")
 
 	// Fetch author users for issues and pull requests
 	err = gitHubIssues.ForEach(func(num int, i issue) error {
@@ -900,8 +914,8 @@ func (r *repo) FetchIssuesAndMerges(ctx context.Context, since time.Time) (remot
 
 	issues, merges := resolveIssuesAndMerges(gitHubIssues, gitHubEvents, r.commits, r.users)
 
-	r.logger.Debugf("Resolved and sorted GitHub issues and pull requests: %d, %d", len(issues), len(merges))
-	r.logger.Infof("All GitHub issues and pull requests are fetched: %d, %d", len(issues), len(merges))
+	r.logger.Debugf("Resolved and sorted GitHub issues (%d) and pull requests (%d)", len(issues), len(merges))
+	r.logger.Infof("All GitHub issues (%d) and pull requests (%d) are fetched", len(issues), len(merges))
 
 	return issues, merges, nil
 }

@@ -126,7 +126,7 @@ var (
 			Number:    1004,
 			Title:     "Refactored code",
 			Labels:    nil,
-			Milestone: "v1.0",
+			Milestone: "",
 			Time:      t4, // Unrleased change for future tag
 			Author:    user1,
 			WebURL:    "https://github.com/octocat/Hello-World/pull/1004",
@@ -727,17 +727,18 @@ func TestGenerator_resolveReleases(t *testing.T) {
 		expectedReleases []changelog.Release
 	}{
 		{
-			name: "WithoutFutureTag",
+			name: "WithoutFutureTag_GroupingMilestone",
 			g: &Generator{
 				logger: log.New(log.None),
 				spec: spec.Spec{
 					Issues: spec.Issues{
-						Grouping:  true,
-						BugLabels: []string{"bug"},
+						Grouping: spec.GroupingMilestone,
 					},
 					Merges: spec.Merges{
-						Grouping:          true,
-						EnhancementLabels: []string{"enhancement"},
+						Grouping: spec.GroupingMilestone,
+					},
+					Content: spec.Content{
+						ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
@@ -760,6 +761,61 @@ func TestGenerator_resolveReleases(t *testing.T) {
 					TagName:    "v0.1.3",
 					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.3",
 					TagTime:    t3,
+					ReleaseURL: "https://storage.artifactory.com/project/releases/v0.1.3",
+					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
+					IssueGroups: []changelog.IssueGroup{
+						{
+							Title:  "Milestone v1.0",
+							Issues: []changelog.Issue{changelogIssue1},
+						},
+					},
+					MergeGroups: []changelog.MergeGroup{
+						{
+							Title:  "Milestone v1.0",
+							Merges: []changelog.Merge{changelogMerge1},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "WithoutFutureTag_GroupingLabel",
+			g: &Generator{
+				logger: log.New(log.None),
+				spec: spec.Spec{
+					Issues: spec.Issues{
+						Grouping:  spec.GroupingLabel,
+						BugLabels: []string{"bug"},
+					},
+					Merges: spec.Merges{
+						Grouping:          spec.GroupingLabel,
+						EnhancementLabels: []string{"enhancement"},
+					},
+					Content: spec.Content{
+						ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					CompareURLMocks: []CompareURLMock{
+						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3"},
+					},
+				},
+			},
+			ctx:        context.Background(),
+			sortedTags: remote.Tags{tag3},
+			baseRev:    "v0.1.2",
+			issueMap: issueMap{
+				"v0.1.3": remote.Issues{issue1},
+			},
+			mergeMap: mergeMap{
+				"v0.1.3": remote.Merges{merge1},
+			},
+			expectedReleases: []changelog.Release{
+				{
+					TagName:    "v0.1.3",
+					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.3",
+					TagTime:    t3,
+					ReleaseURL: "https://storage.artifactory.com/project/releases/v0.1.3",
 					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
 					IssueGroups: []changelog.IssueGroup{
 						{
@@ -777,17 +833,18 @@ func TestGenerator_resolveReleases(t *testing.T) {
 			},
 		},
 		{
-			name: "WithFutureTag",
+			name: "WithFutureTag_GroupingMilestone",
 			g: &Generator{
 				logger: log.New(log.None),
 				spec: spec.Spec{
 					Issues: spec.Issues{
-						Grouping:  true,
-						BugLabels: []string{"bug"},
+						Grouping: spec.GroupingMilestone,
 					},
 					Merges: spec.Merges{
-						Grouping:          true,
-						EnhancementLabels: []string{"enhancement"},
+						Grouping: spec.GroupingMilestone,
+					},
+					Content: spec.Content{
+						ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
@@ -813,6 +870,7 @@ func TestGenerator_resolveReleases(t *testing.T) {
 					TagName:    "v0.1.4",
 					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.4",
 					TagTime:    now,
+					ReleaseURL: "https://storage.artifactory.com/project/releases/v0.1.4",
 					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4",
 					IssueGroups: []changelog.IssueGroup{
 						{
@@ -831,6 +889,83 @@ func TestGenerator_resolveReleases(t *testing.T) {
 					TagName:    "v0.1.3",
 					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.3",
 					TagTime:    t3,
+					ReleaseURL: "https://storage.artifactory.com/project/releases/v0.1.3",
+					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
+					IssueGroups: []changelog.IssueGroup{
+						{
+							Title:  "Milestone v1.0",
+							Issues: []changelog.Issue{changelogIssue1},
+						},
+					},
+					MergeGroups: []changelog.MergeGroup{
+						{
+							Title:  "Milestone v1.0",
+							Merges: []changelog.Merge{changelogMerge1},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "WithFutureTag_GroupingLabel",
+			g: &Generator{
+				logger: log.New(log.None),
+				spec: spec.Spec{
+					Issues: spec.Issues{
+						Grouping:  spec.GroupingLabel,
+						BugLabels: []string{"bug"},
+					},
+					Merges: spec.Merges{
+						Grouping:          spec.GroupingLabel,
+						EnhancementLabels: []string{"enhancement"},
+					},
+					Content: spec.Content{
+						ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					CompareURLMocks: []CompareURLMock{
+						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4"},
+						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3"},
+					},
+				},
+			},
+			ctx:        context.Background(),
+			sortedTags: remote.Tags{futureTag, tag3},
+			baseRev:    "v0.1.2",
+			issueMap: issueMap{
+				"v0.1.4": remote.Issues{issue2},
+				"v0.1.3": remote.Issues{issue1},
+			},
+			mergeMap: mergeMap{
+				"v0.1.4": remote.Merges{merge2},
+				"v0.1.3": remote.Merges{merge1},
+			},
+			expectedReleases: []changelog.Release{
+				{
+					TagName:    "v0.1.4",
+					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.4",
+					TagTime:    now,
+					ReleaseURL: "https://storage.artifactory.com/project/releases/v0.1.4",
+					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4",
+					IssueGroups: []changelog.IssueGroup{
+						{
+							Title:  "Closed Issues",
+							Issues: []changelog.Issue{changelogIssue2},
+						},
+					},
+					MergeGroups: []changelog.MergeGroup{
+						{
+							Title:  "Merged Changes",
+							Merges: []changelog.Merge{changelogMerge2},
+						},
+					},
+				},
+				{
+					TagName:    "v0.1.3",
+					TagURL:     "https://github.com/octocat/Hello-World/tree/v0.1.3",
+					TagTime:    t3,
+					ReleaseURL: "https://storage.artifactory.com/project/releases/v0.1.3",
 					CompareURL: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3",
 					IssueGroups: []changelog.IssueGroup{
 						{

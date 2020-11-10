@@ -23,6 +23,7 @@ type Release struct {
 	TagName     string
 	TagURL      string
 	TagTime     time.Time
+	ReleaseURL  string
 	CompareURL  string
 	IssueGroups []IssueGroup
 	MergeGroups []MergeGroup

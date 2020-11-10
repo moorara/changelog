@@ -2,10 +2,8 @@ general:
   print: true
 
 issues:
+  grouping: milestone
   selection: labeled
 
 merges:
   branch: production
-
-format:
-  group-by: milestone

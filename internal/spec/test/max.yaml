@@ -4,10 +4,6 @@ general:
   print: true
   verbose: true
 
-changes:
-  issues: labeled
-  merges: labeled
-
 tags:
   from: v0.1.0
   to: v0.2.0
@@ -19,7 +15,7 @@ issues:
   selection: labeled
   include-labels: [ breaking, bug, defect, deprecated, enhancement, feature, highlight, improvement, incompatible, privacy, removed, security, summary ]
   exclude-labels: [ documentation, duplicate, invalid, question, wontfix ]
-  grouping: true
+  grouping: milestone
   summary-labels: [ summary, highlight ]
   removed-labels: [ removed ]
   breaking-labels: [ breaking, incompatible ]
@@ -34,7 +30,7 @@ merges:
   branch: production
   include-labels: [ breaking, bug, defect, deprecated, enhancement, feature, highlight, improvement, incompatible, privacy, removed, security, summary ]
   exclude-labels: [ documentation, duplicate, invalid, question, wontfix ]
-  grouping: true
+  grouping: label
   summary-labels: [ summary, highlight ]
   removed-labels: [ removed ]
   breaking-labels: [ breaking, incompatible ]
@@ -44,6 +40,5 @@ merges:
   bug-labels: [ bug, defect ]
   security-labels: [ security, privacy ]
 
-format:
-  group-by: milestone
+content:
   release-url: https://storage.artifactory.com/project/releases/{tag}

@@ -40,7 +40,7 @@ func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
 		logger:     logger,
 		gitRepo:    gitRepo,
 		remoteRepo: remoteRepo,
-		processor:  markdown.NewProcessor(logger, s.General.File),
+		processor:  markdown.NewProcessor(logger, s.General.Base, s.General.File),
 	}
 }
 
@@ -148,10 +148,9 @@ func (g *Generator) resolveCommitMap(ctx context.Context, branch remote.Branch, 
 func (g *Generator) resolveReleases(ctx context.Context, sortedTags remote.Tags, baseRev string, im issueMap, cm mergeMap) []changelog.Release {
 	releases := []changelog.Release{}
 
-	issueGroups := g.spec.Issues.Groups()
-	mergeGroups := g.spec.Merges.Groups()
-
 	for i, tag := range sortedTags {
+		releaseURL := g.spec.Content.GetReleaseURL(tag.Name)
+
 		var compareURL string
 		if j := i + 1; j < len(sortedTags) {
 			compareURL = g.remoteRepo.CompareURL(sortedTags[j].Name, tag.Name)
@@ -164,6 +163,7 @@ func (g *Generator) resolveReleases(ctx context.Context, sortedTags remote.Tags,
 			TagName:    tag.Name,
 			TagURL:     tag.WebURL,
 			TagTime:    tag.Time,
+			ReleaseURL: releaseURL,
 			CompareURL: compareURL,
 		}
 
@@ -171,17 +171,41 @@ func (g *Generator) resolveReleases(ctx context.Context, sortedTags remote.Tags,
 		if issues, ok := im[tag.Name]; ok {
 			unselected := issues
 
-			for _, group := range issueGroups {
-				f := func(i remote.Issue) bool {
-					return i.Labels.Any(group.Labels...)
+			switch g.spec.Issues.Grouping {
+			case spec.GroupingMilestone:
+				milestones := issues.Milestones()
+				g.logger.Debugf("Grouping issues by milestones %s ...", milestones)
+
+				for _, milestone := range milestones {
+					f := func(i remote.Issue) bool {
+						return i.Milestone == milestone
+					}
+
+					selected, _ := issues.Select(f)
+					_, unselected = unselected.Select(f)
+
+					if len(selected) > 0 {
+						title := fmt.Sprintf("Milestone %s", milestone)
+						issueGroup := toIssueGroup(title, selected)
+						release.IssueGroups = append(release.IssueGroups, issueGroup)
+					}
 				}
 
-				selected, _ := issues.Select(f)
-				_, unselected = unselected.Select(f)
+			case spec.GroupingLabel:
+				g.logger.Debug("Grouping issues by labels ...")
 
-				if len(selected) > 0 {
-					issueGroup := toIssueGroup(group.Title, selected)
-					release.IssueGroups = append(release.IssueGroups, issueGroup)
+				for _, group := range g.spec.Issues.LabelGroups() {
+					f := func(i remote.Issue) bool {
+						return i.Labels.Any(group.Labels...)
+					}
+
+					selected, _ := issues.Select(f)
+					_, unselected = unselected.Select(f)
+
+					if len(selected) > 0 {
+						issueGroup := toIssueGroup(group.Title, selected)
+						release.IssueGroups = append(release.IssueGroups, issueGroup)
+					}
 				}
 			}
 
@@ -195,17 +219,41 @@ func (g *Generator) resolveReleases(ctx context.Context, sortedTags remote.Tags,
 		if merges, ok := cm[tag.Name]; ok {
 			unselected := merges
 
-			for _, group := range mergeGroups {
-				f := func(m remote.Merge) bool {
-					return m.Labels.Any(group.Labels...)
+			switch g.spec.Merges.Grouping {
+			case spec.GroupingMilestone:
+				milestones := merges.Milestones()
+				g.logger.Debug("Grouping merges by milestones %s ...", milestones)
+
+				for _, milestone := range milestones {
+					f := func(m remote.Merge) bool {
+						return m.Milestone == milestone
+					}
+
+					selected, _ := merges.Select(f)
+					_, unselected = unselected.Select(f)
+
+					if len(selected) > 0 {
+						title := fmt.Sprintf("Milestone %s", milestone)
+						mergeGroup := toMergeGroup(title, selected)
+						release.MergeGroups = append(release.MergeGroups, mergeGroup)
+					}
 				}
 
-				selected, _ := merges.Select(f)
-				_, unselected = unselected.Select(f)
+			case spec.GroupingLabel:
+				g.logger.Debug("Grouping merges by labels ...")
 
-				if len(selected) > 0 {
-					mergeGroup := toMergeGroup(group.Title, selected)
-					release.MergeGroups = append(release.MergeGroups, mergeGroup)
+				for _, group := range g.spec.Merges.LabelGroups() {
+					f := func(m remote.Merge) bool {
+						return m.Labels.Any(group.Labels...)
+					}
+
+					selected, _ := merges.Select(f)
+					_, unselected = unselected.Select(f)
+
+					if len(selected) > 0 {
+						mergeGroup := toMergeGroup(group.Title, selected)
+						release.MergeGroups = append(release.MergeGroups, mergeGroup)
+					}
 				}
 			}
 
@@ -308,14 +356,14 @@ func (g *Generator) Generate(ctx context.Context) error {
 	}
 
 	sortedIssues, sortedMerges := filterByLabels(issues, merges, g.spec)
-	g.logger.Infof("Filtered issues (%d) and pull/merge requests (%d) by labels", len(sortedIssues), len(sortedMerges))
+	g.logger.Infof("Filtered issues (%d) and pull/merge requests (%d)", len(sortedIssues), len(sortedMerges))
 
 	issueMap := resolveIssueMap(sortedIssues, newTags)
 	mergeMap := resolveMergeMap(sortedMerges, newTags, commitMap)
 	g.logger.Info("Partitioned issues and pull/merge requests by tag")
 
 	chlog.New = g.resolveReleases(ctx, newTags, baseRev, issueMap, mergeMap)
-	g.logger.Info("Grouped issues and pull/merge requests by labels")
+	g.logger.Info("Grouped issues and pull/merge requests")
 
 	// ==============================> UPDATE THE CHANGELOG <==============================
 

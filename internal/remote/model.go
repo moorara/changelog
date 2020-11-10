@@ -343,6 +343,23 @@ func (i Issues) Select(f func(Issue) bool) (Issues, Issues) {
 	return selected, unselected
 }
 
+// Milestones returns a sorted list of all milestones in the collection of issues.
+func (i Issues) Milestones() []string {
+	mp := map[string]bool{}
+	for _, issue := range i {
+		if milestone := issue.Milestone; milestone != "" {
+			mp[milestone] = true
+		}
+	}
+
+	milestones := []string{}
+	for milestone := range mp {
+		milestones = append(milestones, milestone)
+	}
+
+	return milestones
+}
+
 // Merge represents a merge/pull request.
 type Merge struct {
 	Change
@@ -382,4 +399,21 @@ func (m Merges) Select(f func(Merge) bool) (Merges, Merges) {
 	}
 
 	return selected, unselected
+}
+
+// Milestones returns a sorted list of all milestones in the collection of merges.
+func (m Merges) Milestones() []string {
+	mp := map[string]bool{}
+	for _, merge := range m {
+		if milestone := merge.Milestone; milestone != "" {
+			mp[milestone] = true
+		}
+	}
+
+	milestones := []string{}
+	for milestone := range mp {
+		milestones = append(milestones, milestone)
+	}
+
+	return milestones
 }

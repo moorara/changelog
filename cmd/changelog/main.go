@@ -16,7 +16,8 @@ import (
 func main() {
 	// CREATE DEPENDENCIES
 
-	logger := log.New(log.Debug)
+	// We cannot enable the logger until the verbosity is known
+	logger := log.New(log.None)
 
 	gitRepo, err := git.NewRepo(logger, ".")
 	if err != nil {
@@ -39,6 +40,13 @@ func main() {
 
 	if err := flagit.Populate(&s, false); err != nil {
 		logger.Fatal(err)
+	}
+
+	// Update logger verbosity
+	if s.General.Verbose {
+		logger.ChangeVerbosity(log.Debug)
+	} else if !s.General.Print {
+		logger.ChangeVerbosity(log.Info)
 	}
 
 	logger.Debug(s)
