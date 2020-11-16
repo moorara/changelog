@@ -116,6 +116,11 @@ type (
 		OutString string
 	}
 
+	CheckPermissionsMock struct {
+		InContext context.Context
+		OutError  error
+	}
+
 	FetchFirstCommitMock struct {
 		InContext context.Context
 		OutCommit remote.Commit
@@ -163,6 +168,9 @@ type (
 		CompareURLIndex int
 		CompareURLMocks []CompareURLMock
 
+		CheckPermissionsIndex int
+		CheckPermissionsMocks []CheckPermissionsMock
+
 		FetchFirstCommitIndex int
 		FetchFirstCommitMocks []FetchFirstCommitMock
 
@@ -196,6 +204,13 @@ func (m *MockRemoteRepo) CompareURL(base, head string) string {
 	m.CompareURLMocks[i].InBase = base
 	m.CompareURLMocks[i].InHead = head
 	return m.CompareURLMocks[i].OutString
+}
+
+func (m *MockRemoteRepo) CheckPermissions(ctx context.Context) error {
+	i := m.CheckPermissionsIndex
+	m.CheckPermissionsIndex++
+	m.CheckPermissionsMocks[i].InContext = ctx
+	return m.CheckPermissionsMocks[i].OutError
 }
 
 func (m *MockRemoteRepo) FetchFirstCommit(ctx context.Context) (remote.Commit, error) {

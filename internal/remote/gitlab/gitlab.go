@@ -9,15 +9,10 @@ import (
 	"github.com/moorara/changelog/pkg/log"
 )
 
-const (
-	gitlabAPIURL = "https://gitlab.com/api/v4/"
-)
-
 // repo implements the remote.Repo interface for GitLab.
 type repo struct {
 	logger      log.Logger
 	client      *http.Client
-	apiURL      string
 	path        string
 	accessToken string
 }
@@ -32,7 +27,6 @@ func NewRepo(logger log.Logger, path, accessToken string) remote.Repo {
 	return &repo{
 		logger:      logger,
 		client:      client,
-		apiURL:      gitlabAPIURL,
 		path:        path,
 		accessToken: accessToken,
 	}
@@ -46,6 +40,11 @@ func (r *repo) FutureTag(name string) remote.Tag {
 // CompareURL returns a URL for comparing two revisions for a GitLab repository.
 func (r *repo) CompareURL(base, head string) string {
 	return ""
+}
+
+// CheckPermissions ensures the client has all the required permissions for a GitLab repository.
+func (r *repo) CheckPermissions(context.Context) error {
+	return nil
 }
 
 // FetchFirstCommit retrieves the firist/initial commit for a GitLab repository.

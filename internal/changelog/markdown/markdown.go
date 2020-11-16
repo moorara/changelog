@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -67,8 +66,8 @@ type processor struct {
 func NewProcessor(logger log.Logger, baseFile, changelogFile string) changelog.Processor {
 	return &processor{
 		logger:        logger,
-		baseFile:      filepath.Clean(baseFile),
-		changelogFile: filepath.Clean(changelogFile),
+		baseFile:      baseFile,
+		changelogFile: changelogFile,
 	}
 }
 

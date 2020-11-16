@@ -6,12 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moorara/changelog/internal/remote"
+	"github.com/moorara/changelog/pkg/github"
 )
 
 func TestToUser(t *testing.T) {
 	tests := []struct {
 		name         string
-		u            user
+		u            github.User
 		expectedUser remote.User
 	}{
 		{
@@ -24,7 +25,6 @@ func TestToUser(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			user := toUser(tc.u)
-
 			assert.Equal(t, tc.expectedUser, user)
 		})
 	}
@@ -33,7 +33,7 @@ func TestToUser(t *testing.T) {
 func TestToCommit(t *testing.T) {
 	tests := []struct {
 		name           string
-		c              commit
+		c              github.Commit
 		expectedCommit remote.Commit
 	}{
 		{
@@ -46,7 +46,6 @@ func TestToCommit(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			commit := toCommit(tc.c)
-
 			assert.Equal(t, tc.expectedCommit, commit)
 		})
 	}
@@ -55,7 +54,7 @@ func TestToCommit(t *testing.T) {
 func TestToBranch(t *testing.T) {
 	tests := []struct {
 		name           string
-		b              branch
+		b              github.Branch
 		expectedBranch remote.Branch
 	}{
 		{
@@ -68,7 +67,6 @@ func TestToBranch(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			branch := toBranch(tc.b)
-
 			assert.Equal(t, tc.expectedBranch, branch)
 		})
 	}
@@ -77,24 +75,24 @@ func TestToBranch(t *testing.T) {
 func TestToTag(t *testing.T) {
 	tests := []struct {
 		name        string
-		t           tag
-		c           commit
-		repoPath    string
+		t           github.Tag
+		c           github.Commit
+		owner, repo string
 		expectedTag remote.Tag
 	}{
 		{
 			name:        "OK",
-			t:           gitHubTag1,
-			c:           gitHubCommit1,
-			repoPath:    "octocat/Hello-World",
+			t:           gitHubTag,
+			c:           gitHubCommit2,
+			owner:       "octocat",
+			repo:        "Hello-World",
 			expectedTag: remoteTag,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tag := toTag(tc.t, tc.c, tc.repoPath)
-
+			tag := toTag(tc.t, tc.c, tc.owner, tc.repo)
 			assert.Equal(t, tc.expectedTag, tag)
 		})
 	}
@@ -103,9 +101,9 @@ func TestToTag(t *testing.T) {
 func TestToIssue(t *testing.T) {
 	tests := []struct {
 		name           string
-		i              issue
-		e              event
-		author, closer user
+		i              github.Issue
+		e              github.Event
+		author, closer github.User
 		expectedIssue  remote.Issue
 	}{
 		{
@@ -121,7 +119,6 @@ func TestToIssue(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			issue := toIssue(tc.i, tc.e, tc.author, tc.closer)
-
 			assert.Equal(t, tc.expectedIssue, issue)
 		})
 	}
@@ -130,17 +127,17 @@ func TestToIssue(t *testing.T) {
 func TestToMerge(t *testing.T) {
 	tests := []struct {
 		name           string
-		i              issue
-		e              event
-		c              commit
-		author, merger user
+		i              github.Issue
+		e              github.Event
+		c              github.Commit
+		author, merger github.User
 		expectedMerge  remote.Merge
 	}{
 		{
 			name:          "OK",
 			i:             gitHubIssue2,
 			e:             gitHubEvent2,
-			c:             gitHubCommit2,
+			c:             gitHubCommit1,
 			author:        gitHubUser2,
 			merger:        gitHubUser3,
 			expectedMerge: remoteMerge,
@@ -150,7 +147,6 @@ func TestToMerge(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			merge := toMerge(tc.i, tc.e, tc.c, tc.author, tc.merger)
-
 			assert.Equal(t, tc.expectedMerge, merge)
 		})
 	}
@@ -159,32 +155,32 @@ func TestToMerge(t *testing.T) {
 func TestResolveTags(t *testing.T) {
 	tests := []struct {
 		name          string
-		gitHubTags    *tagStore
-		gitHubCommits *commitStore
-		repoPath      string
+		gitHubTags    *store
+		gitHubCommits *store
+		owner, repo   string
 		expectedTags  remote.Tags
 	}{
 		{
 			name: "OK",
-			gitHubTags: &tagStore{
-				m: map[string]tag{
-					"v0.1.0": gitHubTag1,
+			gitHubTags: &store{
+				m: map[interface{}]interface{}{
+					"v0.1.0": gitHubTag,
 				},
 			},
-			gitHubCommits: &commitStore{
-				m: map[string]commit{
-					"c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c": gitHubCommit1,
+			gitHubCommits: &store{
+				m: map[interface{}]interface{}{
+					"c3d0be41ecbe669545ee3e94d31ed9a4bc91ee3c": gitHubCommit2,
 				},
 			},
-			repoPath:     "octocat/Hello-World",
+			owner:        "octocat",
+			repo:         "Hello-World",
 			expectedTags: remote.Tags{remoteTag},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tags := resolveTags(tc.gitHubTags, tc.gitHubCommits, tc.repoPath)
-
+			tags := resolveTags(tc.gitHubTags, tc.gitHubCommits, tc.owner, tc.repo)
 			assert.Equal(t, tc.expectedTags, tags)
 		})
 	}
@@ -193,34 +189,34 @@ func TestResolveTags(t *testing.T) {
 func TestResolveIssuesAndMerges(t *testing.T) {
 	tests := []struct {
 		name           string
-		gitHubIssues   *issueStore
-		gitHubEvents   *eventStore
-		gitHubCommits  *commitStore
-		gitHubUsers    *userStore
+		gitHubIssues   *store
+		gitHubEvents   *store
+		gitHubCommits  *store
+		gitHubUsers    *store
 		expectedIssues remote.Issues
 		expectedMerges remote.Merges
 	}{
 		{
 			name: "OK",
-			gitHubIssues: &issueStore{
-				m: map[int]issue{
+			gitHubIssues: &store{
+				m: map[interface{}]interface{}{
 					1001: gitHubIssue1,
 					1002: gitHubIssue2,
 				},
 			},
-			gitHubEvents: &eventStore{
-				m: map[int]event{
+			gitHubEvents: &store{
+				m: map[interface{}]interface{}{
 					1001: gitHubEvent1,
 					1002: gitHubEvent2,
 				},
 			},
-			gitHubCommits: &commitStore{
-				m: map[string]commit{
-					"6dcb09b5b57875f334f61aebed695e2e4193db5e": gitHubCommit2,
+			gitHubCommits: &store{
+				m: map[interface{}]interface{}{
+					"6dcb09b5b57875f334f61aebed695e2e4193db5e": gitHubCommit1,
 				},
 			},
-			gitHubUsers: &userStore{
-				m: map[string]user{
+			gitHubUsers: &store{
+				m: map[interface{}]interface{}{
 					"octocat": gitHubUser1,
 					"octodog": gitHubUser2,
 					"octofox": gitHubUser3,

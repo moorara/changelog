@@ -30,7 +30,7 @@ const helpTemplate = `
     {{ yellow "                              The default value is read from the CHANGELOG_ACCESS_TOKEN environment variable" }}
 
     -file                         The output file for the generated changelog (default: {{.General.File}})
-    -base                         An optional file for appending the generated changelog to it (default: {{.General.Base}})
+    -base                         An optional file for appending the generated changelog to it {{if .General.Base}}(default: {{.General.Base}}){{end}}
                                   This option can only be used when generating the changelog for the first time
     -print                        Print the generated changelong to STDOUT (default: {{.General.Print}})
                                   If this option is enabled, all logs will be disabled
@@ -386,7 +386,7 @@ func Default(domain, path string) Spec {
 		},
 		General: General{
 			File:    "CHANGELOG.md",
-			Base:    "HISTORY.md",
+			Base:    "",
 			Print:   false,
 			Verbose: false,
 		},

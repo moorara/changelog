@@ -2,8 +2,10 @@ package generate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/moorara/changelog/internal/changelog"
@@ -26,11 +28,17 @@ type Generator struct {
 }
 
 // New creates a new changelog generator.
-func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
+func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) (*Generator, error) {
 	var remoteRepo remote.Repo
 	switch s.Repo.Platform {
 	case spec.PlatformGitHub:
-		remoteRepo = github.NewRepo(logger, s.Repo.Path, s.Repo.AccessToken)
+		parts := strings.Split(s.Repo.Path, "/")
+		if len(parts) != 2 {
+			return nil, errors.New("unexpected GitHub repository: cannot parse owner and repo")
+		}
+		owner, repo := parts[0], parts[1]
+		remoteRepo = github.NewRepo(logger, owner, repo, s.Repo.AccessToken)
+
 	case spec.PlatformGitLab:
 		remoteRepo = gitlab.NewRepo(logger, s.Repo.Path, s.Repo.AccessToken)
 	}
@@ -41,7 +49,7 @@ func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) *Generator {
 		gitRepo:    gitRepo,
 		remoteRepo: remoteRepo,
 		processor:  markdown.NewProcessor(logger, s.General.Base, s.General.File),
-	}
+	}, nil
 }
 
 // resolveTags determines the new tags that should be added to the changelog.
@@ -274,6 +282,12 @@ func (g *Generator) Generate(ctx context.Context) error {
 	// Parse the existing changelog if any
 	chlog, err := g.processor.Parse(changelog.ParseOptions{})
 	if err != nil {
+		return err
+	}
+
+	// ==============================> CHECK ACCESS TOKEN <==============================
+
+	if err := g.remoteRepo.CheckPermissions(ctx); err != nil {
 		return err
 	}
 

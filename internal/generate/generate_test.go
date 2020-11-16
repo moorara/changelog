@@ -210,41 +210,64 @@ func parseGitHubTime(s string) time.Time {
 }
 
 func TestNew(t *testing.T) {
-	specGitHub := spec.Spec{}
-	specGitHub.Repo.Platform = spec.PlatformGitHub
-
-	specGitLab := spec.Spec{}
-	specGitLab.Repo.Platform = spec.PlatformGitLab
-
 	tests := []struct {
-		name    string
-		s       spec.Spec
-		logger  log.Logger
-		gitRepo git.Repo
+		name          string
+		s             spec.Spec
+		logger        log.Logger
+		gitRepo       git.Repo
+		expectedError string
 	}{
 		{
-			name:    "GitHub",
-			s:       specGitHub,
-			logger:  log.New(log.None),
-			gitRepo: &MockGitRepo{},
+			name: "InvalidSpec",
+			s: spec.Spec{
+				Repo: spec.Repo{
+					Platform: spec.PlatformGitHub,
+					Path:     "octocat/invalid/Hello-World",
+				},
+			},
+			logger:        log.New(log.None),
+			gitRepo:       &MockGitRepo{},
+			expectedError: "unexpected GitHub repository: cannot parse owner and repo",
 		},
 		{
-			name:    "GitLab",
-			s:       specGitLab,
-			logger:  log.New(log.None),
-			gitRepo: &MockGitRepo{},
+			name: "GitHub",
+			s: spec.Spec{
+				Repo: spec.Repo{
+					Platform: spec.PlatformGitHub,
+					Path:     "octocat/Hello-World",
+				},
+			},
+			logger:        log.New(log.None),
+			gitRepo:       &MockGitRepo{},
+			expectedError: "",
+		},
+		{
+			name: "GitLab",
+			s: spec.Spec{
+				Repo: spec.Repo{
+					Platform: spec.PlatformGitLab,
+				},
+			},
+			logger:        log.New(log.None),
+			gitRepo:       &MockGitRepo{},
+			expectedError: "",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			g := New(tc.s, tc.logger, tc.gitRepo)
+			g, err := New(tc.s, tc.logger, tc.gitRepo)
 
-			assert.NotNil(t, g)
-			assert.Equal(t, tc.logger, g.logger)
-			assert.Equal(t, tc.gitRepo, g.gitRepo)
-			assert.NotNil(t, g.remoteRepo)
-			assert.NotNil(t, g.processor)
+			if tc.expectedError != "" {
+				assert.Nil(t, g)
+				assert.EqualError(t, err, tc.expectedError)
+			} else {
+				assert.NotNil(t, g)
+				assert.Equal(t, tc.logger, g.logger)
+				assert.Equal(t, tc.gitRepo, g.gitRepo)
+				assert.NotNil(t, g.remoteRepo)
+				assert.NotNil(t, g.processor)
+			}
 		})
 	}
 }
@@ -1015,6 +1038,25 @@ func TestGenerator_Generate(t *testing.T) {
 			expectedError: "error on parsing the changelog file",
 		},
 		{
+			name: "CheckPermissionsFails",
+			g: &Generator{
+				spec:   spec.Spec{},
+				logger: log.New(log.None),
+				processor: &MockChangelogProcessor{
+					ParseMocks: []ParseMock{
+						{OutChangelog: &changelog.Changelog{}},
+					},
+				},
+				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: errors.New("error on checking permissions")},
+					},
+				},
+			},
+			ctx:           context.Background(),
+			expectedError: "error on checking permissions",
+		},
+		{
 			name: "FetchBranchFails",
 			g: &Generator{
 				spec: spec.Spec{
@@ -1029,6 +1071,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchBranchMocks: []FetchBranchMock{
 						{OutError: errors.New("error on getting remote branch")},
 					},
@@ -1048,6 +1093,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutError: errors.New("error on getting default remote branch")},
 					},
@@ -1067,6 +1115,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1089,6 +1140,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1111,6 +1165,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1136,6 +1193,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1164,6 +1224,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1193,6 +1256,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1228,6 +1294,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1269,6 +1338,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1316,6 +1388,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
 					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
 						{OutBranch: branch},
 					},
@@ -1361,6 +1436,15 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 				remoteRepo: &MockRemoteRepo{
+					CheckPermissionsMocks: []CheckPermissionsMock{
+						{OutError: nil},
+					},
+					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
+						{OutBranch: branch},
+					},
+					FetchTagsMocks: []FetchTagsMock{
+						{OutTags: remote.Tags{}},
+					},
 					FutureTagMocks: []FutureTagMock{
 						{
 							OutTag: remote.Tag{
@@ -1369,12 +1453,6 @@ func TestGenerator_Generate(t *testing.T) {
 								WebURL: "https://github.com/octocat/Hello-World/tree/v0.1.0",
 							},
 						},
-					},
-					FetchDefaultBranchMocks: []FetchDefaultBranchMock{
-						{OutBranch: branch},
-					},
-					FetchTagsMocks: []FetchTagsMock{
-						{OutTags: remote.Tags{}},
 					},
 					FetchFirstCommitMocks: []FetchFirstCommitMock{
 						{OutCommit: commit1},

@@ -63,10 +63,12 @@ func main() {
 		fmt.Println(version.String())
 
 	default:
-		g := generate.New(s, logger, gitRepo)
-		ctx := context.Background()
+		g, err := generate.New(s, logger, gitRepo)
+		if err != nil {
+			logger.Fatal(err)
+		}
 
-		if err := g.Generate(ctx); err != nil {
+		if err := g.Generate(context.Background()); err != nil {
 			logger.Fatal(err)
 		}
 	}

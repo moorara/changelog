@@ -5,196 +5,10 @@ import (
 	"time"
 
 	"github.com/moorara/changelog/internal/remote"
+	"github.com/moorara/changelog/pkg/github"
 )
 
-// scope represents a GitHub authorization scope.
-// See https://docs.github.com/en/developers/apps/scopes-for-oauth-apps
-type scope string
-
-const (
-	// scopeRepo grants full access to private and public repositories. It also grants ability to manage user projects.
-	scopeRepo scope = "repo"
-)
-
-type (
-	user struct {
-		ID         int       `json:"id"`
-		Login      string    `json:"login"`
-		Type       string    `json:"type"`
-		Email      string    `json:"email"`
-		Name       string    `json:"name"`
-		URL        string    `json:"url"`
-		HTMLURL    string    `json:"html_url"`
-		OrgsURL    string    `json:"organizations_url"`
-		AvatarURL  string    `json:"avatar_url"`
-		GravatarID string    `json:"gravatar_id"`
-		CreatedAt  time.Time `json:"created_at"`
-		UpdatedAt  time.Time `json:"updated_at"`
-	}
-
-	repository struct {
-		ID            int       `json:"id"`
-		Name          string    `json:"name"`
-		FullName      string    `json:"full_name"`
-		Description   string    `json:"description"`
-		Topics        []string  `json:"topics"`
-		Private       bool      `json:"private"`
-		Fork          bool      `json:"fork"`
-		Archived      bool      `json:"archived"`
-		Disabled      bool      `json:"disabled"`
-		DefaultBranch string    `json:"default_branch"`
-		Owner         user      `json:"owner"`
-		URL           string    `json:"url"`
-		HTMLURL       string    `json:"html_url"`
-		CreatedAt     time.Time `json:"created_at"`
-		UpdatedAt     time.Time `json:"updated_at"`
-		PushedAt      time.Time `json:"pushed_at"`
-	}
-
-	label struct {
-		ID          int    `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Color       string `json:"color"`
-		Default     bool   `json:"default"`
-		URL         string `json:"url"`
-	}
-
-	milestone struct {
-		ID           int       `json:"id"`
-		Number       int       `json:"number"`
-		State        string    `json:"state"`
-		Title        string    `json:"title"`
-		Description  string    `json:"description"`
-		Creator      user      `json:"creator"`
-		OpenIssues   int       `json:"open_issues"`
-		ClosedIssues int       `json:"closed_issues"`
-		DueOn        time.Time `json:"due_on"`
-		URL          string    `json:"url"`
-		HTMLURL      string    `json:"html_url"`
-		LabelsURL    string    `json:"labels_url"`
-		CreatedAt    time.Time `json:"created_at"`
-		UpdatedAt    time.Time `json:"updated_at"`
-		ClosedAt     time.Time `json:"closed_at"`
-	}
-
-	hash struct {
-		SHA string `json:"sha"`
-		URL string `json:"url"`
-	}
-
-	signature struct {
-		Name  string    `json:"name"`
-		Email string    `json:"email"`
-		Time  time.Time `json:"date"`
-	}
-
-	rawCommit struct {
-		Message   string    `json:"message"`
-		Author    signature `json:"author"`
-		Committer signature `json:"committer"`
-		Tree      hash      `json:"tree"`
-		URL       string    `json:"url"`
-	}
-
-	commit struct {
-		SHA       string    `json:"sha"`
-		Commit    rawCommit `json:"commit"`
-		Author    user      `json:"author"`
-		Committer user      `json:"committer"`
-		Parents   []hash    `json:"parents"`
-		URL       string    `json:"url"`
-		HTMLURL   string    `json:"html_url"`
-	}
-
-	branch struct {
-		Name      string `json:"name"`
-		Protected bool   `json:"protected"`
-		Commit    commit `json:"commit"`
-	}
-
-	tag struct {
-		Name   string `json:"name"`
-		Commit hash   `json:"commit"`
-	}
-
-	pullURLs struct {
-		URL      string `json:"url"`
-		HTMLURL  string `json:"html_url"`
-		DiffURL  string `json:"diff_url"`
-		PatchURL string `json:"patch_url"`
-	}
-
-	issue struct {
-		ID          int        `json:"id"`
-		Number      int        `json:"number"`
-		State       string     `json:"state"`
-		Locked      bool       `json:"locked"`
-		Title       string     `json:"title"`
-		Body        string     `json:"body"`
-		User        user       `json:"user"`
-		Labels      []label    `json:"labels"`
-		Milestone   *milestone `json:"milestone"`
-		URL         string     `json:"url"`
-		HTMLURL     string     `json:"html_url"`
-		LabelsURL   string     `json:"labels_url"`
-		PullRequest *pullURLs  `json:"pull_request"`
-		CreatedAt   time.Time  `json:"created_at"`
-		UpdatedAt   time.Time  `json:"updated_at"`
-		ClosedAt    *time.Time `json:"closed_at"`
-	}
-
-	reference struct {
-		Label string     `json:"label"`
-		Ref   string     `json:"ref"`
-		SHA   string     `json:"sha"`
-		User  user       `json:"user"`
-		Repo  repository `json:"repo"`
-	}
-
-	pull struct {
-		ID             int        `json:"id"`
-		Number         int        `json:"number"`
-		State          string     `json:"state"`
-		Draft          bool       `json:"draft"`
-		Locked         bool       `json:"locked"`
-		Title          string     `json:"title"`
-		Body           string     `json:"body"`
-		User           user       `json:"user"`
-		Labels         []label    `json:"labels"`
-		Milestone      *milestone `json:"milestone"`
-		Base           reference  `json:"base"`
-		Head           reference  `json:"head"`
-		Merged         bool       `json:"merged"`
-		Mergeable      *bool      `json:"mergeable"`
-		Rebaseable     *bool      `json:"rebaseable"`
-		MergedBy       *user      `json:"merged_by"`
-		MergeCommitSHA string     `json:"merge_commit_sha"`
-		URL            string     `json:"url"`
-		HTMLURL        string     `json:"html_url"`
-		DiffURL        string     `json:"diff_url"`
-		PatchURL       string     `json:"patch_url"`
-		IssueURL       string     `json:"issue_url"`
-		CommitsURL     string     `json:"commits_url"`
-		StatusesURL    string     `json:"statuses_url"`
-		CreatedAt      time.Time  `json:"created_at"`
-		UpdatedAt      time.Time  `json:"updated_at"`
-		ClosedAt       *time.Time `json:"closed_at"`
-		MergedAt       *time.Time `json:"merged_at"`
-	}
-
-	event struct {
-		ID        int       `json:"id"`
-		Event     string    `json:"event"`
-		CommitID  string    `json:"commit_id"`
-		Actor     user      `json:"actor"`
-		URL       string    `json:"url"`
-		CommitURL string    `json:"commit_url"`
-		CreatedAt time.Time `json:"created_at"`
-	}
-)
-
-func toUser(u user) remote.User {
+func toUser(u github.User) remote.User {
 	return remote.User{
 		Name:     u.Name,
 		Email:    u.Email,
@@ -203,32 +17,30 @@ func toUser(u user) remote.User {
 	}
 }
 
-func toCommit(c commit) remote.Commit {
+func toCommit(c github.Commit) remote.Commit {
 	return remote.Commit{
 		Hash: c.SHA,
 		Time: c.Commit.Committer.Time,
 	}
 }
 
-func toBranch(b branch) remote.Branch {
+func toBranch(b github.Branch) remote.Branch {
 	return remote.Branch{
 		Name:   b.Name,
 		Commit: toCommit(b.Commit),
 	}
 }
 
-func toTag(t tag, c commit, repoPath string) remote.Tag {
+func toTag(t github.Tag, c github.Commit, owner, repo string) remote.Tag {
 	return remote.Tag{
 		Name:   t.Name,
 		Time:   c.Commit.Committer.Time,
 		Commit: toCommit(c),
-		WebURL: fmt.Sprintf("https://github.com/%s/tree/%s", repoPath, t.Name),
+		WebURL: fmt.Sprintf("https://github.com/%s/%s/tree/%s", owner, repo, t.Name),
 	}
 }
 
-func toIssue(i issue, e event, author, closer user) remote.Issue {
-	// e is the closed event of the issue
-
+func toIssue(i github.Issue, e github.Event, author, closer github.User) remote.Issue {
 	labels := make([]string, len(i.Labels))
 	for i, l := range i.Labels {
 		labels[i] = l.Name
@@ -259,9 +71,7 @@ func toIssue(i issue, e event, author, closer user) remote.Issue {
 	}
 }
 
-func toMerge(i issue, e event, c commit, author, merger user) remote.Merge {
-	// e is the merged event of the pull request
-
+func toMerge(i github.Issue, e github.Event, c github.Commit, author, merger github.User) remote.Merge {
 	labels := make([]string, len(i.Labels))
 	for i, l := range i.Labels {
 		labels[i] = l.Name
@@ -291,35 +101,56 @@ func toMerge(i issue, e event, c commit, author, merger user) remote.Merge {
 	}
 }
 
-func resolveTags(gitHubTags *tagStore, gitHubCommits *commitStore, repoPath string) remote.Tags {
+func resolveTags(gitHubTags, gitHubCommits *store, owner, repo string) remote.Tags {
 	tags := remote.Tags{}
 
-	_ = gitHubTags.ForEach(func(name string, t tag) error {
-		if c, ok := gitHubCommits.Load(t.Commit.SHA); ok {
-			tags = append(tags, toTag(t, c, repoPath))
+	_ = gitHubTags.ForEach(func(k, v interface{}) error {
+		t := v.(github.Tag)
+
+		if v, ok := gitHubCommits.Load(t.Commit.SHA); ok {
+			c := v.(github.Commit)
+			tags = append(tags, toTag(t, c, owner, repo))
 		}
+
 		return nil
 	})
 
 	return tags
 }
 
-func resolveIssuesAndMerges(gitHubIssues *issueStore, gitHubEvents *eventStore, gitHubCommits *commitStore, gitHubUsers *userStore) (remote.Issues, remote.Merges) {
+func resolveIssuesAndMerges(gitHubIssues, gitHubEvents, gitHubCommits, gitHubUsers *store) (remote.Issues, remote.Merges) {
 	issues := remote.Issues{}
 	merges := remote.Merges{}
 
-	_ = gitHubIssues.ForEach(func(num int, i issue) error {
-		if i.PullRequest == nil { // Issue
-			e, _ := gitHubEvents.Load(num)
-			author, _ := gitHubUsers.Load(i.User.Login)
-			closer, _ := gitHubUsers.Load(e.Actor.Login)
+	_ = gitHubIssues.ForEach(func(k, v interface{}) error {
+		num := k.(int)
+		i := v.(github.Issue)
+
+		if i.PullURLs == nil { // Issue
+			v, _ := gitHubEvents.Load(num)
+			e := v.(github.Event)
+
+			v, _ = gitHubUsers.Load(i.User.Login)
+			author := v.(github.User)
+
+			v, _ = gitHubUsers.Load(e.Actor.Login)
+			closer := v.(github.User)
+
 			issues = append(issues, toIssue(i, e, author, closer))
 		} else { // Pull request
 			// If no event found, the pull request is closed without being merged
-			if e, ok := gitHubEvents.Load(num); ok {
-				c, _ := gitHubCommits.Load(e.CommitID)
-				author, _ := gitHubUsers.Load(i.User.Login)
-				merger, _ := gitHubUsers.Load(e.Actor.Login)
+			if v, ok := gitHubEvents.Load(num); ok {
+				e := v.(github.Event)
+
+				v, _ = gitHubCommits.Load(e.CommitID)
+				c := v.(github.Commit)
+
+				v, _ = gitHubUsers.Load(i.User.Login)
+				author := v.(github.User)
+
+				v, _ = gitHubUsers.Load(e.Actor.Login)
+				merger := v.(github.User)
+
 				merges = append(merges, toMerge(i, e, c, author, merger))
 			}
 		}

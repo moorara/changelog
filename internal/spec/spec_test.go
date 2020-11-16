@@ -120,7 +120,7 @@ func TestDefault(t *testing.T) {
 	assert.Equal(t, "octocat/Hello-World", spec.Repo.Path)
 	assert.Equal(t, "", spec.Repo.AccessToken)
 	assert.Equal(t, "CHANGELOG.md", spec.General.File)
-	assert.Equal(t, "HISTORY.md", spec.General.Base)
+	assert.Equal(t, "", spec.General.Base)
 	assert.Equal(t, false, spec.General.Print)
 	assert.Equal(t, false, spec.General.Verbose)
 	assert.Equal(t, "", spec.Tags.From)
@@ -196,7 +196,7 @@ func TestFromFile(t *testing.T) {
 				},
 				General: General{
 					File:    "CHANGELOG.md",
-					Base:    "HISTORY.md",
+					Base:    "",
 					Print:   true,
 					Verbose: false,
 				},

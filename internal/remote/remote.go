@@ -11,6 +11,8 @@ type Repo interface {
 	FutureTag(string) Tag
 	// CompareURL returns a URL for comparing two revisions.
 	CompareURL(string, string) string
+	// CheckPermissions ensures the client has all the required permissions.
+	CheckPermissions(context.Context) error
 	// FetchFirstCommit retrieves the firist/initial commit.
 	FetchFirstCommit(context.Context) (Commit, error)
 	// FetchBranch retrieves a branch by name.

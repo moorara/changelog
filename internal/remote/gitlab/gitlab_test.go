@@ -35,7 +35,6 @@ func TestNewRepo(t *testing.T) {
 
 			assert.Equal(t, tc.logger, gr.logger)
 			assert.NotNil(t, gr.client)
-			assert.Equal(t, gitlabAPIURL, gr.apiURL)
 			assert.Equal(t, tc.path, gr.path)
 			assert.Equal(t, tc.accessToken, gr.accessToken)
 		})
@@ -60,6 +59,16 @@ func TestRepo_CompareURL(t *testing.T) {
 	url := r.CompareURL("v0.1.0", "v0.2.0")
 
 	assert.Empty(t, url)
+}
+
+func TestRepo_CheckPermissions(t *testing.T) {
+	r := &repo{
+		logger: log.New(log.None),
+	}
+
+	err := r.CheckPermissions(context.Background())
+
+	assert.NoError(t, err)
 }
 
 func TestRepo_FetchFirstCommit(t *testing.T) {
