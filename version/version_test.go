@@ -19,14 +19,14 @@ func TestString(t *testing.T) {
 		{
 			Version:   "0.1.0",
 			Commit:    "aaaaaaa",
-			Branch:    "master",
+			Branch:    "main",
 			GoVersion: "1.15",
 			BuildTool: "go",
 			BuildTime: "2020-09-20T15:00:00",
 			expectedString: `
   version:    0.1.0
   commit:     aaaaaaa
-  branch:     master
+  branch:     main
   goVersion:  1.15
   buildTool:  go
   buildTime:  2020-09-20T15:00:00
