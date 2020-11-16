@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moorara/changelog/internal/remote"
-	"github.com/moorara/changelog/pkg/github"
+	"github.com/moorara/go-github"
 )
 
 func TestToUser(t *testing.T) {

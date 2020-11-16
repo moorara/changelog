@@ -8,8 +8,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/moorara/changelog/internal/remote"
-	"github.com/moorara/changelog/pkg/github"
 	"github.com/moorara/changelog/pkg/log"
+	"github.com/moorara/go-github"
 )
 
 const pageSize = 100
