@@ -54,7 +54,7 @@ func TestRepo_getUser(t *testing.T) {
 	tests := []struct {
 		name          string
 		usersStore    *store
-		usersService  usersService
+		usersService  *MockUsersService
 		ctx           context.Context
 		username      string
 		expectedUser  github.User
@@ -125,7 +125,7 @@ func TestRepo_getCommit(t *testing.T) {
 	tests := []struct {
 		name           string
 		commitsStore   *store
-		repoService    repoService
+		repoService    *MockRepoService
 		ctx            context.Context
 		ref            string
 		expectedCommit github.Commit
@@ -196,7 +196,7 @@ func TestRepo_getParentCommits(t *testing.T) {
 	tests := []struct {
 		name            string
 		commitsStore    *store
-		repoService     repoService
+		repoService     *MockRepoService
 		ctx             context.Context
 		ref             string
 		expectedCommits remote.Commits
@@ -270,7 +270,7 @@ func TestRepo_getParentCommits(t *testing.T) {
 func TestRepo_findEvent(t *testing.T) {
 	tests := []struct {
 		name          string
-		repoService   repoService
+		repoService   *MockRepoService
 		ctx           context.Context
 		num           int
 		eventName     string
@@ -446,7 +446,7 @@ func TestRepo_CompareURL(t *testing.T) {
 func TestRepo_CheckPermissions(t *testing.T) {
 	tests := []struct {
 		name          string
-		githubService githubService
+		githubService *MockGithubService
 		ctx           context.Context
 		expectedError string
 	}{
@@ -492,7 +492,7 @@ func TestRepo_FetchFirstCommit(t *testing.T) {
 	tests := []struct {
 		name           string
 		commitsStore   *store
-		repoService    repoService
+		repoService    *MockRepoService
 		ctx            context.Context
 		expectedCommit remote.Commit
 		expectedError  string
@@ -574,7 +574,7 @@ func TestRepo_FetchFirstCommit(t *testing.T) {
 func TestRepo_FetchBranch(t *testing.T) {
 	tests := []struct {
 		name           string
-		repoService    repoService
+		repoService    *MockRepoService
 		ctx            context.Context
 		branchName     string
 		expectedBranch remote.Branch
@@ -625,7 +625,7 @@ func TestRepo_FetchBranch(t *testing.T) {
 func TestRepo_FetchDefaultBranch(t *testing.T) {
 	tests := []struct {
 		name           string
-		repoService    repoService
+		repoService    *MockRepoService
 		ctx            context.Context
 		expectedBranch remote.Branch
 		expectedError  string
@@ -692,7 +692,7 @@ func TestRepo_FetchTags(t *testing.T) {
 		owner         string
 		repo          string
 		commitsStore  *store
-		repoService   repoService
+		repoService   *MockRepoService
 		ctx           context.Context
 		expectedTags  remote.Tags
 		expectedError string
@@ -824,8 +824,8 @@ func TestRepo_FetchIssuesAndMerges(t *testing.T) {
 		name           string
 		usersStore     *store
 		commitsStore   *store
-		usersService   usersService
-		repoService    repoService
+		usersService   *MockUsersService
+		repoService    *MockRepoService
 		ctx            context.Context
 		since          time.Time
 		expectedIssues remote.Issues
@@ -1100,7 +1100,7 @@ func TestRepo_FetchParentCommits(t *testing.T) {
 	tests := []struct {
 		name            string
 		commitsStore    *store
-		repoService     repoService
+		repoService     *MockRepoService
 		ctx             context.Context
 		ref             string
 		expectedCommits remote.Commits

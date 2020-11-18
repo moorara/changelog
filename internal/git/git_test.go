@@ -25,11 +25,11 @@ func TestNewRepo(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r, err := NewRepo(tc.logger, tc.path)
+			assert.NoError(t, err)
 
 			rp, ok := r.(*repo)
 			assert.True(t, ok)
 
-			assert.NoError(t, err)
 			assert.NotNil(t, rp)
 			assert.NotNil(t, rp.git)
 		})
