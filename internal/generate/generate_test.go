@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moorara/changelog/internal/changelog"
-	"github.com/moorara/changelog/internal/git"
 	"github.com/moorara/changelog/internal/remote"
 	"github.com/moorara/changelog/internal/spec"
 	"github.com/moorara/changelog/pkg/log"
@@ -214,7 +213,6 @@ func TestNew(t *testing.T) {
 		name          string
 		s             spec.Spec
 		logger        log.Logger
-		gitRepo       git.Repo
 		expectedError string
 	}{
 		{
@@ -225,8 +223,7 @@ func TestNew(t *testing.T) {
 					Path:     "octocat/invalid/Hello-World",
 				},
 			},
-			logger:        log.New(log.None),
-			gitRepo:       &MockGitRepo{},
+			logger:        nil,
 			expectedError: "unexpected GitHub repository: cannot parse owner and repo",
 		},
 		{
@@ -238,7 +235,6 @@ func TestNew(t *testing.T) {
 				},
 			},
 			logger:        log.New(log.None),
-			gitRepo:       &MockGitRepo{},
 			expectedError: "",
 		},
 		{
@@ -249,14 +245,13 @@ func TestNew(t *testing.T) {
 				},
 			},
 			logger:        log.New(log.None),
-			gitRepo:       &MockGitRepo{},
 			expectedError: "",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			g, err := New(tc.s, tc.logger, tc.gitRepo)
+			g, err := New(tc.s, tc.logger)
 
 			if tc.expectedError != "" {
 				assert.Nil(t, g)
@@ -264,7 +259,6 @@ func TestNew(t *testing.T) {
 			} else {
 				assert.NotNil(t, g)
 				assert.Equal(t, tc.logger, g.logger)
-				assert.Equal(t, tc.gitRepo, g.gitRepo)
 				assert.NotNil(t, g.remoteRepo)
 				assert.NotNil(t, g.processor)
 			}

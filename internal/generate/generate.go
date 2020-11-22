@@ -10,7 +10,6 @@ import (
 
 	"github.com/moorara/changelog/internal/changelog"
 	"github.com/moorara/changelog/internal/changelog/markdown"
-	"github.com/moorara/changelog/internal/git"
 	"github.com/moorara/changelog/internal/remote"
 	"github.com/moorara/changelog/internal/remote/github"
 	"github.com/moorara/changelog/internal/remote/gitlab"
@@ -22,13 +21,16 @@ import (
 type Generator struct {
 	spec       spec.Spec
 	logger     log.Logger
-	gitRepo    git.Repo
 	remoteRepo remote.Repo
 	processor  changelog.Processor
 }
 
 // New creates a new changelog generator.
-func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) (*Generator, error) {
+func New(s spec.Spec, logger log.Logger) (*Generator, error) {
+	if logger == nil {
+		logger = log.New(log.None)
+	}
+
 	var remoteRepo remote.Repo
 	switch s.Repo.Platform {
 	case spec.PlatformGitHub:
@@ -46,7 +48,6 @@ func New(s spec.Spec, logger log.Logger, gitRepo git.Repo) (*Generator, error) {
 	return &Generator{
 		spec:       s,
 		logger:     logger,
-		gitRepo:    gitRepo,
 		remoteRepo: remoteRepo,
 		processor:  markdown.NewProcessor(logger, s.General.Base, s.General.File),
 	}, nil

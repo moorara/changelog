@@ -63,7 +63,7 @@ func main() {
 		fmt.Println(version.String())
 
 	default:
-		g, err := generate.New(s, logger, gitRepo)
+		g, err := generate.New(s, logger)
 		if err != nil {
 			logger.Fatal(err)
 		}
