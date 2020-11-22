@@ -6,10 +6,10 @@ import (
 
 	"github.com/moorara/flagit"
 
-	"github.com/moorara/changelog/internal/generate"
+	"github.com/moorara/changelog/generate"
 	"github.com/moorara/changelog/internal/git"
-	"github.com/moorara/changelog/internal/spec"
-	"github.com/moorara/changelog/pkg/log"
+	"github.com/moorara/changelog/spec"
+	"github.com/moorara/changelog/log"
 	"github.com/moorara/changelog/version"
 )
 

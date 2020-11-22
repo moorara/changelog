@@ -6,7 +6,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/moorara/changelog/pkg/log"
+	"github.com/moorara/changelog/log"
 )
 
 func TestNewRepo(t *testing.T) {

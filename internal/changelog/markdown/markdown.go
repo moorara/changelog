@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/moorara/changelog/internal/changelog"
-	"github.com/moorara/changelog/pkg/log"
+	"github.com/moorara/changelog/log"
 )
 
 const timeLayout = "2006-01-02"

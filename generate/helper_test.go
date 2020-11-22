@@ -6,7 +6,7 @@ import (
 
 	"github.com/moorara/changelog/internal/changelog"
 	"github.com/moorara/changelog/internal/remote"
-	"github.com/moorara/changelog/internal/spec"
+	"github.com/moorara/changelog/spec"
 	"github.com/stretchr/testify/assert"
 )
 

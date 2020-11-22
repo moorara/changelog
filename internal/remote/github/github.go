@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/moorara/changelog/internal/remote"
-	"github.com/moorara/changelog/pkg/log"
+	"github.com/moorara/changelog/log"
 	"github.com/moorara/go-github"
 )
 

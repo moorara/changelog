@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/moorara/changelog/internal/remote"
-	"github.com/moorara/changelog/pkg/log"
+	"github.com/moorara/changelog/log"
 )
 
 // repo implements the remote.Repo interface for GitLab.

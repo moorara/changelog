@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moorara/changelog/internal/changelog"
-	"github.com/moorara/changelog/pkg/log"
+	"github.com/moorara/changelog/log"
 )
 
 var (

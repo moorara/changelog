@@ -3,7 +3,7 @@ package generate
 import (
 	"github.com/moorara/changelog/internal/changelog"
 	"github.com/moorara/changelog/internal/remote"
-	"github.com/moorara/changelog/internal/spec"
+	"github.com/moorara/changelog/spec"
 )
 
 // revisions refers to a branch name and list of tags sorted from the most recent to the least recent.

@@ -13,8 +13,8 @@ import (
 	"github.com/moorara/changelog/internal/remote"
 	"github.com/moorara/changelog/internal/remote/github"
 	"github.com/moorara/changelog/internal/remote/gitlab"
-	"github.com/moorara/changelog/internal/spec"
-	"github.com/moorara/changelog/pkg/log"
+	"github.com/moorara/changelog/spec"
+	"github.com/moorara/changelog/log"
 )
 
 // Generator is the changelog generator.
