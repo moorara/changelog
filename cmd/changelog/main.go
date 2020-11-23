@@ -8,8 +8,8 @@ import (
 
 	"github.com/moorara/changelog/generate"
 	"github.com/moorara/changelog/internal/git"
-	"github.com/moorara/changelog/spec"
 	"github.com/moorara/changelog/log"
+	"github.com/moorara/changelog/spec"
 	"github.com/moorara/changelog/version"
 )
 
@@ -68,7 +68,9 @@ func main() {
 			logger.Fatal(err)
 		}
 
-		if err := g.Generate(context.Background()); err != nil {
+		ctx := context.Background()
+
+		if err := g.Generate(ctx, s); err != nil {
 			logger.Fatal(err)
 		}
 	}

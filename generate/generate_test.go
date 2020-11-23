@@ -294,6 +294,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 	tests := []struct {
 		name          string
 		g             *Generator
+		s             spec.Tags
 		sortedTags    remote.Tags
 		chlog         *changelog.Changelog
 		expectedTags  remote.Tags
@@ -302,9 +303,9 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "NoGitTag_NoChangelogTag_NoFutureTag",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
+			s:             spec.Tags{},
 			sortedTags:    remote.Tags{},
 			chlog:         &changelog.Changelog{},
 			expectedTags:  remote.Tags{},
@@ -313,17 +314,15 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "NoGitTag_NoChangelogTag_FutureTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						Future: "v0.1.0",
-					},
-				},
 				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FutureTagMocks: []FutureTagMock{
 						{OutTag: futureTag1},
 					},
 				},
+			},
+			s: spec.Tags{
+				Future: "v0.1.0",
 			},
 			sortedTags:    remote.Tags{},
 			chlog:         &changelog.Changelog{},
@@ -333,9 +332,9 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "GitTag_NoChangelogTag_NoFutureTag",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
+			s:             spec.Tags{},
 			sortedTags:    remote.Tags{tag1},
 			chlog:         &changelog.Changelog{},
 			expectedTags:  remote.Tags{tag1},
@@ -344,17 +343,15 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "GitTag_NoChangelogTag_FutureTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						Future: "v0.2.0",
-					},
-				},
 				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FutureTagMocks: []FutureTagMock{
 						{OutTag: futureTag2},
 					},
 				},
+			},
+			s: spec.Tags{
+				Future: "v0.2.0",
 			},
 			sortedTags:    remote.Tags{tag1},
 			chlog:         &changelog.Changelog{},
@@ -364,9 +361,9 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "SameGitTag_SameChangelogTag_NoFutureTag",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
+			s:          spec.Tags{},
 			sortedTags: remote.Tags{tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
@@ -379,17 +376,15 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "SameGitTag_SameChangelogTag_FutureTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						Future: "v0.2.0",
-					},
-				},
 				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FutureTagMocks: []FutureTagMock{
 						{OutTag: futureTag2},
 					},
 				},
+			},
+			s: spec.Tags{
+				Future: "v0.2.0",
 			},
 			sortedTags: remote.Tags{tag1},
 			chlog: &changelog.Changelog{
@@ -403,9 +398,9 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "NewGitTag_ChangelogTag_NoFutureTag",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 			},
+			s:          spec.Tags{},
 			sortedTags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
 				Existing: []changelog.Release{
@@ -418,17 +413,15 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "NewGitTag_ChangelogTag_FutureTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						Future: "v0.3.0",
-					},
-				},
 				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FutureTagMocks: []FutureTagMock{
 						{OutTag: futureTag3},
 					},
 				},
+			},
+			s: spec.Tags{
+				Future: "v0.3.0",
 			},
 			sortedTags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -442,12 +435,10 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "InvalidFromTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						From: "invalid",
-					},
-				},
 				logger: log.New(log.None),
+			},
+			s: spec.Tags{
+				From: "invalid",
 			},
 			sortedTags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -461,12 +452,10 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "InvalidToTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						To: "invalid",
-					},
-				},
 				logger: log.New(log.None),
+			},
+			s: spec.Tags{
+				To: "invalid",
 			},
 			sortedTags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -480,12 +469,10 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "FromTag_Before_NewTags",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						From: "v0.1.1",
-					},
-				},
 				logger: log.New(log.None),
+			},
+			s: spec.Tags{
+				From: "v0.1.1",
 			},
 			sortedTags: remote.Tags{tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -499,13 +486,11 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "FromTag_After_ToTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						From: "v0.1.3",
-						To:   "v0.1.2",
-					},
-				},
 				logger: log.New(log.None),
+			},
+			s: spec.Tags{
+				From: "v0.1.3",
+				To:   "v0.1.2",
 			},
 			sortedTags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -519,13 +504,11 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "FromTag_Equal_ToTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						From: "v0.1.2",
-						To:   "v0.1.2",
-					},
-				},
 				logger: log.New(log.None),
+			},
+			s: spec.Tags{
+				From: "v0.1.2",
+				To:   "v0.1.2",
 			},
 			sortedTags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -539,13 +522,11 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "FromTag_Before_ToTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						From: "v0.1.2",
-						To:   "v0.1.3",
-					},
-				},
 				logger: log.New(log.None),
+			},
+			s: spec.Tags{
+				From: "v0.1.2",
+				To:   "v0.1.3",
 			},
 			sortedTags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -559,19 +540,17 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "InvalidFutureTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						From:   "v0.1.2",
-						To:     "v0.1.3",
-						Future: "v0.1.1",
-					},
-				},
 				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FutureTagMocks: []FutureTagMock{
 						{OutTag: futureTag4},
 					},
 				},
+			},
+			s: spec.Tags{
+				From:   "v0.1.2",
+				To:     "v0.1.3",
+				Future: "v0.1.1",
 			},
 			sortedTags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -585,19 +564,17 @@ func TestGenerator_resolveTags(t *testing.T) {
 		{
 			name: "FromTag_ToTag_FutureTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						From:   "v0.1.2",
-						To:     "v0.1.3",
-						Future: "v0.1.4",
-					},
-				},
 				logger: log.New(log.None),
 				remoteRepo: &MockRemoteRepo{
 					FutureTagMocks: []FutureTagMock{
 						{OutTag: futureTag4},
 					},
 				},
+			},
+			s: spec.Tags{
+				From:   "v0.1.2",
+				To:     "v0.1.3",
+				Future: "v0.1.4",
 			},
 			sortedTags: remote.Tags{tag3, tag2, tag1},
 			chlog: &changelog.Changelog{
@@ -612,7 +589,7 @@ func TestGenerator_resolveTags(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tags, err := tc.g.resolveTags(tc.sortedTags, tc.chlog)
+			tags, err := tc.g.resolveTags(tc.s, tc.sortedTags, tc.chlog)
 
 			assert.Equal(t, tc.expectedTags, tags)
 			assert.Equal(t, tc.expectedError, err)
@@ -737,6 +714,7 @@ func TestGenerator_resolveReleases(t *testing.T) {
 		name             string
 		g                *Generator
 		ctx              context.Context
+		s                spec.Spec
 		sortedTags       remote.Tags
 		baseRev          string
 		issueMap         issueMap
@@ -747,24 +725,24 @@ func TestGenerator_resolveReleases(t *testing.T) {
 			name: "WithoutFutureTag_GroupingMilestone",
 			g: &Generator{
 				logger: log.New(log.None),
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Grouping: spec.GroupingMilestone,
-					},
-					Merges: spec.Merges{
-						Grouping: spec.GroupingMilestone,
-					},
-					Content: spec.Content{
-						ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
-					},
-				},
 				remoteRepo: &MockRemoteRepo{
 					CompareURLMocks: []CompareURLMock{
 						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3"},
 					},
 				},
 			},
-			ctx:        context.Background(),
+			ctx: context.Background(),
+			s: spec.Spec{
+				Issues: spec.Issues{
+					Grouping: spec.GroupingMilestone,
+				},
+				Merges: spec.Merges{
+					Grouping: spec.GroupingMilestone,
+				},
+				Content: spec.Content{
+					ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
+				},
+			},
 			sortedTags: remote.Tags{tag3},
 			baseRev:    "v0.1.2",
 			issueMap: issueMap{
@@ -799,26 +777,26 @@ func TestGenerator_resolveReleases(t *testing.T) {
 			name: "WithoutFutureTag_GroupingLabel",
 			g: &Generator{
 				logger: log.New(log.None),
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Grouping:  spec.GroupingLabel,
-						BugLabels: []string{"bug"},
-					},
-					Merges: spec.Merges{
-						Grouping:          spec.GroupingLabel,
-						EnhancementLabels: []string{"enhancement"},
-					},
-					Content: spec.Content{
-						ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
-					},
-				},
 				remoteRepo: &MockRemoteRepo{
 					CompareURLMocks: []CompareURLMock{
 						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.2...v0.1.3"},
 					},
 				},
 			},
-			ctx:        context.Background(),
+			ctx: context.Background(),
+			s: spec.Spec{
+				Issues: spec.Issues{
+					Grouping:  spec.GroupingLabel,
+					BugLabels: []string{"bug"},
+				},
+				Merges: spec.Merges{
+					Grouping:          spec.GroupingLabel,
+					EnhancementLabels: []string{"enhancement"},
+				},
+				Content: spec.Content{
+					ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
+				},
+			},
 			sortedTags: remote.Tags{tag3},
 			baseRev:    "v0.1.2",
 			issueMap: issueMap{
@@ -853,17 +831,6 @@ func TestGenerator_resolveReleases(t *testing.T) {
 			name: "WithFutureTag_GroupingMilestone",
 			g: &Generator{
 				logger: log.New(log.None),
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Grouping: spec.GroupingMilestone,
-					},
-					Merges: spec.Merges{
-						Grouping: spec.GroupingMilestone,
-					},
-					Content: spec.Content{
-						ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
-					},
-				},
 				remoteRepo: &MockRemoteRepo{
 					CompareURLMocks: []CompareURLMock{
 						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4"},
@@ -871,7 +838,18 @@ func TestGenerator_resolveReleases(t *testing.T) {
 					},
 				},
 			},
-			ctx:        context.Background(),
+			ctx: context.Background(),
+			s: spec.Spec{
+				Issues: spec.Issues{
+					Grouping: spec.GroupingMilestone,
+				},
+				Merges: spec.Merges{
+					Grouping: spec.GroupingMilestone,
+				},
+				Content: spec.Content{
+					ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
+				},
+			},
 			sortedTags: remote.Tags{futureTag, tag3},
 			baseRev:    "v0.1.2",
 			issueMap: issueMap{
@@ -927,19 +905,6 @@ func TestGenerator_resolveReleases(t *testing.T) {
 			name: "WithFutureTag_GroupingLabel",
 			g: &Generator{
 				logger: log.New(log.None),
-				spec: spec.Spec{
-					Issues: spec.Issues{
-						Grouping:  spec.GroupingLabel,
-						BugLabels: []string{"bug"},
-					},
-					Merges: spec.Merges{
-						Grouping:          spec.GroupingLabel,
-						EnhancementLabels: []string{"enhancement"},
-					},
-					Content: spec.Content{
-						ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
-					},
-				},
 				remoteRepo: &MockRemoteRepo{
 					CompareURLMocks: []CompareURLMock{
 						{OutString: "https://github.com/octocat/Hello-World/compare/v0.1.3...v0.1.4"},
@@ -947,7 +912,20 @@ func TestGenerator_resolveReleases(t *testing.T) {
 					},
 				},
 			},
-			ctx:        context.Background(),
+			ctx: context.Background(),
+			s: spec.Spec{
+				Issues: spec.Issues{
+					Grouping:  spec.GroupingLabel,
+					BugLabels: []string{"bug"},
+				},
+				Merges: spec.Merges{
+					Grouping:          spec.GroupingLabel,
+					EnhancementLabels: []string{"enhancement"},
+				},
+				Content: spec.Content{
+					ReleaseURL: "https://storage.artifactory.com/project/releases/{tag}",
+				},
+			},
 			sortedTags: remote.Tags{futureTag, tag3},
 			baseRev:    "v0.1.2",
 			issueMap: issueMap{
@@ -1003,7 +981,7 @@ func TestGenerator_resolveReleases(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			releases := tc.g.resolveReleases(tc.ctx, tc.sortedTags, tc.baseRev, tc.issueMap, tc.mergeMap)
+			releases := tc.g.resolveReleases(tc.ctx, tc.s, tc.sortedTags, tc.baseRev, tc.issueMap, tc.mergeMap)
 
 			assert.Equal(t, tc.expectedReleases, releases)
 		})
@@ -1021,7 +999,6 @@ func TestGenerator_Generate(t *testing.T) {
 		{
 			name: "ParseFails",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1030,12 +1007,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on parsing the changelog file",
 		},
 		{
 			name: "CheckPermissionsFails",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1049,16 +1026,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on checking permissions",
 		},
 		{
 			name: "FetchBranchFails",
 			g: &Generator{
-				spec: spec.Spec{
-					Merges: spec.Merges{
-						Branch: "main",
-					},
-				},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1074,13 +1047,17 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 			},
-			ctx:           context.Background(),
+			ctx: context.Background(),
+			s: spec.Spec{
+				Merges: spec.Merges{
+					Branch: "main",
+				},
+			},
 			expectedError: "error on getting remote branch",
 		},
 		{
 			name: "FetchDefaultBranchFails",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1097,12 +1074,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on getting default remote branch",
 		},
 		{
 			name: "FetchTagsFails",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1122,12 +1099,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on getting remote tags",
 		},
 		{
 			name: "NoNewTag",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1147,12 +1124,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "",
 		},
 		{
 			name: "FetchFirstCommitFails",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1175,12 +1152,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on fetching first commit",
 		},
 		{
 			name: "FetchParentCommitsFails_Branch",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1206,12 +1183,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on fetching parent commits for branch",
 		},
 		{
 			name: "FetchParentCommitsFails_Tag",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1238,12 +1215,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on fetching parent commits for tag",
 		},
 		{
 			name: "FetchIssuesAndMergesFails",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1273,12 +1250,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on fetching issues and merges",
 		},
 		{
 			name: "RenderFails",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1317,12 +1294,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "error on rendering changelog",
 		},
 		{
 			name: "Success_ToTag",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1361,12 +1338,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "",
 		},
 		{
 			name: "Success_FromAndToTags",
 			g: &Generator{
-				spec:   spec.Spec{},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1411,16 +1388,12 @@ func TestGenerator_Generate(t *testing.T) {
 				},
 			},
 			ctx:           context.Background(),
+			s:             spec.Spec{},
 			expectedError: "",
 		},
 		{
 			name: "Success_FutureTag",
 			g: &Generator{
-				spec: spec.Spec{
-					Tags: spec.Tags{
-						Future: "v0.1.0",
-					},
-				},
 				logger: log.New(log.None),
 				processor: &MockChangelogProcessor{
 					ParseMocks: []ParseMock{
@@ -1467,14 +1440,19 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 			},
-			ctx:           context.Background(),
+			ctx: context.Background(),
+			s: spec.Spec{
+				Tags: spec.Tags{
+					Future: "v0.1.0",
+				},
+			},
 			expectedError: "",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.g.Generate(tc.ctx)
+			err := tc.g.Generate(tc.ctx, tc.s)
 
 			if tc.expectedError == "" {
 				assert.NoError(t, err)

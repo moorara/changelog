@@ -24,7 +24,7 @@ type issueMap map[string]remote.Issues
 // It allows us to look up all merges for a tatg.
 type mergeMap map[string]remote.Merges
 
-func filterByLabels(issues remote.Issues, merges remote.Merges, s spec.Spec) (remote.Issues, remote.Merges) {
+func filterByLabels(s spec.Spec, issues remote.Issues, merges remote.Merges) (remote.Issues, remote.Merges) {
 	switch s.Issues.Selection {
 	case spec.SelectionNone:
 		issues = remote.Issues{}

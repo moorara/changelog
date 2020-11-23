@@ -13,17 +13,15 @@ import (
 func TestFilterByLabels(t *testing.T) {
 	tests := []struct {
 		name           string
+		s              spec.Spec
 		issues         remote.Issues
 		merges         remote.Merges
-		spec           spec.Spec
 		expectedIssues remote.Issues
 		expectedMerges remote.Merges
 	}{
 		{
-			name:   "None",
-			issues: remote.Issues{issue1, issue2},
-			merges: remote.Merges{merge1, merge2},
-			spec: spec.Spec{
+			name: "None",
+			s: spec.Spec{
 				Issues: spec.Issues{
 					Selection: spec.SelectionNone,
 				},
@@ -31,14 +29,14 @@ func TestFilterByLabels(t *testing.T) {
 					Selection: spec.SelectionNone,
 				},
 			},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
 			expectedIssues: remote.Issues{},
 			expectedMerges: remote.Merges{},
 		},
 		{
-			name:   "AllWithIncludeLabels",
-			issues: remote.Issues{issue1, issue2},
-			merges: remote.Merges{merge1, merge2},
-			spec: spec.Spec{
+			name: "AllWithIncludeLabels",
+			s: spec.Spec{
 				Issues: spec.Issues{
 					Selection:     spec.SelectionAll,
 					IncludeLabels: []string{"bug"},
@@ -48,14 +46,14 @@ func TestFilterByLabels(t *testing.T) {
 					IncludeLabels: []string{"enhancement"},
 				},
 			},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
 			expectedIssues: remote.Issues{issue1},
 			expectedMerges: remote.Merges{merge1, merge2},
 		},
 		{
-			name:   "AllWithExcludeLabels",
-			issues: remote.Issues{issue1, issue2},
-			merges: remote.Merges{merge1, merge2},
-			spec: spec.Spec{
+			name: "AllWithExcludeLabels",
+			s: spec.Spec{
 				Issues: spec.Issues{
 					Selection:     spec.SelectionAll,
 					ExcludeLabels: []string{"invalid"},
@@ -65,14 +63,14 @@ func TestFilterByLabels(t *testing.T) {
 					ExcludeLabels: []string{"enhancement"},
 				},
 			},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
 			expectedIssues: remote.Issues{issue1},
 			expectedMerges: remote.Merges{merge2},
 		},
 		{
-			name:   "LabeledWithIncludeLabels",
-			issues: remote.Issues{issue1, issue2},
-			merges: remote.Merges{merge1, merge2},
-			spec: spec.Spec{
+			name: "LabeledWithIncludeLabels",
+			s: spec.Spec{
 				Issues: spec.Issues{
 					Selection:     spec.SelectionLabeled,
 					IncludeLabels: []string{"bug"},
@@ -82,14 +80,14 @@ func TestFilterByLabels(t *testing.T) {
 					IncludeLabels: []string{"enhancement"},
 				},
 			},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
 			expectedIssues: remote.Issues{issue1},
 			expectedMerges: remote.Merges{merge1},
 		},
 		{
-			name:   "LabeledWithExcludeLabels",
-			issues: remote.Issues{issue1, issue2},
-			merges: remote.Merges{merge1, merge2},
-			spec: spec.Spec{
+			name: "LabeledWithExcludeLabels",
+			s: spec.Spec{
 				Issues: spec.Issues{
 					Selection:     spec.SelectionLabeled,
 					ExcludeLabels: []string{"invalid"},
@@ -99,6 +97,8 @@ func TestFilterByLabels(t *testing.T) {
 					ExcludeLabels: []string{"enhancement"},
 				},
 			},
+			issues:         remote.Issues{issue1, issue2},
+			merges:         remote.Merges{merge1, merge2},
 			expectedIssues: remote.Issues{issue1},
 			expectedMerges: remote.Merges{},
 		},
@@ -106,7 +106,7 @@ func TestFilterByLabels(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			issues, merges := filterByLabels(tc.issues, tc.merges, tc.spec)
+			issues, merges := filterByLabels(tc.s, tc.issues, tc.merges)
 
 			assert.Equal(t, tc.expectedIssues, issues)
 			assert.Equal(t, tc.expectedMerges, merges)
