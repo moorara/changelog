@@ -96,7 +96,9 @@ func filterByLabels(s spec.Spec, issues remote.Issues, merges remote.Merges) (re
 	return issues, merges
 }
 
-func resolveIssueMap(issues remote.Issues, sortedTags remote.Tags) issueMap {
+// resolveIssueMap partitions a list of issues by tags.
+// It returns a map of tag names to issues.
+func resolveIssueMap(issues remote.Issues, sortedTags remote.Tags, futureTag remote.Tag) issueMap {
 	im := issueMap{}
 
 	for _, i := range issues {
@@ -108,13 +110,21 @@ func resolveIssueMap(issues remote.Issues, sortedTags remote.Tags) issueMap {
 
 		if ok {
 			im[tag.Name] = append(im[tag.Name], i)
+		} else {
+			// The issue does not belong to any existing tag
+			// If there is a future tag, we should assign the issue to it
+			if futureTag.Commit.IsZero() {
+				im[futureTag.Name] = append(im[futureTag.Name], i)
+			}
 		}
 	}
 
 	return im
 }
 
-func resolveMergeMap(merges remote.Merges, sortedTags remote.Tags, cm commitMap) mergeMap {
+// resolveIssueMap partitions a list of merges by tags.
+// It returns a map of tag names to merges.
+func resolveMergeMap(merges remote.Merges, cm commitMap, futureTag remote.Tag) mergeMap {
 	mm := mergeMap{}
 
 	for _, m := range merges {
@@ -123,9 +133,9 @@ func resolveMergeMap(merges remote.Merges, sortedTags remote.Tags, cm commitMap)
 				tagName := rev.Tags[len(rev.Tags)-1]
 				mm[tagName] = append(mm[tagName], m)
 			} else {
-				// The commit does not belong to any tag
-				// The first tag can be a future tag without a commit
-				if futureTag := sortedTags[0]; futureTag.Commit.IsZero() {
+				// The commit does not belong to any existing tag
+				// If there is a future tag, we should assign the merge to it
+				if futureTag.Commit.IsZero() {
 					tagName := futureTag.Name
 					mm[tagName] = append(mm[tagName], m)
 				}

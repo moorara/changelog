@@ -107,6 +107,9 @@ func (g *Generator) resolveTags(s spec.Tags, sortedTags remote.Tags, chlog *chan
 	return newTags, nil
 }
 
+// resolveCommitMap returns a map of commit hashes to revisions.
+// A revision includes a branch name and a list of tags.
+// The resulting map lets us to know what is the branch and all the tags than any given commit falls into.
 func (g *Generator) resolveCommitMap(ctx context.Context, branch remote.Branch, sortedTags remote.Tags) (commitMap, error) {
 	commitMap := commitMap{}
 
@@ -347,7 +350,8 @@ func (g *Generator) Generate(ctx context.Context, s spec.Spec) (string, error) {
 	// ==============================> FETCH COMMITS FOR BRANCH AND TAGS <==============================
 
 	// Construct a map of commit hashes to branch and tags names
-	commitMap, err := g.resolveCommitMap(ctx, branch, newTags)
+	// We need to resolve the commit map with all sorted tags, so commits will not be misassigned to new tags
+	commitMap, err := g.resolveCommitMap(ctx, branch, sortedTags)
 	if err != nil {
 		return "", err
 	}
@@ -368,8 +372,10 @@ func (g *Generator) Generate(ctx context.Context, s spec.Spec) (string, error) {
 	sortedIssues, sortedMerges := filterByLabels(s, issues, merges)
 	g.logger.Infof("Filtered issues (%d) and pull/merge requests (%d)", len(sortedIssues), len(sortedMerges))
 
-	issueMap := resolveIssueMap(sortedIssues, newTags)
-	mergeMap := resolveMergeMap(sortedMerges, newTags, commitMap)
+	// We need to resolve the issue map with all sorted tags, so issues will not be misassigned to new tags
+	possibleFutureTag := newTags[0]
+	issueMap := resolveIssueMap(sortedIssues, sortedTags, possibleFutureTag)
+	mergeMap := resolveMergeMap(sortedMerges, commitMap, possibleFutureTag)
 	g.logger.Info("Partitioned issues and pull/merge requests by tag")
 
 	chlog.New = g.resolveReleases(ctx, s, newTags, baseRev, issueMap, mergeMap)

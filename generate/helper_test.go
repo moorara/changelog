@@ -124,12 +124,14 @@ func TestResolveIssueMap(t *testing.T) {
 		name             string
 		issues           remote.Issues
 		sortedTags       remote.Tags
+		futureTag        remote.Tag
 		expectedIssueMap issueMap
 	}{
 		{
 			name:       "OK",
 			issues:     remote.Issues{issue1, issue2},
-			sortedTags: remote.Tags{futureTag, tag3, tag2, tag1},
+			sortedTags: remote.Tags{tag3, tag2, tag1},
+			futureTag:  futureTag,
 			expectedIssueMap: issueMap{
 				"v0.1.4": remote.Issues{issue2},
 				"v0.1.3": remote.Issues{issue1},
@@ -139,7 +141,7 @@ func TestResolveIssueMap(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			issueMap := resolveIssueMap(tc.issues, tc.sortedTags)
+			issueMap := resolveIssueMap(tc.issues, tc.sortedTags, tc.futureTag)
 
 			assert.Equal(t, tc.expectedIssueMap, issueMap)
 		})
@@ -172,15 +174,15 @@ func TestResolveMergeMap(t *testing.T) {
 	tests := []struct {
 		name             string
 		merges           remote.Merges
-		sortedTags       remote.Tags
 		commitMap        commitMap
+		futureTag        remote.Tag
 		expectedMergeMap mergeMap
 	}{
 		{
-			name:       "OK",
-			merges:     remote.Merges{merge1, merge2},
-			sortedTags: remote.Tags{futureTag},
-			commitMap:  cm,
+			name:      "OK",
+			merges:    remote.Merges{merge1, merge2},
+			commitMap: cm,
+			futureTag: futureTag,
 			expectedMergeMap: mergeMap{
 				"v0.1.4": remote.Merges{merge2},
 				"v0.1.3": remote.Merges{merge1},
@@ -190,7 +192,7 @@ func TestResolveMergeMap(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mergeMap := resolveMergeMap(tc.merges, tc.sortedTags, tc.commitMap)
+			mergeMap := resolveMergeMap(tc.merges, tc.commitMap, tc.futureTag)
 
 			assert.Equal(t, tc.expectedMergeMap, mergeMap)
 		})

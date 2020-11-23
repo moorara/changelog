@@ -304,7 +304,7 @@ func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 
 	tags := resolveTags(tagStore, r.stores.commits, r.owner, r.repo)
 
-	r.logger.Debugf("GitHub tags are fetched: %s", len(tags))
+	r.logger.Debugf("GitHub tags are fetched: %d", len(tags))
 
 	return tags, nil
 }
