@@ -276,15 +276,15 @@ func (g *Generator) resolveReleases(ctx context.Context, s spec.Spec, sortedTags
 }
 
 // Generate generates changelogs for a Git repository.
-func (g *Generator) Generate(ctx context.Context, s spec.Spec) error {
+func (g *Generator) Generate(ctx context.Context, s spec.Spec) (string, error) {
 	// Parse the existing changelog if any
 	chlog, err := g.processor.Parse(changelog.ParseOptions{})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err := g.remoteRepo.CheckPermissions(ctx); err != nil {
-		return err
+		return "", err
 	}
 
 	// ==============================> FETCH RELEASE BRANCH <==============================
@@ -298,14 +298,14 @@ func (g *Generator) Generate(ctx context.Context, s spec.Spec) error {
 	}
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// ==============================> FETCH AND FILTER TAGS <==============================
 
 	tags, err := g.remoteRepo.FetchTags(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	g.logger.Info("Sorting and filtering git tags ...")
@@ -316,19 +316,19 @@ func (g *Generator) Generate(ctx context.Context, s spec.Spec) error {
 	if s.Tags.ExcludeRegex != "" {
 		re, err := regexp.CompilePOSIX(s.Tags.ExcludeRegex)
 		if err != nil {
-			return err
+			return "", err
 		}
 		sortedTags = sortedTags.ExcludeRegex(re)
 	}
 
 	newTags, err := g.resolveTags(s.Tags, sortedTags, chlog)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if len(newTags) == 0 {
 		g.logger.Info("Changelog is up-to-date (no new tag or a future tag)")
-		return nil
+		return "", nil
 	}
 
 	// ==============================> RESOLVE GIT REVISION FOR COMPARISON <==============================
@@ -339,7 +339,7 @@ func (g *Generator) Generate(ctx context.Context, s spec.Spec) error {
 	} else {
 		firstCommit, err := g.remoteRepo.FetchFirstCommit(ctx)
 		if err != nil {
-			return err
+			return "", err
 		}
 		baseRev = firstCommit.Hash
 	}
@@ -349,7 +349,7 @@ func (g *Generator) Generate(ctx context.Context, s spec.Spec) error {
 	// Construct a map of commit hashes to branch and tags names
 	commitMap, err := g.resolveCommitMap(ctx, branch, newTags)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// ==============================> FETCH & ORGANIZE ISSUES AND MERGES <==============================
@@ -362,7 +362,7 @@ func (g *Generator) Generate(ctx context.Context, s spec.Spec) error {
 
 	issues, merges, err := g.remoteRepo.FetchIssuesAndMerges(ctx, since)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	sortedIssues, sortedMerges := filterByLabels(s, issues, merges)
@@ -379,12 +379,12 @@ func (g *Generator) Generate(ctx context.Context, s spec.Spec) error {
 
 	content, err := g.processor.Render(chlog)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if s.General.Print {
 		fmt.Print(content)
 	}
 
-	return nil
+	return content, nil
 }

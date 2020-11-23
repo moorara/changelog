@@ -990,11 +990,12 @@ func TestGenerator_resolveReleases(t *testing.T) {
 
 func TestGenerator_Generate(t *testing.T) {
 	tests := []struct {
-		name          string
-		g             *Generator
-		ctx           context.Context
-		s             spec.Spec
-		expectedError string
+		name            string
+		g               *Generator
+		ctx             context.Context
+		s               spec.Spec
+		expectedContent string
+		expectedError   string
 	}{
 		{
 			name: "ParseFails",
@@ -1123,9 +1124,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 			},
-			ctx:           context.Background(),
-			s:             spec.Spec{},
-			expectedError: "",
+			ctx:             context.Background(),
+			s:               spec.Spec{},
+			expectedContent: "",
 		},
 		{
 			name: "FetchFirstCommitFails",
@@ -1337,9 +1338,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 			},
-			ctx:           context.Background(),
-			s:             spec.Spec{},
-			expectedError: "",
+			ctx:             context.Background(),
+			s:               spec.Spec{},
+			expectedContent: "changelog",
 		},
 		{
 			name: "Success_FromAndToTags",
@@ -1387,9 +1388,9 @@ func TestGenerator_Generate(t *testing.T) {
 					},
 				},
 			},
-			ctx:           context.Background(),
-			s:             spec.Spec{},
-			expectedError: "",
+			ctx:             context.Background(),
+			s:               spec.Spec{},
+			expectedContent: "changelog",
 		},
 		{
 			name: "Success_FutureTag",
@@ -1446,17 +1447,19 @@ func TestGenerator_Generate(t *testing.T) {
 					Future: "v0.1.0",
 				},
 			},
-			expectedError: "",
+			expectedContent: "changelog",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.g.Generate(tc.ctx, tc.s)
+			content, err := tc.g.Generate(tc.ctx, tc.s)
 
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedContent, content)
 			} else {
+				assert.Empty(t, content)
 				assert.EqualError(t, err, tc.expectedError)
 			}
 		})

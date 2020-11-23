@@ -70,7 +70,7 @@ func main() {
 
 		ctx := context.Background()
 
-		if err := g.Generate(ctx, s); err != nil {
+		if _, err := g.Generate(ctx, s); err != nil {
 			logger.Fatal(err)
 		}
 	}
