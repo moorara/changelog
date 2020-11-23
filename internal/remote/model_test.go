@@ -510,34 +510,13 @@ func TestTags_Sort(t *testing.T) {
 	}
 }
 
-func TestTags_Reverse(t *testing.T) {
-	tests := []struct {
-		name         string
-		t            Tags
-		expectedTags Tags
-	}{
-		{
-			name:         "OK",
-			t:            Tags{tag1, tag2},
-			expectedTags: Tags{tag2, tag1},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			tags := tc.t.Reverse()
-
-			assert.Equal(t, tc.expectedTags, tags)
-		})
-	}
-}
-
 func TestTags_Select(t *testing.T) {
 	tests := []struct {
-		name             string
-		t                Tags
-		f                func(Tag) bool
-		expectedSelected Tags
+		name               string
+		t                  Tags
+		f                  func(Tag) bool
+		expectedSelected   Tags
+		expectedUnselected Tags
 	}{
 		{
 			name: "Named",
@@ -545,7 +524,8 @@ func TestTags_Select(t *testing.T) {
 			f: func(t Tag) bool {
 				return len(t.Name) > 0
 			},
-			expectedSelected: Tags{tag1, tag2},
+			expectedSelected:   Tags{tag1, tag2},
+			expectedUnselected: Tags{},
 		},
 		{
 			name: "Unnamed",
@@ -553,51 +533,17 @@ func TestTags_Select(t *testing.T) {
 			f: func(t Tag) bool {
 				return len(t.Name) == 0
 			},
-			expectedSelected: Tags{},
+			expectedSelected:   Tags{},
+			expectedUnselected: Tags{tag1, tag2},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			selected := tc.t.Select(tc.f)
+			selected, unselected := tc.t.Select(tc.f)
 
 			assert.Equal(t, tc.expectedSelected, selected)
-		})
-	}
-}
-
-func TestTags_Remove(t *testing.T) {
-	tests := []struct {
-		name            string
-		t               Tags
-		f               func(Tag) bool
-		expectedTags    Tags
-		expextedRemoved Tags
-	}{
-		{
-			name:            "Nil",
-			t:               nil,
-			f:               nil,
-			expectedTags:    nil,
-			expextedRemoved: nil,
-		},
-		{
-			name: "OK",
-			t:    Tags{tag1, tag2},
-			f: func(t Tag) bool {
-				return t.Name == "v0.1.0"
-			},
-			expectedTags:    Tags{tag2},
-			expextedRemoved: Tags{tag1},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			removed := tc.t.Remove(tc.f)
-
-			assert.Equal(t, tc.expectedTags, tc.t)
-			assert.Equal(t, tc.expextedRemoved, removed)
+			assert.Equal(t, tc.expectedUnselected, unselected)
 		})
 	}
 }

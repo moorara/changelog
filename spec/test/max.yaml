@@ -5,10 +5,7 @@ general:
   verbose: true
 
 tags:
-  from: v0.1.0
-  to: v0.2.0
-  future: v0.3.0
-  exclude: [ staging ]
+  exclude: [ prerelease, candidate ]
   exclude-regex: (.*)-(alpha|beta)
 
 issues:

@@ -13,8 +13,8 @@ import (
 	"github.com/moorara/changelog/internal/remote"
 	"github.com/moorara/changelog/internal/remote/github"
 	"github.com/moorara/changelog/internal/remote/gitlab"
-	"github.com/moorara/changelog/spec"
 	"github.com/moorara/changelog/log"
+	"github.com/moorara/changelog/spec"
 )
 
 // Generator is the changelog generator.
@@ -38,8 +38,7 @@ func New(s spec.Spec, logger log.Logger) (*Generator, error) {
 		if len(parts) != 2 {
 			return nil, errors.New("unexpected GitHub repository: cannot parse owner and repo")
 		}
-		owner, repo := parts[0], parts[1]
-		remoteRepo = github.NewRepo(logger, owner, repo, s.Repo.AccessToken)
+		remoteRepo = github.NewRepo(logger, parts[0], parts[1], s.Repo.AccessToken)
 
 	case spec.PlatformGitLab:
 		remoteRepo = gitlab.NewRepo(logger, s.Repo.Path, s.Repo.AccessToken)
@@ -65,7 +64,7 @@ func (g *Generator) resolveTags(sortedTags remote.Tags, chlog *changelog.Changel
 	}
 
 	// Select those tags that are not in changelog
-	newTags := sortedTags.Select(func(t remote.Tag) bool {
+	newTags, _ := sortedTags.Select(func(t remote.Tag) bool {
 		for _, release := range chlog.Existing {
 			if t.Name == release.TagName {
 				return false
@@ -285,8 +284,6 @@ func (g *Generator) Generate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// ==============================> CHECK ACCESS TOKEN <==============================
 
 	if err := g.remoteRepo.CheckPermissions(ctx); err != nil {
 		return err

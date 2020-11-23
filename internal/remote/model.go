@@ -183,43 +183,20 @@ func (t Tags) Sort() Tags {
 	return sorted
 }
 
-// Reverse returns a new list of tags with the reverse order.
-func (t Tags) Reverse() Tags {
-	l := len(t)
-	reversed := make(Tags, l)
-
-	for i := 0; i < l; i++ {
-		reversed[l-1-i] = t[i]
-	}
-
-	return reversed
-}
-
 // Select returns a new list of tags that satisfies the predicate f.
-func (t Tags) Select(f func(Tag) bool) Tags {
+func (t Tags) Select(f func(Tag) bool) (Tags, Tags) {
 	selected := Tags{}
+	unselected := Tags{}
 
 	for _, tag := range t {
 		if f(tag) {
 			selected = append(selected, tag)
+		} else {
+			unselected = append(unselected, tag)
 		}
 	}
 
-	return selected
-}
-
-// Remove removes any tag that satisfies the predicate f and returns the removed tags.
-func (t *Tags) Remove(f func(Tag) bool) Tags {
-	var removed Tags
-
-	for n, tag := range *t {
-		if f(tag) {
-			removed = append(removed, (*t)[n])
-			*t = append((*t)[:n], (*t)[n+1:]...)
-		}
-	}
-
-	return removed
+	return selected, unselected
 }
 
 // Exclude excludes the given tag names and returns a new list of tags.

@@ -51,12 +51,12 @@ type repo struct {
 }
 
 // NewRepo creates a new GitHub repository.
-func NewRepo(logger log.Logger, repoOwner, repoName, accessToken string) remote.Repo {
+func NewRepo(logger log.Logger, ownerName, repoName, accessToken string) remote.Repo {
 	client := github.NewClient(accessToken)
 
 	r := &repo{
 		logger: logger,
-		owner:  repoOwner,
+		owner:  ownerName,
 		repo:   repoName,
 	}
 
@@ -64,7 +64,7 @@ func NewRepo(logger log.Logger, repoOwner, repoName, accessToken string) remote.
 	r.stores.commits = newStore()
 	r.services.github = client
 	r.services.users = client.Users
-	r.services.repo = client.Repo(repoOwner, repoName)
+	r.services.repo = client.Repo(ownerName, repoName)
 
 	return r
 }
@@ -304,9 +304,7 @@ func (r *repo) FetchTags(ctx context.Context) (remote.Tags, error) {
 
 	tags := resolveTags(tagStore, r.stores.commits, r.owner, r.repo)
 
-	r.logger.Debugf("GitHub tags are fetched: %s", tags.Map(func(t remote.Tag) string {
-		return t.Name
-	}))
+	r.logger.Debugf("GitHub tags are fetched: %s", len(tags))
 
 	return tags, nil
 }

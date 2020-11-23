@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/moorara/changelog/internal/remote"
 	"github.com/moorara/go-github"
+
+	"github.com/moorara/changelog/internal/remote"
 )
 
 func toUser(u github.User) remote.User {

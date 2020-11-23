@@ -17,14 +17,14 @@ func TestNewRepo(t *testing.T) {
 	tests := []struct {
 		name        string
 		logger      log.Logger
-		repoOwner   string
+		ownerName   string
 		repoName    string
 		accessToken string
 	}{
 		{
 			name:        "OK",
 			logger:      log.New(log.None),
-			repoOwner:   "moorara",
+			ownerName:   "moorara",
 			repoName:    "changelog",
 			accessToken: "github-access-token",
 		},
@@ -32,14 +32,14 @@ func TestNewRepo(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewRepo(tc.logger, tc.repoOwner, tc.repoName, tc.accessToken)
+			r := NewRepo(tc.logger, tc.ownerName, tc.repoName, tc.accessToken)
 			assert.NotNil(t, r)
 
 			gr, ok := r.(*repo)
 			assert.True(t, ok)
 
 			assert.Equal(t, tc.logger, gr.logger)
-			assert.Equal(t, tc.repoOwner, gr.owner)
+			assert.Equal(t, tc.ownerName, gr.owner)
 			assert.Equal(t, tc.repoName, gr.repo)
 			assert.NotNil(t, gr.stores.users)
 			assert.NotNil(t, gr.stores.commits)

@@ -200,7 +200,6 @@ func (t Tag) String() string {
 	if t.IsZero() {
 		return ""
 	}
-
 	return fmt.Sprintf("%s %s %s Commit[%s %s]", t.Type, t.Hash, t.Name, t.Commit.Hash, t.Commit.ShortMessage())
 }
 

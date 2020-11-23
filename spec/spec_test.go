@@ -260,10 +260,10 @@ func TestFromFile(t *testing.T) {
 					Verbose: true,
 				},
 				Tags: Tags{
-					From:         "v0.1.0",
-					To:           "v0.2.0",
-					Future:       "v0.3.0",
-					Exclude:      []string{"staging"},
+					From:         "",
+					To:           "",
+					Future:       "",
+					Exclude:      []string{"prerelease", "candidate"},
 					ExcludeRegex: `(.*)-(alpha|beta)`,
 				},
 				Issues: Issues{

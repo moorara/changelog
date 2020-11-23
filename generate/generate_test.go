@@ -10,8 +10,8 @@ import (
 
 	"github.com/moorara/changelog/internal/changelog"
 	"github.com/moorara/changelog/internal/remote"
-	"github.com/moorara/changelog/spec"
 	"github.com/moorara/changelog/log"
+	"github.com/moorara/changelog/spec"
 )
 
 var (
@@ -1015,6 +1015,7 @@ func TestGenerator_Generate(t *testing.T) {
 		name          string
 		g             *Generator
 		ctx           context.Context
+		s             spec.Spec
 		expectedError string
 	}{
 		{

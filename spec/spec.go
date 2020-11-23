@@ -153,9 +153,9 @@ type General struct {
 
 // Tags has the specifications for identifying git tags.
 type Tags struct {
-	From         string   `yaml:"from" flag:"from-tag"`
-	To           string   `yaml:"to" flag:"to-tag"`
-	Future       string   `yaml:"future" flag:"future-tag"`
+	From         string   `yaml:"-" flag:"from-tag"`
+	To           string   `yaml:"-" flag:"to-tag"`
+	Future       string   `yaml:"-" flag:"future-tag"`
 	Exclude      []string `yaml:"exclude" flag:"exclude-tags"`
 	ExcludeRegex string   `yaml:"exclude-regex" flag:"exclude-tags-regex"`
 }

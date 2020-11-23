@@ -48,6 +48,58 @@ changelog -access-token=$GITHUB_TOKEN
 changelog -access-token=$GITHUB_TOKEN -future-tag v0.1.0
 ```
 
+### Spec File
+
+You can check in a file in your repository for configuring how changelogs are generated.
+
+<details>
+  <summary>changelog.yaml</summary>
+
+```yaml
+general:
+  file: CHANGELOG.md
+  base: HISTORY.md
+  print: true
+  verbose: false
+
+tags:
+  exclude: [ prerelease, candidate ]
+  exclude-regex: (.*)-(alpha|beta)
+
+issues:
+  selection: labeled
+  include-labels: [ breaking, bug, defect, deprecated, enhancement, feature, highlight, improvement, incompatible, privacy, removed, security, summary ]
+  exclude-labels: [ documentation, duplicate, invalid, question, wontfix ]
+  grouping: milestone
+  summary-labels: [ summary, highlight ]
+  removed-labels: [ removed ]
+  breaking-labels: [ breaking, incompatible ]
+  deprecated-labels: [ deprecated ]
+  feature-labels: [ feature ]
+  enhancement-labels: [ enhancement, improvement ]
+  bug-labels: [ bug, defect ]
+  security-labels: [ security, privacy ]
+
+merges:
+  selection: labeled
+  branch: production
+  include-labels: [ breaking, bug, defect, deprecated, enhancement, feature, highlight, improvement, incompatible, privacy, removed, security, summary ]
+  exclude-labels: [ documentation, duplicate, invalid, question, wontfix ]
+  grouping: label
+  summary-labels: [ summary, highlight ]
+  removed-labels: [ removed ]
+  breaking-labels: [ breaking, incompatible ]
+  deprecated-labels: [ deprecated ]
+  feature-labels: [ feature ]
+  enhancement-labels: [ enhancement, improvement ]
+  bug-labels: [ bug, defect ]
+  security-labels: [ security, privacy ]
+
+content:
+  release-url: https://storage.artifactory.com/project/releases/{tag}
+```
+</details>
+
 ## Features
 
   - Single, dependency-free, and cross-platform binary
