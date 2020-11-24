@@ -14,26 +14,12 @@ import (
 )
 
 func main() {
-	// CREATE DEPENDENCIES
-
 	// We cannot enable the logger until the verbosity is known
 	logger := log.New(log.None)
 
-	gitRepo, err := git.NewRepo(logger, ".")
-	if err != nil {
-		logger.Fatal(err)
-	}
-
-	domain, path, err := gitRepo.GetRemoteInfo()
-	if err != nil {
-		logger.Fatal(err)
-	}
-
 	// READING SPEC
 
-	s := spec.Default(domain, path)
-
-	s, err = spec.FromFile(s)
+	s, err := spec.Default().FromFile()
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -63,12 +49,25 @@ func main() {
 		fmt.Println(version.String())
 
 	default:
+		// Retrieve git repo informatin
+
+		gitRepo, err := git.NewRepo(logger, ".")
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		domain, path, err := gitRepo.GetRemoteInfo()
+		if err != nil {
+			logger.Fatal(err)
+		}
+
 		g, err := generate.New(s, logger)
 		if err != nil {
 			logger.Fatal(err)
 		}
 
 		ctx := context.Background()
+		s = s.WithRepo(domain, path)
 
 		if _, err := g.Generate(ctx, s); err != nil {
 			logger.Fatal(err)

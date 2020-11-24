@@ -1,6 +1,7 @@
 package spec
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,11 +114,11 @@ func TestFormat_GetReleaseURL(t *testing.T) {
 }
 
 func TestDefault(t *testing.T) {
-	spec := Default("github.com", "octocat/Hello-World")
+	spec := Default()
 
 	assert.NotNil(t, spec)
-	assert.Equal(t, PlatformGitHub, spec.Repo.Platform)
-	assert.Equal(t, "octocat/Hello-World", spec.Repo.Path)
+	assert.Equal(t, Platform(""), spec.Repo.Platform)
+	assert.Equal(t, "", spec.Repo.Path)
 	assert.Equal(t, "", spec.Repo.AccessToken)
 	assert.Equal(t, "CHANGELOG.md", spec.General.File)
 	assert.Equal(t, "", spec.General.Base)
@@ -156,7 +157,7 @@ func TestDefault(t *testing.T) {
 	assert.Equal(t, "", spec.Content.ReleaseURL)
 }
 
-func TestFromFile(t *testing.T) {
+func TestSpec_FromFile(t *testing.T) {
 	tests := []struct {
 		name          string
 		specFiles     []string
@@ -167,31 +168,31 @@ func TestFromFile(t *testing.T) {
 		{
 			name:         "NoSpecFile",
 			specFiles:    []string{"test/null"},
-			spec:         Default("github.com", "octocat/Hello-World"),
-			expectedSpec: Default("github.com", "octocat/Hello-World"),
+			spec:         Default(),
+			expectedSpec: Default(),
 		},
 		{
 			name:          "EmptySpecFile",
 			specFiles:     []string{"test/empty.yaml"},
-			spec:          Default("github.com", "octocat/Hello-World"),
+			spec:          Default(),
 			expectedError: "EOF",
 		},
 		{
 			name:          "InvalidSpecFile",
 			specFiles:     []string{"test/invalid.yaml"},
-			spec:          Default("github.com", "octocat/Hello-World"),
+			spec:          Default(),
 			expectedError: "yaml: unmarshal errors",
 		},
 		{
 			name:      "MinimumSpecFile",
 			specFiles: []string{"test/min.yaml"},
-			spec:      Default("github.com", "octocat/Hello-World"),
+			spec:      Default(),
 			expectedSpec: Spec{
 				Help:    false,
 				Version: false,
 				Repo: Repo{
-					Platform:    Platform("github.com"),
-					Path:        "octocat/Hello-World",
+					Platform:    Platform(""),
+					Path:        "",
 					AccessToken: "",
 				},
 				General: General{
@@ -244,13 +245,13 @@ func TestFromFile(t *testing.T) {
 		{
 			name:      "MaximumSpecFile",
 			specFiles: []string{"test/max.yaml"},
-			spec:      Default("github.com", "octocat/Hello-World"),
+			spec:      Default(),
 			expectedSpec: Spec{
 				Help:    false,
 				Version: false,
 				Repo: Repo{
-					Platform:    Platform("github.com"),
-					Path:        "octocat/Hello-World",
+					Platform:    Platform(""),
+					Path:        "",
 					AccessToken: "",
 				},
 				General: General{
@@ -305,7 +306,7 @@ func TestFromFile(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			specFiles = tc.specFiles
-			spec, err := FromFile(tc.spec)
+			spec, err := tc.spec.FromFile()
 
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
@@ -314,6 +315,66 @@ func TestFromFile(t *testing.T) {
 				assert.Empty(t, spec)
 				assert.Contains(t, err.Error(), tc.expectedError)
 			}
+		})
+	}
+}
+
+func TestSpec_WithRepo(t *testing.T) {
+	tests := []struct {
+		name         string
+		env          map[string]string
+		spec         Spec
+		domain       string
+		path         string
+		expectedSpec Spec
+	}{
+		{
+			name: "WithoutAccessToken",
+			env: map[string]string{
+				envVarName: "",
+			},
+			spec:   Spec{},
+			domain: "github.com",
+			path:   "octocat/Hello-World",
+			expectedSpec: Spec{
+				Repo: Repo{
+					Platform:    Platform("github.com"),
+					Path:        "octocat/Hello-World",
+					AccessToken: "",
+				},
+			},
+		},
+		{
+			name: "WitAccessToken",
+			env: map[string]string{
+				envVarName: "github-access-token",
+			},
+			spec:   Spec{},
+			domain: "github.com",
+			path:   "octocat/Hello-World",
+			expectedSpec: Spec{
+				Repo: Repo{
+					Platform:    Platform("github.com"),
+					Path:        "octocat/Hello-World",
+					AccessToken: "github-access-token",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setting up environment variables
+			for k, v := range tc.env {
+				orig := os.Getenv(k)
+				err := os.Setenv(k, v)
+				assert.NoError(t, err)
+				defer os.Setenv(k, orig)
+			}
+
+			spec := tc.spec.WithRepo(tc.domain, tc.path)
+
+			assert.Equal(t, tc.expectedSpec, spec)
 		})
 	}
 }

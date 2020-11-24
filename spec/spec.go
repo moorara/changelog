@@ -10,6 +10,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const envVarName = "CHANGELOG_ACCESS_TOKEN"
+
 var specFiles = []string{"changelog.yml", "changelog.yaml"}
 
 const helpTemplate = `
@@ -373,18 +375,11 @@ type Spec struct {
 }
 
 // Default returns specfications with default values.
-// The default access token will be read from the CHANGELOG_ACCESS_TOKEN environment variable (if set).
-func Default(domain, path string) Spec {
-	accessToken := os.Getenv("CHANGELOG_ACCESS_TOKEN")
-
+func Default() Spec {
 	return Spec{
 		Help:    false,
 		Version: false,
-		Repo: Repo{
-			Platform:    Platform(domain),
-			Path:        path,
-			AccessToken: accessToken,
-		},
+		Repo:    Repo{},
 		General: General{
 			File:    "CHANGELOG.md",
 			Base:    "",
@@ -434,7 +429,7 @@ func Default(domain, path string) Spec {
 }
 
 // FromFile updates a base spec from a spec file if it exists.
-func FromFile(s Spec) (Spec, error) {
+func (s Spec) FromFile() (Spec, error) {
 	for _, filename := range specFiles {
 		f, err := os.Open(filename)
 		if err != nil {
@@ -453,6 +448,17 @@ func FromFile(s Spec) (Spec, error) {
 	}
 
 	return s, nil
+}
+
+// WithRepo adds populates Repo sepcs and returns a new spec object.
+func (s Spec) WithRepo(domain, path string) Spec {
+	s.Repo = Repo{
+		Platform:    Platform(domain),
+		Path:        path,
+		AccessToken: os.Getenv(envVarName),
+	}
+
+	return s
 }
 
 // PrintHelp prints the help text.
