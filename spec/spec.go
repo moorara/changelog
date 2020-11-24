@@ -13,6 +13,7 @@ import (
 var specFiles = []string{"changelog.yml", "changelog.yaml"}
 
 const helpTemplate = `
+  changelog is a simple command-line tool for generating changelogs based on issues and pull/merge requests.
   It assumes the remote repository name is origin.
 
   Supported Remote Repositories:
