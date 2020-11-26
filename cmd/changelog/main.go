@@ -56,7 +56,7 @@ func main() {
 			logger.Fatal(err)
 		}
 
-		domain, path, err := gitRepo.GetRemoteInfo()
+		domain, path, err := gitRepo.GetRemote()
 		if err != nil {
 			logger.Fatal(err)
 		}
