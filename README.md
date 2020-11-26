@@ -208,7 +208,6 @@ It is only supposed to do one job and it should just work out-of-the-box.
     - [x] Markdown
     - [ ] HTML
   - Enhancements:
-    - [ ] Updating GitHub release desctiptions
     - [ ] Switching to GitHub API v4 (GraphQL)
 
 
