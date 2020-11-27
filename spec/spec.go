@@ -18,6 +18,9 @@ const helpTemplate = `
   changelog is a simple command-line tool for generating changelogs based on issues and pull/merge requests.
   It assumes the remote repository name is origin.
 
+  You can also have a changelog.yaml file in your repository for configuring how changelogs are generated.
+  For more information, please see https://github.com/moorara/changelog
+
   Supported Remote Repositories:
 
     • GitHub (github.com)
@@ -78,6 +81,8 @@ const helpTemplate = `
 
     changelog
     changelog -access-token=<your-access-token>
+    changelog -access-token=<your-access-token> -base=HISTORY.md
+    changelog -access-token=<your-access-token> -future-tag=v0.1.0
 
 `
 
