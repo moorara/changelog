@@ -212,7 +212,7 @@ It is only supposed to do one job and it should just work out-of-the-box.
 
 
 [godoc-url]: https://pkg.go.dev/github.com/moorara/changelog
-[godoc-image]: https://godoc.org/github.com/moorara/changelog?status.svg
+[godoc-image]: https://pkg.go.dev/badge/github.com/moorara/changelog
 [workflow-url]: https://github.com/moorara/changelog/actions
 [workflow-image]: https://github.com/moorara/changelog/workflows/Main/badge.svg
 [goreport-url]: https://goreportcard.com/report/github.com/moorara/changelog
