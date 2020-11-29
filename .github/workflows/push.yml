@@ -5,21 +5,21 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 2
       - name: Lint
-        uses: moorara/actions/go-lint@master
+        uses: moorara/actions/go-lint@main
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 0
       - name: Test
         id: test
-        uses: moorara/actions/go-cover@master
+        uses: moorara/actions/go-cover@main
         with:
           codeclimate_reporter_id: ${{ secrets.CODECLIMATE_REPORTER_ID }}
       - name: Upload Test Report
@@ -31,7 +31,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 0
           submodules: 'true'
