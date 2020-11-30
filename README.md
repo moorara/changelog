@@ -38,6 +38,12 @@ The luxury of a fresh start allows you to:
 
 ### Install
 
+```
+brew install moorara/brew/changelog
+```
+
+For other platforms, you can download the binary from the [latest release](https://github.com/moorara/changelog/releases/latest).
+
 ### Examples
 
 ```bash
@@ -72,7 +78,7 @@ changelog -access-token=$GITHUB_TOKEN -future-tag v0.1.0
                                   The default value is read from the CHANGELOG_ACCESS_TOKEN environment variable
 
     -file                         The output file for the generated changelog (default: CHANGELOG.md)
-    -base                         An optional file for appending the generated changelog to it 
+    -base                         An optional file for appending the generated changelog to it
                                   This option can only be used when generating the changelog for the first time
     -print                        Print the generated changelong to STDOUT (default: false)
                                   If this option is enabled, all logs will be disabled
@@ -80,12 +86,12 @@ changelog -access-token=$GITHUB_TOKEN -future-tag v0.1.0
 
     -from-tag                     Changelog will be generated for all changes after this tag (default: last tag on changelog)
     -to-tag                       Changelog will be generated for all changes before this tag (default: last git tag)
-    -future-tag                   A future tag for all unreleased changes (changes after the last git tag) 
-    -exclude-tags                 These tags will be excluded from changelog 
-    -exclude-tags-regex           A POSIX-compliant regex for excluding certain tags from changelog 
+    -future-tag                   A future tag for all unreleased changes (changes after the last git tag)
+    -exclude-tags                 These tags will be excluded from changelog
+    -exclude-tags-regex           A POSIX-compliant regex for excluding certain tags from changelog
 
     -issues-selection             Include closed issues in changelog (values: none|all|labeled) (default: all)
-    -issues-include-labels        Include issues with these labels 
+    -issues-include-labels        Include issues with these labels
     -issues-exclude-labels        Exclude issues with these labels (default: duplicate,invalid,question,wontfix)
     -issues-grouping              Grouping style for issues (values: simple|milestone|label) (default: label)
     -issues-summary-labels        Labels for summary group (default: summary,release-summary)
@@ -99,17 +105,17 @@ changelog -access-token=$GITHUB_TOKEN -future-tag v0.1.0
 
     -merges-selection             Include merged pull/merge requests in changelog (values: none|all|labeled) (default: all)
     -merges-branch                Include pull/merge requests merged into this branch (default: default remote branch)
-    -merges-include-labels        Include merges with these labels 
-    -merges-exclude-labels        Exclude merges with these labels 
+    -merges-include-labels        Include merges with these labels
+    -merges-exclude-labels        Exclude merges with these labels
     -merges-grouping              Grouping style for pull/merge requests (values: simple|milestone|label) (default: simple)
-    -merges-summary-labels        Labels for summary group 
-    -merges-removed-labels        Labels for removed group 
-    -merges-breaking-labels       Labels for breaking group 
-    -merges-deprecated-labels     Labels for deprecated group 
-    -merges-feature-labels        Labels for feature group 
-    -merges-enhancement-labels    Labels for enhancement group 
-    -merges-bug-labels            Labels for bug group 
-    -merges-security-labels       Labels for security group 
+    -merges-summary-labels        Labels for summary group
+    -merges-removed-labels        Labels for removed group
+    -merges-breaking-labels       Labels for breaking group
+    -merges-deprecated-labels     Labels for deprecated group
+    -merges-feature-labels        Labels for feature group
+    -merges-enhancement-labels    Labels for enhancement group
+    -merges-bug-labels            Labels for bug group
+    -merges-security-labels       Labels for security group
 
     -release-url                  An external release URL with the '{tag}' placeholder for the release tag
 
