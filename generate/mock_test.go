@@ -5,103 +5,26 @@ import (
 	"time"
 
 	"github.com/moorara/changelog/internal/changelog"
-	"github.com/moorara/changelog/internal/git"
 	"github.com/moorara/changelog/internal/remote"
 )
 
 type (
-	GetRemoteInfoMock struct {
+	GetRemoteMock struct {
 		OutDomain string
 		OutPath   string
 		OutError  error
 	}
 
-	CommitsMock struct {
-		OutCommits git.Commits
-		OutError   error
-	}
-
-	CommitMock struct {
-		InHash    string
-		OutCommit git.Commit
-		OutError  error
-	}
-
-	TagsMock struct {
-		OutTags  git.Tags
-		OutError error
-	}
-
-	TagMock struct {
-		InName   string
-		OutTag   git.Tag
-		OutError error
-	}
-
-	CommitsFromRevisionMock struct {
-		InRev      string
-		OutCommits git.Commits
-		OutError   error
-	}
-
 	MockGitRepo struct {
-		GetRemoteInfoIndex int
-		GetRemoteInfoMocks []GetRemoteInfoMock
-
-		CommitsIndex int
-		CommitsMocks []CommitsMock
-
-		CommitIndex int
-		CommitMocks []CommitMock
-
-		TagsIndex int
-		TagsMocks []TagsMock
-
-		TagIndex int
-		TagMocks []TagMock
-
-		CommitsFromRevisionIndex int
-		CommitsFromRevisionMocks []CommitsFromRevisionMock
+		GetRemoteIndex int
+		GetRemoteMocks []GetRemoteMock
 	}
 )
 
-func (m *MockGitRepo) GetRemoteInfo() (string, string, error) {
-	i := m.GetRemoteInfoIndex
-	m.GetRemoteInfoIndex++
-	return m.GetRemoteInfoMocks[i].OutDomain, m.GetRemoteInfoMocks[i].OutPath, m.GetRemoteInfoMocks[i].OutError
-}
-
-func (m *MockGitRepo) Commits() (git.Commits, error) {
-	i := m.CommitsIndex
-	m.CommitsIndex++
-	return m.CommitsMocks[i].OutCommits, m.CommitsMocks[i].OutError
-}
-
-func (m *MockGitRepo) Commit(hash string) (git.Commit, error) {
-	i := m.CommitIndex
-	m.CommitIndex++
-	m.CommitMocks[i].InHash = hash
-	return m.CommitMocks[i].OutCommit, m.CommitMocks[i].OutError
-}
-
-func (m *MockGitRepo) Tags() (git.Tags, error) {
-	i := m.TagsIndex
-	m.TagsIndex++
-	return m.TagsMocks[i].OutTags, m.TagsMocks[i].OutError
-}
-
-func (m *MockGitRepo) Tag(name string) (git.Tag, error) {
-	i := m.TagIndex
-	m.TagIndex++
-	m.TagMocks[i].InName = name
-	return m.TagMocks[i].OutTag, m.TagMocks[i].OutError
-}
-
-func (m *MockGitRepo) CommitsFromRevision(rev string) (git.Commits, error) {
-	i := m.CommitsFromRevisionIndex
-	m.CommitsFromRevisionIndex++
-	m.CommitsFromRevisionMocks[i].InRev = rev
-	return m.CommitsFromRevisionMocks[i].OutCommits, m.CommitsFromRevisionMocks[i].OutError
+func (m *MockGitRepo) GetRemote() (string, string, error) {
+	i := m.GetRemoteIndex
+	m.GetRemoteIndex++
+	return m.GetRemoteMocks[i].OutDomain, m.GetRemoteMocks[i].OutPath, m.GetRemoteMocks[i].OutError
 }
 
 type (

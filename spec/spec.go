@@ -380,11 +380,16 @@ type Spec struct {
 }
 
 // Default returns specfications with default values.
+// The default access token will be read from the CHANGELOG_ACCESS_TOKEN environment variable.
 func Default() Spec {
 	return Spec{
 		Help:    false,
 		Version: false,
-		Repo:    Repo{},
+		Repo: Repo{
+			Platform:    Platform(""),
+			Path:        "",
+			AccessToken: os.Getenv(envVarName),
+		},
 		General: General{
 			File:    "CHANGELOG.md",
 			Base:    "",
@@ -457,11 +462,9 @@ func (s Spec) FromFile() (Spec, error) {
 
 // WithRepo adds populates Repo sepcs and returns a new spec object.
 func (s Spec) WithRepo(domain, path string) Spec {
-	s.Repo = Repo{
-		Platform:    Platform(domain),
-		Path:        path,
-		AccessToken: os.Getenv(envVarName),
-	}
+	// Leave s.Repo.AccessToken unchanged
+	s.Repo.Platform = Platform(domain)
+	s.Repo.Path = path
 
 	return s
 }

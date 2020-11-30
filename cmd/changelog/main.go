@@ -60,6 +60,7 @@ func main() {
 		if err != nil {
 			logger.Fatal(err)
 		}
+		s = s.WithRepo(domain, path)
 
 		g, err := generate.New(s, logger)
 		if err != nil {
@@ -67,7 +68,6 @@ func main() {
 		}
 
 		ctx := context.Background()
-		s = s.WithRepo(domain, path)
 
 		if _, err := g.Generate(ctx, s); err != nil {
 			logger.Fatal(err)

@@ -114,12 +114,17 @@ func TestFormat_GetReleaseURL(t *testing.T) {
 }
 
 func TestDefault(t *testing.T) {
+	orig := os.Getenv(envVarName)
+	err := os.Setenv(envVarName, "access-token")
+	assert.NoError(t, err)
+	defer os.Setenv(envVarName, orig)
+
 	spec := Default()
 
 	assert.NotNil(t, spec)
 	assert.Equal(t, Platform(""), spec.Repo.Platform)
 	assert.Equal(t, "", spec.Repo.Path)
-	assert.Equal(t, "", spec.Repo.AccessToken)
+	assert.Equal(t, "access-token", spec.Repo.AccessToken)
 	assert.Equal(t, "CHANGELOG.md", spec.General.File)
 	assert.Equal(t, "", spec.General.Base)
 	assert.Equal(t, false, spec.General.Print)
@@ -322,41 +327,20 @@ func TestSpec_FromFile(t *testing.T) {
 func TestSpec_WithRepo(t *testing.T) {
 	tests := []struct {
 		name         string
-		env          map[string]string
 		spec         Spec
 		domain       string
 		path         string
 		expectedSpec Spec
 	}{
 		{
-			name: "WithoutAccessToken",
-			env: map[string]string{
-				envVarName: "",
-			},
+			name:   "OK",
 			spec:   Spec{},
 			domain: "github.com",
 			path:   "octocat/Hello-World",
 			expectedSpec: Spec{
 				Repo: Repo{
-					Platform:    Platform("github.com"),
-					Path:        "octocat/Hello-World",
-					AccessToken: "",
-				},
-			},
-		},
-		{
-			name: "WitAccessToken",
-			env: map[string]string{
-				envVarName: "github-access-token",
-			},
-			spec:   Spec{},
-			domain: "github.com",
-			path:   "octocat/Hello-World",
-			expectedSpec: Spec{
-				Repo: Repo{
-					Platform:    Platform("github.com"),
-					Path:        "octocat/Hello-World",
-					AccessToken: "github-access-token",
+					Platform: Platform("github.com"),
+					Path:     "octocat/Hello-World",
 				},
 			},
 		},
@@ -364,14 +348,6 @@ func TestSpec_WithRepo(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// Setting up environment variables
-			for k, v := range tc.env {
-				orig := os.Getenv(k)
-				err := os.Setenv(k, v)
-				assert.NoError(t, err)
-				defer os.Setenv(k, orig)
-			}
-
 			spec := tc.spec.WithRepo(tc.domain, tc.path)
 
 			assert.Equal(t, tc.expectedSpec, spec)
